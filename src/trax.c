@@ -9,8 +9,9 @@
 // TODO: tokenizer
 
 #define _HELPER(x) #x
-#define __TOKEN_INIT TRAX_PREFIX "init"
-#define __TOKEN_OK TRAX_PREFIX "ok"
+#define __TOKEN_INIT TRAX_PREFIX "initialize"
+#define __TOKEN_HELLO TRAX_PREFIX "hello"
+#define __TOKEN_SELECT TRAX_PREFIX "select"
 #define __TOKEN_FRAME TRAX_PREFIX "frame"
 #define __TOKEN_QUIT TRAX_PREFIX "quit"
 #define __TOKEN_POSITION TRAX_PREFIX "position"
@@ -97,7 +98,7 @@ int __next_token(char* str, int start, char* buffer, int len, int flags)
             else s = i;
             continue;
         }
-        if (s >= 0 && ((!quotes && str[i] == ' ') || quotes && str[i] == '"'))
+        if (s >= 0 && ((!quotes && str[i] == ' ') || (quotes && str[i] == '"' && (i == start || str[i-1] != '\''))))
         {
             e = i;
             break;
@@ -137,6 +138,12 @@ void trax_test()
 
 int trax_setup(const char* log, int flg) {
 
+    char message[1024];
+    int pos = 0;
+    char* line = NULL;
+    int size = 0;
+    char* buffer;
+
     flags = flg;
 
     if (log)
@@ -145,7 +152,36 @@ int trax_setup(const char* log, int flg) {
         __log = NULL;
 
     LOG("LOG START");
-    return 0;
+
+    // TODO: this is only a dummy message
+    sprintf(message,"%s in.boundingbox out.boundingbox source.path\n", __TOKEN_HELLO);
+    __output(message);
+
+    LOG("SELECT wait");
+
+    line = __read_line(stdin);
+    size = strlen(line);
+    buffer = (char *) malloc(size * sizeof(char));
+
+    if (!line) return TRAX_ERROR;
+
+    if ((pos = __next_token(line, pos, buffer, size, _FLAG_STRING)) < 0) 
+    {
+        free(line);
+        free(buffer);
+        return TRAX_ERROR;
+    }
+
+    if (strcmp(buffer, __TOKEN_SELECT) == 0) 
+    {
+        free(line);
+        free(buffer);
+        return 0;
+    }
+
+    free(line);
+    free(buffer);
+    return TRAX_ERROR;
 }
 
 int trax_cleanup() {
@@ -155,6 +191,7 @@ int trax_cleanup() {
         fclose(__log);
         __log = 0;
     }
+
 
     return 0;
 }
