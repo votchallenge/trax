@@ -14,9 +14,11 @@
 #define __TOKEN_SELECT TRAX_PREFIX "select"
 #define __TOKEN_FRAME TRAX_PREFIX "frame"
 #define __TOKEN_QUIT TRAX_PREFIX "quit"
-#define __TOKEN_POSITION TRAX_PREFIX "position"
+#define __TOKEN_STATUS TRAX_PREFIX "status"
 
 #define LOG(MSG) if (__log && (flags & TRAX_LOG_DEBUG)) { fprintf(__log, "%s\n", MSG); fflush(__log); }
+#define LOG_IN(MSG) if (__log && (flags & TRAX_LOG_INPUT)) { fprintf(__log, ">> %s >>\n", MSG); fflush(__log); }
+#define LOG_OUT(MSG) if (__log && (flags & TRAX_LOG_OUTPUT)) { fprintf(__log, "<< %s <<\n", MSG); fflush(__log); }
 #define BUFFER_LENGTH 10
 
 FILE* __log = 0;
@@ -29,8 +31,8 @@ struct trax_properties {
 void __output(const char *message) {
 
     fputs(message, stdout);
-    if (__log && (flags & TRAX_LOG_OUTPUT))
-        fputs(message, __log);
+    LOG_OUT(message);
+    fflush(stdout);
 
 }
 
@@ -53,8 +55,13 @@ char* __read_line(FILE* file)
 
     for(;;) {
         c = fgetc(stdin);
-        if(c == EOF)
+        if(c == EOF) {
+            if (len == lenmax) {
+                free(line);
+                return NULL;
+            }
             break;
+        }
 
         if(--len == 0) {
             len += BUFFER_LENGTH;
@@ -160,10 +167,12 @@ int trax_setup(const char* log, int flg) {
     LOG("SELECT wait");
 
     line = __read_line(stdin);
+    if (!line) return TRAX_ERROR;
     size = strlen(line);
+
     buffer = (char *) malloc(size * sizeof(char));
 
-    if (!line) return TRAX_ERROR;
+    LOG_IN(line);
 
     if ((pos = __next_token(line, pos, buffer, size, _FLAG_STRING)) < 0) 
     {
@@ -176,7 +185,9 @@ int trax_setup(const char* log, int flg) {
     {
         free(line);
         free(buffer);
-        return 0;
+
+        LOG("SELECT rcv");
+        return TRAX_READY;
     }
 
     free(line);
@@ -208,11 +219,7 @@ int trax_wait(trax_imagepath path, trax_properties* properties, trax_rectangle *
 
     if (!line) return TRAX_ERROR;
 
-    if (__log && (flags & TRAX_LOG_INPUT)) {
-        fputs(line, __log);
-        fputs("\n", __log);
-        fflush(__log);
-    }
+    LOG_IN(line);
 
     if ((pos = __next_token(line, pos, buffer, size, _FLAG_STRING)) < 0) {
         free(line);
@@ -261,6 +268,11 @@ int trax_wait(trax_imagepath path, trax_properties* properties, trax_rectangle *
         LOG("INIT rcv");
         result = TRAX_INIT;
 
+        if ((pos = __next_token(line, pos, path, TRAX_PATH_MAX_LENGTH, _FLAG_STRING)) < 0) 
+        {
+            result = TRAX_ERROR; goto end;
+        }
+
         if ((pos = __next_token(line, pos, buffer, size, 0)) > 0) 
         {
             rectangle->x = (float) atof(buffer);
@@ -281,11 +293,6 @@ int trax_wait(trax_imagepath path, trax_properties* properties, trax_rectangle *
         {
             rectangle->height = (float) atof(buffer);
         } else {result = TRAX_ERROR; goto end;}
-
-        if ((pos = __next_token(line, pos, path, TRAX_PATH_MAX_LENGTH, _FLAG_STRING)) < 0) 
-        {
-            result = TRAX_ERROR; goto end;
-        }
 
         if (properties) {
             while ( (pos = __next_token(line, pos, buffer, size, _FLAG_STRING)) > 0) 
@@ -321,7 +328,7 @@ void trax_report_position(trax_rectangle position, trax_properties* properties) 
 
     char message[1024];
 
-    sprintf(message,"%s %f %f %f %f", __TOKEN_POSITION, position.x, position.y,  position.width,  position.height);
+    sprintf(message,"%s %f %f %f %f", __TOKEN_STATUS, position.x, position.y,  position.width,  position.height);
 
     __output(message);
 

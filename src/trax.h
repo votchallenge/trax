@@ -6,9 +6,10 @@
 #include <stdio.h>
 
 #define TRAX_ERROR 0
-#define TRAX_INIT 1
-#define TRAX_FRAME 2
-#define TRAX_QUIT 3
+#define TRAX_READY 1
+#define TRAX_INIT 2
+#define TRAX_FRAME 3
+#define TRAX_QUIT 4
 
 
 #define TRAX_LOG_INPUT 1

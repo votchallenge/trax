@@ -118,7 +118,7 @@ int main( int argc, char** argv )
 
             // properties
 
-
+            trax_report_position(rect, NULL);
         } else
         // The second one is TRAX_FRAME that tells the tracker what to process next.
          if (tr == TRAX_FRAME) {
