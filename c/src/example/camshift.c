@@ -82,30 +82,35 @@ CvRect box2rect(CvBox2D box) {
 int main( int argc, char** argv )
 {
 
-    // Call trax_setup to initialize trax system
-    trax_setup(NULL, 0);
+    trax_handle* trax;
+    trax_configuration config;
+    config.format_region = TRAX_REGION_RECTANGLE;
+    config.format_image = TRAX_IMAGE_PATH;
+
+    // Call trax_server_setup to initialize trax protocol
+    trax = trax_server_setup(config, NULL, 0);
 
     for(;;)
     {
-        trax_imagepath path;
-        trax_rectangle rect;
+        trax_image img;
+        trax_region rect;
         trax_properties* prop = trax_properties_create();
 
         // The main idea of Trax interface is to leave the control to the master program
         // and just follow the instructions that the tracker gets. 
         // The main function for this is trax_wait that actually listens for commands.
 
-        int tr = trax_wait(path, prop, &rect);
+        int tr = trax_server_wait(trax, &img, prop, &rect);
 
         // There are two important commands. The first one is TRAX_INIT that tells the
         // tracker how to initialize.
         if (tr == TRAX_INIT) {
 
             // The bounding box of the object is given during initialization
-            selection.x = rect.x;
-            selection.y = rect.y;
-            selection.width = rect.width;
-            selection.height = rect.height;  
+            selection.x = rect.data.rectangle.x;
+            selection.y = rect.data.rectangle.y;
+            selection.width = rect.data.rectangle.width;
+            selection.height = rect.data.rectangle.height;  
 
             // With every parameter master program can also give one or more key-value
             // parameters. This is useful for seting some tracking parameters externally.
@@ -118,7 +123,7 @@ int main( int argc, char** argv )
 
             // properties
 
-            trax_report_position(rect, NULL);
+            trax_server_reply(trax, rect, NULL);
         } else
         // The second one is TRAX_FRAME that tells the tracker what to process next.
          if (tr == TRAX_FRAME) {
@@ -139,7 +144,7 @@ int main( int argc, char** argv )
 
         // In trax mode images are read from the disk. The master program tells the
         // tracker where to get them.
-        IplImage* frame = cvLoadImage(path, CV_LOAD_IMAGE_COLOR);
+        IplImage* frame = cvLoadImage(img.data.path, CV_LOAD_IMAGE_COLOR);
 
         int i, bin_w, c;
 
@@ -210,23 +215,24 @@ int main( int argc, char** argv )
 
         // At the end of single frame processing we send back the estimated
         // bounding box and wait for further instructions.
-        trax_rectangle region;
+        trax_region region;
+        region.type = TRAX_REGION_RECTANGLE;
 
         CvRect result = box2rect(track_box);
-        region.x = result.x;
-        region.y = result.y;
-        region.width = result.width;
-        region.height = result.height;
+        region.data.rectangle.x = result.x;
+        region.data.rectangle.y = result.y;
+        region.data.rectangle.width = result.width;
+        region.data.rectangle.height = result.height;
 
         // Note that the tracker also has an option of sending additional data
         // back to the main program in a form of key-value pairs. We do not use
         // this option here, so this part is empty.
-        trax_report_position(region, NULL);
+        trax_server_reply(trax, region, NULL);
 
     }
 
     // Call trax_cleanup to release potentially allocated resources 
-    trax_cleanup();
+    trax_cleanup(&trax);
 
     return 0;
 }
