@@ -219,7 +219,7 @@ void trax_test()
 
     trax_handle handle;
 
-    trax_wait(path, prop, &rectangle);
+    //trax_wait(path, prop, &rectangle);
 
     sm_enum(prop->map, __output_enum, &handle);
     trax_properties_release(&prop);
@@ -299,7 +299,7 @@ int trax_client_wait(trax_handle* client, trax_properties* properties, trax_regi
     int size, pos;
     int result = TRAX_ERROR;
 
-    VERIFY_CLIENT_HANDLE(client);
+    VALIDATE_CLIENT_HANDLE(client);
 
     pos = 0;
     line = __read_protocol_line(client->input);
@@ -369,7 +369,7 @@ void trax_client_initialize(trax_handle* client, trax_image image, trax_region r
 
     char message[1024];
 
-    VERIFY_CLIENT_HANDLE(client);
+    VALIDATE_CLIENT_HANDLE(client);
 
     assert(client->config.format_region == region.type && client->config.format_image == region.type);
 
@@ -404,7 +404,7 @@ void trax_client_frame(trax_handle* client, trax_image image, trax_properties* p
 
     char message[1024];
 
-    VERIFY_CLIENT_HANDLE(client);
+    VALIDATE_CLIENT_HANDLE(client);
 
     assert(client->config.format_image == image.type);
 
@@ -478,7 +478,7 @@ trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags) 
 int trax_server_wait(trax_handle* server, trax_image* image, trax_properties* properties, trax_region * region) 
 {
 
-    VERIFY_SERVER_HANDLE(server);
+    VALIDATE_SERVER_HANDLE(server);
 
     LOG(server, "FRAME wait");
 
@@ -576,7 +576,7 @@ void trax_server_reply(trax_handle* server, trax_region region, trax_properties*
 
     char message[1024];
 
-    VERIFY_SERVER_HANDLE(server);
+    VALIDATE_SERVER_HANDLE(server);
 
     assert(server->config.format_region == region.type);
 
@@ -602,7 +602,7 @@ void trax_server_reply(trax_handle* server, trax_region region, trax_properties*
 
 int trax_cleanup(trax_handle** handle) {
 
-    VERIFY_HANDLE(*handle);
+    VALIDATE_HANDLE((*handle));
 
 // TODO: send QUIT if client
 
@@ -620,7 +620,7 @@ int trax_cleanup(trax_handle** handle) {
 
 void trax_log(trax_handle* handle, const char *message) {
 
-    VERIFY_HANDLE(handle);
+    VALIDATE_HANDLE(handle);
 
     LOG(handle, message);
 
