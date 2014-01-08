@@ -8,15 +8,18 @@
 #define TRAX_VERSION 1
 
 #define TRAX_ERROR 0
-#define TRAX_READY 1
-#define TRAX_INIT 2
-#define TRAX_FRAME 3
-#define TRAX_QUIT 4
-#define TRAX_STATUS 5
+#define TRAX_INITIALIZE 1
+#define TRAX_FRAME 2
+#define TRAX_QUIT 3
+#define TRAX_STATUS 4
 
 #define TRAX_IMAGE_PATH 0
+#define TRAX_IMAGE_URL 1 // Not implemented yet!
+#define TRAX_IMAGE_DATA 2 // Not implemented yet!
 
 #define TRAX_REGION_RECTANGLE 0
+#define TRAX_REGION_POLYGON 1 // Not implemented yet!
+#define TRAX_REGION_MASK 1 // Not implemented yet!
 
 #define TRAX_FLAG_VALID 1
 #define TRAX_FLAG_SERVER 2
@@ -38,17 +41,15 @@ typedef struct trax_rectangle {
     float height;
 } trax_rectangle;
 
-typedef char trax_imagepath[TRAX_PATH_MAX_LENGTH];
-
 typedef struct trax_image {
-    int type;
-    union {
-        trax_imagepath path;
-    } data;
+    short type;
+    int width;
+    int height;
+    char* data;
 } trax_image;
 
 typedef struct trax_region {
-    int type;
+    short type;
     union {
         trax_rectangle rectangle;
     } data;
@@ -59,14 +60,18 @@ typedef struct trax_configuration {
         int format_image;
 } trax_configuration;
 
-typedef struct trax_handle trax_handle;
+typedef struct trax_handle {
+    int flags;
+    int version;
+    FILE* log;
+    trax_configuration config;
+    FILE* input;
+    FILE* output;
+} trax_handle;
 
 typedef struct trax_properties trax_properties;
 
 typedef void(*trax_enumerator)(const char *key, const char *value, const void *obj);
-
-
-void trax_test();
 
 /**
  *
@@ -74,11 +79,11 @@ void trax_test();
 
 trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags);
 
-int trax_client_wait(trax_handle* client, trax_properties* properties, trax_region* region);
+int trax_client_wait(trax_handle* client, trax_region** region, trax_properties* properties);
 
-void trax_client_initialize(trax_handle* client, trax_image image, trax_region region, trax_properties* properties);
+void trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties);
 
-void trax_client_frame(trax_handle* client, trax_image image, trax_properties* properties);
+void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties);
 
 
 /**
@@ -87,14 +92,24 @@ void trax_client_frame(trax_handle* client, trax_image image, trax_properties* p
 **/
 trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags);
 
-int trax_server_wait(trax_handle* server, trax_image* image, trax_properties* properties, trax_region* region);
+int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties);
 
-void trax_server_reply(trax_handle* server, trax_region region, trax_properties* properties);
+void trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties);
 
 
 int trax_cleanup(trax_handle** handle);
 
 void trax_log(trax_handle* handle, const char *message);
+
+
+void trax_image_release(trax_image** image);
+
+trax_image* trax_image_create_path(const char* path);
+
+void trax_region_release(trax_region** region);
+
+trax_region* trax_region_create_rectangle(int x, int y, int width, int height);
+
 
 void trax_properties_release(trax_properties** properties);
 

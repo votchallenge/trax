@@ -6,7 +6,7 @@
 #include "trax.h"
 #include "strmap.h"
 
-// TODO: arbitrary line length
+// TODO: arbitrary line length (without buffering)
 
 #define _HELPER(x) #x
 #define __TOKEN_INIT TRAX_PREFIX "initialize"
@@ -19,22 +19,16 @@
 #define VALIDATE_SERVER_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && (H->flags & TRAX_FLAG_SERVER))
 #define VALIDATE_CLIENT_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && !(H->flags & TRAX_FLAG_SERVER))
 
-#define LOG(H, MSG) if (H->log && (H->flags & TRAX_FLAG_LOG_DEBUG)) { fprintf(H->log, "%s\n", MSG); fflush(H->log); }
-#define LOG_IN(H, MSG) if (H->log && (H->flags & TRAX_FLAG_LOG_INPUT)) { fprintf(H->log, ">> %s >>\n", MSG); fflush(H->log); }
-#define LOG_OUT(H, MSG) if (H->log && (H->flags & TRAX_FLAG_LOG_OUTPUT)) { fprintf(H->log, "<< %s <<\n", MSG); fflush(H->log); }
+#define LOG(H, MSG) if (H->log && (H->flags & TRAX_FLAG_LOG_DEBUG)) { fprintf(H->log, "TRAX_LOG: %s\n", MSG); fflush(H->log); }
+#define LOG_IN(H, MSG) if (H->log && (H->flags & TRAX_FLAG_LOG_INPUT)) { fprintf(H->log, "TRAX_INC: <%s>\n", MSG); fflush(H->log); }
+#define LOG_OUT_BEGIN(H) if (H->log && (H->flags & TRAX_FLAG_LOG_OUTPUT)) { fprintf(H->log, "TRAX_OUT: <"); fflush(H->log); }
+#define LOG_OUT_PART(H, MSG) if (H->log && (H->flags & TRAX_FLAG_LOG_OUTPUT)) { fprintf(H->log, "%s", MSG); fflush(H->log); }
+#define LOG_OUT_FORMAT(H, ...) if (H->log && (H->flags & TRAX_FLAG_LOG_OUTPUT)) { fprintf(H->log, __VA_ARGS__); fflush(H->log); }
+#define LOG_OUT_END(H) if (H->log && (H->flags & TRAX_FLAG_LOG_OUTPUT)) { fprintf(H->log, ">\n"); fflush(H->log); }
 #define BUFFER_LENGTH 64
 
 struct trax_properties {
     StrMap *map;
-};
-
-struct trax_handle {
-    int flags;
-    int version;
-    FILE* log;
-    trax_configuration config;
-    FILE* input;
-    FILE* output;
 };
 
 int starts_with(const char *pre, const char *str)
@@ -47,8 +41,10 @@ int starts_with(const char *pre, const char *str)
 void __output(trax_handle* handle, const char *message) {
 
     fputs(message, handle->output);
-    LOG_OUT(handle, message);
+
     fflush(handle->output);
+
+    LOG_OUT_PART(handle, message);
 
 }
 
@@ -57,8 +53,9 @@ void __output_enum(const char *key, const char *value, const void *obj) {
     const trax_handle* handle = (trax_handle *) obj;
 
     fprintf(handle->output, " %s=%s", key, value);
-    if (handle->log && (handle->flags & TRAX_FLAG_LOG_OUTPUT))
-        fprintf(handle->log, " %s=%s", key, value);
+
+    LOG_OUT_FORMAT(handle, " %s=%s", key, value);
+
 }
 
 char* __read_line(FILE* file)
@@ -72,7 +69,7 @@ char* __read_line(FILE* file)
         return NULL;
 
     for(;;) {
-        c = fgetc(stdin);
+        c = fgetc(file);
         if(c == EOF) {
             if (len == lenmax) {
                 free(line);
@@ -119,6 +116,7 @@ char* __read_protocol_line(FILE* file)
 
 #define _FLAG_STRING 1
 
+//TODO: handle \\ and \n sequences
 int __next_token(const char* str, int start, char* buffer, int len, int flags) 
 {
     int i;
@@ -154,7 +152,6 @@ int __next_token(const char* str, int start, char* buffer, int len, int flags)
 
     if (e - s > len - 1) return -1;
 
-
     memcpy(buffer, &(str[s]), e - s);
 
     buffer[e - s] = '\0';
@@ -185,44 +182,26 @@ int __parse_properties(const char* line, int* pos, int size, trax_properties* pr
 
 int __parse_rectangle(const char* line, int* pos, int size, trax_rectangle* rectangle) {
 
+    int i;
     char buffer[size];
+    float pointbuf[4];
 
-    if ((*pos = __next_token(line, *pos, buffer, size, 0)) > 0) 
-    {
-        rectangle->x = (float) atof(buffer);
-    } else { return 0; }
+    if ( (*pos = __next_token(line, *pos, buffer, size, _FLAG_STRING)) <= 0)
+        return 0;
 
-    if ((*pos = __next_token(line, *pos, buffer, size, 0)) > 0) 
-    {
-        rectangle->y = (float) atof(buffer);
-    } else { return 0; }
+    for (i = 0; i < 4; i++) {
+        char* pch = strtok(buffer, ",");
+        if (pch)
+            pointbuf[i] = atof(pch);
+        else 
+            return 0;
+    }
 
-    if ((*pos = __next_token(line, *pos, buffer, size, 0)) > 0) 
-    {
-        rectangle->width = (float) atof(buffer);
-    } else { return 0; }
-
-    if ((*pos = __next_token(line, *pos, buffer, size, 0)) > 0) 
-    {
-        rectangle->height = (float) atof(buffer);
-    } else { return 0; }
-
+    rectangle->x = pointbuf[0];
+    rectangle->y = pointbuf[1];
+    rectangle->width = pointbuf[2];
+    rectangle->height = pointbuf[3];
     return 1;
-}
-
-void trax_test() 
-{
-// init 10 10 50 50 "/home/lukacu/111.png" aa=bla bb=c
-    trax_rectangle rectangle;
-    trax_imagepath path;
-    trax_properties* prop = trax_properties_create();
-
-    trax_handle handle;
-
-    //trax_wait(path, prop, &rectangle);
-
-    sm_enum(prop->map, __output_enum, &handle);
-    trax_properties_release(&prop);
 }
 
 trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) {
@@ -236,24 +215,17 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
 
     trax_handle* client = malloc(sizeof(trax_handle));
 
+    client->flags = (flags & ~TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
 
-    client->flags = (flags & !TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
-
-    if (log)
-        client->log = log;
-    else
-        client->log = NULL;
-
+    client->log = log;
     client->input = input;
     client->output = output;
-
-    LOG(client, "LOG START");
 
     LOG(client, "HELLO wait");
 
     line = __read_protocol_line(client->input);
     if (!line) return TRAX_ERROR;
-    size = strlen(line);
+    size = strlen(line) + 1;
     buffer = (char *) malloc(size * sizeof(char));
 
     LOG_IN(client, line);
@@ -262,7 +234,7 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
     {
         free(line);
         free(buffer);
-        return TRAX_ERROR;
+        return NULL;
     }
 
     if (strcmp(buffer, __TOKEN_HELLO) == 0) 
@@ -272,8 +244,10 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
 
         __parse_properties(line, &pos, size, config);
 
+        // TODO: parse format info, tracker name, identifier
         client->config.format_region = TRAX_REGION_RECTANGLE;
         client->config.format_image = TRAX_IMAGE_PATH;
+
         client->version = trax_properties_get_int(config, "trax.version", 1);
 
         trax_properties_release(&config);
@@ -292,7 +266,7 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
 
 }
 
-int trax_client_wait(trax_handle* client, trax_properties* properties, trax_region* region) {
+int trax_client_wait(trax_handle* client, trax_region** region, trax_properties* properties) {
 
     char* line;
     char* buffer;
@@ -303,7 +277,7 @@ int trax_client_wait(trax_handle* client, trax_properties* properties, trax_regi
 
     pos = 0;
     line = __read_protocol_line(client->input);
-    size = strlen(line);
+    size = strlen(line) + 1;
     buffer = (char*) malloc(sizeof(char) * size);
 
     LOG(client, "STATUS wait");
@@ -330,9 +304,10 @@ int trax_client_wait(trax_handle* client, trax_properties* properties, trax_regi
 
         switch (client->config.format_region) {
         case TRAX_REGION_RECTANGLE:
-            if (!__parse_rectangle(line, &pos, size, &(region->data.rectangle)))
-                {result = TRAX_ERROR; goto end;}
-            region->type = TRAX_REGION_RECTANGLE;
+            *region = trax_region_create_rectangle(0, 0, 0, 0);
+            if (!__parse_rectangle(line, &pos, size, &((*region)->data.rectangle)))
+                {result = TRAX_ERROR; goto end;}            
+            result = TRAX_STATUS;
             break;
         default:
             result = TRAX_ERROR; goto end;
@@ -365,24 +340,25 @@ end:
 
 }
 
-void trax_client_initialize(trax_handle* client, trax_image image, trax_region region, trax_properties* properties) {
+void trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties) {
 
     char message[1024];
 
     VALIDATE_CLIENT_HANDLE(client);
 
-    assert(client->config.format_region == region.type && client->config.format_image == region.type);
+    assert(client->config.format_region == region->type && client->config.format_image == image->type);
 
+    LOG_OUT_BEGIN(client);
     sprintf(message, "%s ", __TOKEN_INIT);
     __output(client, message);
 
-    if (image.type == TRAX_IMAGE_PATH) {
-        __output(client, image.data.path);
+    if (image->type == TRAX_IMAGE_PATH) {
+        __output(client, image->data);
     } else return;
 
-    if (region.type == TRAX_REGION_RECTANGLE) {
-        trax_rectangle position = region.data.rectangle;
-        sprintf(message,"%f %f %f %f", position.x, position.y,  position.width,  position.height);
+    if (region->type == TRAX_REGION_RECTANGLE) {
+        trax_rectangle position = region->data.rectangle;
+        sprintf(message," %f,%f,%f,%f", position.x, position.y, position.width, position.height);
     } else return;
     
     __output(client, message);
@@ -391,8 +367,8 @@ void trax_client_initialize(trax_handle* client, trax_image image, trax_region r
         sm_enum(properties->map, __output_enum, client);
     }
 
-    sprintf(message, "\n");
-    __output(client, message);
+    fputs("\n", client->output); fflush(client->output);
+    LOG_OUT_END(client);
 
     fflush(client->output);
 
@@ -400,27 +376,28 @@ void trax_client_initialize(trax_handle* client, trax_image image, trax_region r
 
 }
 
-void trax_client_frame(trax_handle* client, trax_image image, trax_properties* properties) {
+void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties) {
 
     char message[1024];
 
     VALIDATE_CLIENT_HANDLE(client);
 
-    assert(client->config.format_image == image.type);
+    assert(client->config.format_image == image->type);
 
+    LOG_OUT_BEGIN(client);
     sprintf(message, "%s ", __TOKEN_FRAME);
     __output(client, message);
 
-    if (image.type == TRAX_IMAGE_PATH) {
-        __output(client, image.data.path);
+    if (image->type == TRAX_IMAGE_PATH) {
+        __output(client, image->data);
     } else return;
 
     if (properties) {
         sm_enum(properties->map, __output_enum, client);
     }
 
-    sprintf(message, "\n");
-    __output(client, message);
+    fputs("\n", client->output); fflush(client->output);
+    LOG_OUT_END(client);
 
     fflush(client->output);
 
@@ -431,20 +408,12 @@ void trax_client_frame(trax_handle* client, trax_image image, trax_properties* p
 trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags) {
 
     char message[1024];
-    int pos = 0;
-    char* line = NULL;
-    int size = 0;
-    char* buffer;
     trax_properties* properties;
     trax_handle* server = malloc(sizeof(trax_handle));
 
     server->flags = (flags | TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
 
-    if (log)
-        server->log = log;
-    else
-        server->log = NULL;
-
+    server->log = log;
     server->input = stdin;
     server->output = stdout;
 
@@ -452,7 +421,8 @@ trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags) 
 
     LOG(server, "LOG START");
 
-    sprintf(message,"%s", __TOKEN_HELLO);
+    LOG_OUT_BEGIN(server);
+    sprintf(message, "%s", __TOKEN_HELLO);
     __output(server, message);
 
     properties = trax_properties_create();
@@ -465,17 +435,14 @@ trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags) 
 
     trax_properties_release(&properties);
 
-    sprintf(message, "\n");
-    __output(server, message);
-
-    free(line);
-    free(buffer);
+    fputs("\n", server->output); fflush(server->output);
+    LOG_OUT_END(server);
 
     return server;
 
 }
 
-int trax_server_wait(trax_handle* server, trax_image* image, trax_properties* properties, trax_region * region) 
+int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties) 
 {
 
     VALIDATE_SERVER_HANDLE(server);
@@ -484,7 +451,7 @@ int trax_server_wait(trax_handle* server, trax_image* image, trax_properties* pr
 
     int pos = 0;
     char* line = __read_protocol_line(server->input);
-    int size = strlen(line);
+    int size = strlen(line) + 1;
     char buffer[size];
     int result = TRAX_ERROR;
 
@@ -505,11 +472,13 @@ int trax_server_wait(trax_handle* server, trax_image* image, trax_properties* pr
         result = TRAX_FRAME;
 
         switch (server->config.format_region) {
-        case TRAX_IMAGE_PATH:
-            if ((pos = __next_token(line, pos, image->data.path, TRAX_PATH_MAX_LENGTH, _FLAG_STRING)) < 0) 
+        case TRAX_IMAGE_PATH: {
+            char path[TRAX_PATH_MAX_LENGTH];
+            if ((pos = __next_token(line, pos, path, TRAX_PATH_MAX_LENGTH, _FLAG_STRING)) < 0) 
                 { result = TRAX_ERROR; goto end; }
-            image->type = TRAX_IMAGE_PATH;
+            *image = trax_image_create_path(path);
             break;
+        }
         default:
             result = TRAX_ERROR; goto end;
         }
@@ -532,23 +501,25 @@ int trax_server_wait(trax_handle* server, trax_image* image, trax_properties* pr
     } else if (strcmp(buffer, __TOKEN_INIT) == 0) {
 
         LOG(server, "INIT rcv");
-        result = TRAX_INIT;
+        result = TRAX_INITIALIZE;
 
         switch (server->config.format_region) {
-        case TRAX_IMAGE_PATH:
-            if ((pos = __next_token(line, pos, image->data.path, TRAX_PATH_MAX_LENGTH, _FLAG_STRING)) < 0) 
+        case TRAX_IMAGE_PATH: {
+            char path[TRAX_PATH_MAX_LENGTH];
+            if ((pos = __next_token(line, pos, path, TRAX_PATH_MAX_LENGTH, _FLAG_STRING)) < 0) 
                 { result = TRAX_ERROR; goto end; }
-            image->type = TRAX_IMAGE_PATH;
+            *image = trax_image_create_path(path);
             break;
+        }
         default:
             result = TRAX_ERROR; goto end;
         }
 
         switch (server->config.format_region) {
         case TRAX_REGION_RECTANGLE:
-            if (!__parse_rectangle(line, &pos, size, &(region->data.rectangle)))
+            *region = trax_region_create_rectangle(0, 0, 0, 0);
+            if (!__parse_rectangle(line, &pos, size, &((*region)->data.rectangle)))
                 {result = TRAX_ERROR; goto end;}
-            region->type = TRAX_REGION_RECTANGLE;
             break;
         default:
             result = TRAX_ERROR; goto end;
@@ -572,27 +543,28 @@ end:
     return TRAX_ERROR;
 }
 
-void trax_server_reply(trax_handle* server, trax_region region, trax_properties* properties) {
+void trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties) {
 
     char message[1024];
 
     VALIDATE_SERVER_HANDLE(server);
 
-    assert(server->config.format_region == region.type);
+    assert(server->config.format_region == region->type);
 
-    if (region.type == TRAX_REGION_RECTANGLE) {
-        trax_rectangle position = region.data.rectangle;
-        sprintf(message,"%s %f %f %f %f", __TOKEN_STATUS, position.x, position.y,  position.width,  position.height);
+    if (region->type == TRAX_REGION_RECTANGLE) {
+        trax_rectangle position = region->data.rectangle;
+        sprintf(message,"%s %f,%f,%f,%f", __TOKEN_STATUS, position.x, position.y, position.width, position.height);
     } else return;
     
+    LOG_OUT_BEGIN(server);
     __output(server, message);
 
     if (properties) {
         sm_enum(properties->map, __output_enum, server);
     }
 
-    sprintf(message, "\n");
-    __output(server, message);
+    fputs("\n", server->output); fflush(server->output);
+    LOG_OUT_END(server);
 
     fflush(server->output);
 
@@ -626,6 +598,57 @@ void trax_log(trax_handle* handle, const char *message) {
 
 }
 
+void trax_image_release(trax_image** image) {
+
+    switch ((*image)->type) {
+        case TRAX_IMAGE_PATH:
+            free((*image)->data);
+    }
+
+    free(*image);
+
+    *image = NULL;
+}
+
+trax_image* trax_image_create_path(const char* path) {
+
+    trax_image* img = (trax_image*) malloc(sizeof(trax_image));
+
+    img->type = TRAX_IMAGE_PATH;
+    img->width = 0;
+    img->height = 0;
+    img->data = strcpy((char*) malloc(sizeof(char) * strlen(path)), path);
+
+    return img;
+}
+
+void trax_region_release(trax_region** region) {
+
+    switch ((*region)->type) {
+        case TRAX_REGION_RECTANGLE:
+            break;
+    }
+
+    free(*region);
+
+    *region = NULL;
+
+}
+
+trax_region* trax_region_create_rectangle(int x, int y, int width, int height) {
+
+    trax_region* reg = (trax_region*) malloc(sizeof(trax_region));
+
+    reg->type = TRAX_REGION_RECTANGLE;
+    reg->data.rectangle.width = width;
+    reg->data.rectangle.height = height;
+    reg->data.rectangle.x = x;
+    reg->data.rectangle.y = y;
+
+    return reg;
+
+}
+
 void trax_properties_release(trax_properties** properties) {
     
     if (properties && *properties) {
@@ -639,7 +662,7 @@ void trax_properties_clear(trax_properties* properties) {
     if (properties) {
         if (properties->map) 
             sm_delete(properties->map);
-        properties->map = sm_new(100);
+        properties->map = sm_new(32);
     }
 }
 
@@ -647,7 +670,7 @@ trax_properties* trax_properties_create() {
 
     trax_properties* prop = malloc(sizeof(trax_properties));
 
-    prop->map = sm_new(100);
+    prop->map = sm_new(32);
 
     return prop;
 
@@ -697,7 +720,7 @@ int trax_properties_get_int(trax_properties* properties, const char* key, int de
     if (value == NULL) return def;
 
     if (value[0]!='\0') {
-        ret = strtol(value,&end, 10);
+        ret = strtol(value, &end, 10);
         ret = (*end=='\0' && end!=value) ? ret : def;
     }
 
