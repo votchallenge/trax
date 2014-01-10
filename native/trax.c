@@ -224,7 +224,7 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
     LOG(client, "HELLO wait");
 
     line = __read_protocol_line(client->input);
-    if (!line) return NULL
+    if (!line) return NULL;
     size = strlen(line) + 1;
     buffer = (char *) malloc(size * sizeof(char));
 
