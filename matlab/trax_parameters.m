@@ -1,8 +1,8 @@
-function [parameters] = trax_parameters(tokens)
+function [properties] = trax_parameters(tokens)
 
 n = length(tokens);
 
-parameters = cell(n*2, 1);
+properties = cell(n*2, 1);
 
 for i = 1:n
     token = tokens{i};
@@ -11,9 +11,11 @@ for i = 1:n
     key = token(1:split-1);
     value = token(split+1:end);
     
-    parameters{i*2-1} = key;
-    parameters{i*2} = value;
+    properties{i*2-1} = key;
+    properties{i*2} = value;
     
 end;
+
+properties = struct(properties{:});
 
 return;

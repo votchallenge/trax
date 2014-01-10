@@ -1,4 +1,9 @@
-function [] = trax_dummy_test()
+function [] = trax_dummy()
+%
+% TRAX_DUMMY
+%
+% Dummy tracker (only reports initialization region)
+%
 
 trax = trax_setup('name', 'Dummy', 'identifier', '1');
 
@@ -9,19 +14,14 @@ while 1
     [code, image, region] = trax_wait(trax);
     
     switch code
-    case 1
+    case 'initialize'
         memory = region;
         trax_status(trax, memory);
-    case 2
+    case 'frame'
         trax_status(trax, memory);
     otherwise
         break;
     end
 
 end
-
-
-
-
-
 

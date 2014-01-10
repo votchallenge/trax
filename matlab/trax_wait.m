@@ -1,6 +1,21 @@
-function [code, image, region, parameters] = trax_wait(obj)
+function [request, image, region, properties] = trax_wait(obj)
+%
+% CODE, IMAGE, REGION, PROPERTIES = TRAX_WAIT(handle, region)
+% 
+% This function is used to report the status of the tracker back to the client.
+%
+% Parameters:
+%    handle - TraX handle (obtained using trax_setup)
+%
+% Return values:
+%    request - Request type
+%    image - Incoming image
+%    region - Initialization region (if applicable)
+%    properties - Additional properties as a structure
+%
+%
 
-parameters = {};
+properties = {};
 region = [];
 image = [];
 
@@ -14,10 +29,10 @@ while 1
         
        	if strcmpi(tokens{1}, '@@TRAX:frame')
             
-            code = 2;
+            request = 'frame';
             
             if length(tokens) < 2
-                code = -1;
+                request = [];
                 return;
             end;
             
@@ -28,7 +43,7 @@ while 1
                 error('Unsupported image format');
             end;
 
-            parameters = trax_parameters(tokens(3:end));
+            properties = trax_properties(tokens(3:end));
             
             return;
             
@@ -37,11 +52,11 @@ while 1
         if strcmpi(tokens{1}, '@@TRAX:initialize')
             
             if length(tokens) < 3
-                code = -1;
+                request = [];
                 return;
             end;
             
-            code = 1;
+            request = 'initialize';
             
             switch obj.format_image
             case 'path'
@@ -61,7 +76,7 @@ while 1
                 error('Unsupported region format');
             end;
 
-            parameters = trax_parameters(tokens(4:end));
+            properties = trax_properties(tokens(4:end));
 
             return;
             
@@ -69,15 +84,15 @@ while 1
         
         if strcmpi(tokens{1}, '@@TRAX:quit')
             
-            code = 0;
+            request = 'quit';
             
-            parameters = trax_parameters(tokens(2:end));
+            properties = trax_properties(tokens(2:end));
             
             return;
             
         end 
         
-        code = 0;
+        request = [];
         
         return;
         

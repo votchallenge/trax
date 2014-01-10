@@ -1,4 +1,16 @@
 function [obj] = trax_setup(varargin)
+%
+% OBJ = TRAX_SETUP(...)
+% 
+% This function is used to initialize TraX session.
+%
+% Optional parameters:
+%   image - accepted image format
+%   region - accepted region format
+%   name - name of the tracker
+%   identifier - identifier of the tracker
+%
+% Function returns a TraX handle that is used by other functions.
 
 obj = struct();
 
