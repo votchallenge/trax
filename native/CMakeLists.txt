@@ -9,13 +9,17 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 ADD_LIBRARY(trax SHARED src/trax.c src/strmap.c)
 
+ADD_EXECUTABLE(dummy src/dummy.c)
+
+TARGET_LINK_LIBRARIES(dummy trax m)
+
 SET (CAMSHIFT_EXAMPLE FALSE CACHE BOOL "Build an example using OpenCV CamShift tracker")
 
 IF (CAMSHIFT_EXAMPLE)
 	FIND_PACKAGE(OpenCV REQUIRED)
-	LINK_LIBRARIES(${OpenCV_LIBS} trax m)
 	INCLUDE_DIRECTORIES(AFTER ${OpenCV_INCLUDE_DIR})
-	ADD_EXECUTABLE(camshift src/example/camshift.c)
+	ADD_EXECUTABLE(camshift src/camshift.c)
+	TARGET_LINK_LIBRARIES(camshift ${OpenCV_LIBS} trax m)
 ENDIF (CAMSHIFT_EXAMPLE)
 
 IF (WIN32)

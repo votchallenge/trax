@@ -224,7 +224,7 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
     LOG(client, "HELLO wait");
 
     line = __read_protocol_line(client->input);
-    if (!line) return TRAX_ERROR;
+    if (!line) return NULL
     size = strlen(line) + 1;
     buffer = (char *) malloc(size * sizeof(char));
 
@@ -277,6 +277,8 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
     pos = 0;
     line = __read_protocol_line(client->input);
+    if (!line) return result;
+
     size = strlen(line) + 1;
     buffer = (char*) malloc(sizeof(char) * size);
 
@@ -451,6 +453,7 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 
     int pos = 0;
     char* line = __read_protocol_line(server->input);
+    if (!line) return TRAX_ERROR;
     int size = strlen(line) + 1;
     char buffer[size];
     int result = TRAX_ERROR;
@@ -574,6 +577,8 @@ void trax_server_reply(trax_handle* server, trax_region* region, trax_properties
 
 int trax_cleanup(trax_handle** handle) {
 
+    if (!*handle) return;
+
     VALIDATE_HANDLE((*handle));
 
 // TODO: send QUIT if client
@@ -644,6 +649,22 @@ trax_region* trax_region_create_rectangle(int x, int y, int width, int height) {
     reg->data.rectangle.height = height;
     reg->data.rectangle.x = x;
     reg->data.rectangle.y = y;
+
+    return reg;
+
+}
+
+trax_region* trax_region_create_bounds(const trax_region* region) {
+
+    trax_region* reg = (trax_region*) malloc(sizeof(trax_region));
+
+    reg->type = TRAX_REGION_RECTANGLE;
+
+    switch (region->type) {
+        case TRAX_REGION_RECTANGLE:
+            reg->data.rectangle = region->data.rectangle;
+            break;
+    }
 
     return reg;
 

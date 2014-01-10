@@ -86,9 +86,9 @@ int main( int argc, char** argv )
     trax_configuration config;
     config.format_region = TRAX_REGION_RECTANGLE;
     config.format_image = TRAX_IMAGE_PATH;
-FILE* log = fopen("test.log", "w");
+
     // Call trax_server_setup to initialize trax protocol
-    trax = trax_server_setup(config, log, TRAX_FLAG_LOG_INPUT | TRAX_FLAG_LOG_OUTPUT |  TRAX_FLAG_LOG_DEBUG);
+    trax = trax_server_setup(config, NULL, 0);
 
     trax_image* img = NULL;
     trax_region* rect = NULL;
@@ -102,7 +102,7 @@ FILE* log = fopen("test.log", "w");
         // The main function for this is trax_wait that actually listens for commands.
 
         int tr = trax_server_wait(trax, &img, &rect, prop);
-printf("%d \n", tr);
+
         // There are two important commands. The first one is TRAX_INITIALIZE that tells the
         // tracker how to initialize.
         if (tr == TRAX_INITIALIZE) {
@@ -234,7 +234,7 @@ printf("%d \n", tr);
 
     if (img) trax_image_release(&img);
     if (rect) trax_region_release(&rect);
-fclose(log);
+
     // Call trax_cleanup to release potentially allocated resources 
     trax_cleanup(&trax);
 

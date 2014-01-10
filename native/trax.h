@@ -110,6 +110,12 @@ void trax_region_release(trax_region** region);
 
 trax_region* trax_region_create_rectangle(int x, int y, int width, int height);
 
+/**
+ * Creates a rectangle region object that bounds the input region (in case the input
+ * region is also a rectangle it just clones it).
+ **/
+trax_region* trax_region_create_bounds(const trax_region* region);
+
 
 void trax_properties_release(trax_properties** properties);
 
