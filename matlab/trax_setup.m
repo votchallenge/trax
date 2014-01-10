@@ -1,32 +1,39 @@
-function [code] = trax_setup()
+function [obj] = trax_setup(varargin)
 
-disp('@@TRAX:hello in.boundingbox out.boundingbox source.path');
+obj = struct();
 
-while 1
-   
-    line = input('', 's');
-    
-    if strncmpi(line, '@@TRAX:', 7)
-       
-        tokens = trax_parse(line);
-        
-       	if strcmpi(tokens{1}, '@@TRAX:select')
-            
-            code = 1;
-            
-            return;
-            
-        end 
-        
-        code = 0;
-        
-        return;
-        
+obj.format_image = 'path';
+obj.format_region = 'rectangle';
+obj.name = '';
+obj.identifier = '';
+
+for i = 1 : 2 : length(varargin)
+    switch lower(varargin{i})
+        case 'image'
+            obj.format_image = varargin{i+1};
+        case 'region'
+            obj.format_region = varargin{i+1};
+        case 'name'
+            obj.name = varargin{i+1};
+        case 'identifier'
+            obj.identifier = varargin{i+1};
+        otherwise 
+            error(['Unknown parameter ', varargin{i},'!']) ;
     end
-    
 end
 
+fprintf('@@TRAX:hello trax.version=1 "trax.region=%s" "trax.image=%s"', ...
+        obj.format_region, obj.format_image);
 
+if ~isempty(obj.name)
+    fprintf(' "trax.name=%s"', obj.name);
+end;
+
+if ~isempty(obj.name)
+    fprintf(' "trax.identifier=%s"', obj.identifier);
+end;
+
+fprintf('\n');
 
 
 

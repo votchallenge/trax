@@ -1,4 +1,8 @@
-function [code, image, varargout] = trax_wait()
+function [code, image, region, parameters] = trax_wait(obj)
+
+parameters = {};
+region = [];
+image = [];
 
 while 1
    
@@ -17,18 +21,14 @@ while 1
                 return;
             end;
             
-            image = tokens{2};
-            
-            if (nargout > 0)
-                varargout{1} = [];
+            switch obj.format_image
+            case 'path'
+                image = tokens{2};
+            otherwise
+                error('Unsupported image format');
             end;
-            
-            if (nargout > 1)
-                
-                parameters = trax_parameters(tokens(3:end));
-                
-                varargout{2} = parameters;
-            end;
+
+            parameters = trax_parameters(tokens(3:end));
             
             return;
             
@@ -36,28 +36,33 @@ while 1
         
         if strcmpi(tokens{1}, '@@TRAX:initialize')
             
-            if length(tokens) < 6
+            if length(tokens) < 3
                 code = -1;
                 return;
             end;
             
             code = 1;
             
-            image = tokens{2};
-            
-            region = [str2double(tokens{3}), str2double(tokens{4}), str2double(tokens{5}), str2double(tokens{6})];
-            
-            if (nargout > 0)
-                varargout{1} = region;
+            switch obj.format_image
+            case 'path'
+                image = tokens{2};
+            otherwise
+                error('Unsupported image format');
             end;
             
-            if (nargout > 1)
-                
-                parameters = trax_parameters(tokens(7:end));
-                
-                varargout{2} = parameters;
+            switch obj.format_region
+            case 'rectangle'
+                parts = strsplit(tokens{3}, ',');
+                if length(parts) ~= 4
+                    error('Illegal rectangle format');
+                end;
+                region = [str2double(parts{1}), str2double(parts{2}), str2double(parts{3}), str2double(parts{4})]; 
+            otherwise
+                error('Unsupported region format');
             end;
-            
+
+            parameters = trax_parameters(tokens(4:end));
+
             return;
             
         end 
@@ -66,9 +71,7 @@ while 1
             
             code = 0;
             
-            image = [];
-            
-            varargout{1} = [];
+            parameters = trax_parameters(tokens(2:end));
             
             return;
             

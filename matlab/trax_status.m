@@ -1,8 +1,11 @@
-function [code] = trax_status(position)
+function [] = trax_status(obj, region)
 
-fprintf('@@TRAX:status %.2f %.2f %.2f %.2f\n', position(1), position(2), position(3), position(4));
-
-code = 1;
+switch obj.format_region
+case 'rectangle'
+    fprintf('@@TRAX:status %.2f,%.2f,%.2f,%.2f\n', region(1), region(2), region(3), region(4));
+otherwise
+    error('Unsupported region format');
+end;
 
 
 
