@@ -3,7 +3,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+
 #include "trax.h"
+#include "region.h"
 #include "strmap.h"
 
 // TODO: arbitrary line length (without buffering)
@@ -180,28 +182,26 @@ int __parse_properties(const char* line, int* pos, int size, trax_properties* pr
     return 1;
 }
 
-int __parse_rectangle(const char* line, int* pos, int size, trax_rectangle* rectangle) {
+inline trax_region* __create_region(int type) {
+
+    trax_region* reg = (trax_region*) malloc(sizeof(trax_region));
+
+    reg->type = type;
+
+    return reg;
+
+}
+
+int __parse_region(const char* line, int* pos, int size, trax_region** region) {
 
     int i;
     char buffer[size];
-    float pointbuf[4];
 
     if ( (*pos = __next_token(line, *pos, buffer, size, _FLAG_STRING)) <= 0)
         return 0;
 
-    for (i = 0; i < 4; i++) {
-        char* pch = strtok(buffer, ",");
-        if (pch)
-            pointbuf[i] = atof(pch);
-        else 
-            return 0;
-    }
+    return parse_region(buffer, region);
 
-    rectangle->x = pointbuf[0];
-    rectangle->y = pointbuf[1];
-    rectangle->width = pointbuf[2];
-    rectangle->height = pointbuf[3];
-    return 1;
 }
 
 trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) {
@@ -304,15 +304,21 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
         result = TRAX_STATUS;
 
-        switch (client->config.format_region) {
-        case TRAX_REGION_RECTANGLE:
-            *region = trax_region_create_rectangle(0, 0, 0, 0);
-            if (!__parse_rectangle(line, &pos, size, &((*region)->data.rectangle)))
-                {result = TRAX_ERROR; goto end;}            
-            result = TRAX_STATUS;
-            break;
-        default:
-            result = TRAX_ERROR; goto end;
+        trax_region* region = NULL;
+
+        if (!__parse_region(line, &pos, size, &region))
+            {result = TRAX_ERROR; goto end;}  
+          
+        result = TRAX_STATUS;   
+
+        if (client->config.format_region != region->type) {
+
+            trax_region* converted = convert_region(region, client->config.format_region);
+
+            trax_region_release(&region);
+
+            region = converted;
+
         }
 
         if (properties) 
@@ -344,32 +350,26 @@ end:
 
 void trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties) {
 
-    char message[1024];
-
     VALIDATE_CLIENT_HANDLE(client);
 
     assert(client->config.format_region == region->type && client->config.format_image == image->type);
 
     LOG_OUT_BEGIN(client);
-    sprintf(message, "%s ", __TOKEN_INIT);
-    __output(client, message);
+    fprintf(client->output, "%s ", __TOKEN_INIT);
 
     if (image->type == TRAX_IMAGE_PATH) {
-        __output(client, image->data);
+        fprintf(client->output, "\"%s\" ", image->data);
     } else return;
 
-    if (region->type == TRAX_REGION_RECTANGLE) {
-        trax_rectangle position = region->data.rectangle;
-        sprintf(message," %f,%f,%f,%f", position.x, position.y, position.width, position.height);
-    } else return;
-    
-    __output(client, message);
+    print_region(client->output, region);
 
     if (properties) {
         sm_enum(properties->map, __output_enum, client);
     }
 
-    fputs("\n", client->output); fflush(client->output);
+    fputs("\n", client->output);
+    fflush(client->output);
+
     LOG_OUT_END(client);
 
     fflush(client->output);
@@ -387,11 +387,10 @@ void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* 
     assert(client->config.format_image == image->type);
 
     LOG_OUT_BEGIN(client);
-    sprintf(message, "%s ", __TOKEN_FRAME);
-    __output(client, message);
+    fprintf(client->output, "%s ", __TOKEN_FRAME);
 
     if (image->type == TRAX_IMAGE_PATH) {
-        __output(client, image->data);
+        fprintf(client->output, "\"%s\" ", image->data);
     } else return;
 
     if (properties) {
@@ -518,15 +517,7 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
             result = TRAX_ERROR; goto end;
         }
 
-        switch (server->config.format_region) {
-        case TRAX_REGION_RECTANGLE:
-            *region = trax_region_create_rectangle(0, 0, 0, 0);
-            if (!__parse_rectangle(line, &pos, size, &((*region)->data.rectangle)))
-                {result = TRAX_ERROR; goto end;}
-            break;
-        default:
-            result = TRAX_ERROR; goto end;
-        }
+        if (!__parse_region(line, &pos, size, region)) {result = TRAX_ERROR; goto end;}
 
         if (properties) {
             __parse_properties(line, &pos, size, properties);
@@ -548,19 +539,15 @@ end:
 
 void trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties) {
 
-    char message[1024];
-
     VALIDATE_SERVER_HANDLE(server);
 
     assert(server->config.format_region == region->type);
 
-    if (region->type == TRAX_REGION_RECTANGLE) {
-        trax_rectangle position = region->data.rectangle;
-        sprintf(message,"%s %f,%f,%f,%f", __TOKEN_STATUS, position.x, position.y, position.width, position.height);
-    } else return;
-    
     LOG_OUT_BEGIN(server);
-    __output(server, message);
+
+    fprintf(server->output, "%s ", __TOKEN_STATUS);
+
+    print_region(server->output, region);
 
     if (properties) {
         sm_enum(properties->map, __output_enum, server);
@@ -632,6 +619,11 @@ void trax_region_release(trax_region** region) {
     switch ((*region)->type) {
         case TRAX_REGION_RECTANGLE:
             break;
+        case TRAX_REGION_POLYGON:
+            free((*region)->data.polygon.x);
+            free((*region)->data.polygon.y);
+            (*region)->data.polygon.count = 0;
+            break;
     }
 
     free(*region);
@@ -642,9 +634,8 @@ void trax_region_release(trax_region** region) {
 
 trax_region* trax_region_create_rectangle(int x, int y, int width, int height) {
 
-    trax_region* reg = (trax_region*) malloc(sizeof(trax_region));
+    trax_region* reg = __create_region(TRAX_REGION_RECTANGLE);
 
-    reg->type = TRAX_REGION_RECTANGLE;
     reg->data.rectangle.width = width;
     reg->data.rectangle.height = height;
     reg->data.rectangle.x = x;
@@ -654,19 +645,9 @@ trax_region* trax_region_create_rectangle(int x, int y, int width, int height) {
 
 }
 
-trax_region* trax_region_create_bounds(const trax_region* region) {
+trax_region* trax_region_get_bounds(const trax_region* region) {
 
-    trax_region* reg = (trax_region*) malloc(sizeof(trax_region));
-
-    reg->type = TRAX_REGION_RECTANGLE;
-
-    switch (region->type) {
-        case TRAX_REGION_RECTANGLE:
-            reg->data.rectangle = region->data.rectangle;
-            break;
-    }
-
-    return reg;
+    return convert_region(region, TRAX_REGION_RECTANGLE);
 
 }
 

@@ -18,8 +18,8 @@
 #define TRAX_IMAGE_DATA 2 // Not implemented yet!
 
 #define TRAX_REGION_RECTANGLE 0
-#define TRAX_REGION_POLYGON 1 // Not implemented yet!
-#define TRAX_REGION_MASK 1 // Not implemented yet!
+#define TRAX_REGION_POLYGON 1
+#define TRAX_REGION_MASK 2 // Not implemented yet!
 
 #define TRAX_FLAG_VALID 1
 #define TRAX_FLAG_SERVER 2
@@ -41,6 +41,12 @@ typedef struct trax_rectangle {
     float height;
 } trax_rectangle;
 
+typedef struct trax_polygon {
+    int count;
+    float* x;
+    float* y;
+} trax_polygon;
+
 typedef struct trax_image {
     short type;
     int width;
@@ -52,6 +58,7 @@ typedef struct trax_region {
     short type;
     union {
         trax_rectangle rectangle;
+        trax_polygon polygon;
     } data;
 } trax_region;
 
@@ -110,11 +117,13 @@ void trax_region_release(trax_region** region);
 
 trax_region* trax_region_create_rectangle(int x, int y, int width, int height);
 
+trax_region* trax_region_create_polygon(int count);
+
 /**
  * Creates a rectangle region object that bounds the input region (in case the input
  * region is also a rectangle it just clones it).
  **/
-trax_region* trax_region_create_bounds(const trax_region* region);
+trax_region* trax_region_get_bounds(const trax_region* region);
 
 
 void trax_properties_release(trax_properties** properties);

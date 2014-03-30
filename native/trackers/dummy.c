@@ -82,7 +82,7 @@ int main( int argc, char** argv)
             if (wait > 0) usleep(wait * 1000000);
 
             if (mem) trax_region_release(&mem);
-            mem = trax_region_create_bounds(reg);
+            mem = trax_region_get_bounds(reg);
 
             trax_server_reply(trax, mem, NULL);
 

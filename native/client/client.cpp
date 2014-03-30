@@ -36,11 +36,13 @@
 
 #include <stdio.h>
 #include <ctype.h>
-#include <trax.h>
 #include <math.h>
 #include <stdexcept>
 #include <iostream>
 #include <map>
+
+#include "trax.h"
+#include "region.h"
 
 #include "process.h"
 #include "threads.h"
@@ -169,16 +171,12 @@ void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth) {
         if ((gt_linebuf)[gt_linelen - 1] == '\n') { (gt_linebuf)[gt_linelen - 1] = '\0'; }
         if ((img_linebuf)[img_linelen - 1] == '\n') { (img_linebuf)[img_linelen - 1] = '\0'; }
 
-        char* pch = strtok(gt_linebuf, ",");
-        x = (pch) ? atof(pch) : 0;
-        pch = strtok(gt_linebuf, ",");
-        y = (pch) ? atof(pch) : 0;
-        pch = strtok(gt_linebuf, ",");
-        width = (pch) ? atof(pch) : 0;
-        pch = strtok(gt_linebuf, ",");
-        height = (pch) ? atof(pch) : 0;
+        trax_region* region;
 
-        groundtruth.push_back(trax_region_create_rectangle(x, y, width, height));
+        if (parse_region(gt_linebuf, &region))
+            groundtruth.push_back(region);
+        else
+            continue; // TODO: do not know how to handle this ... probably a warning
 
         images.push_back(trax_image_create_path(img_linebuf));
 
@@ -209,13 +207,9 @@ void save_data(vector<trax_region*>& output) {
             continue;
         }
 
-        switch (r->type) {
-            case TRAX_REGION_RECTANGLE:
-                fprintf(outFp, "%.2f,%.2f,%.2f,%.2f\n", r->data.rectangle.x,
-                    r->data.rectangle.y, r->data.rectangle.width, r->data.rectangle.height);
+        print_region(outFp, r);
+        fprintf(outFp, "\n");
 
-                break;
-        }
     }
 
     fclose(outFp);

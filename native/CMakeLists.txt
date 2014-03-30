@@ -7,7 +7,7 @@ SET(CMAKE_MODULE_PATH ${PROJECT_ROOT}/cmake)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 
-ADD_LIBRARY(trax SHARED trax.c strmap.c)
+ADD_LIBRARY(trax SHARED trax.c region.c strmap.c)
 
 ADD_EXECUTABLE(dummy trackers/dummy.c)
 
