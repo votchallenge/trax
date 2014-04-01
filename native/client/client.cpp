@@ -58,7 +58,7 @@ inline void sleep(long time) {
 
 using namespace std;
 
-#define CMD_OPTIONS "hsdI:G:f:O:r:t:T:p:e:"
+#define CMD_OPTIONS "hsdI:G:f:O:S:r:t:T:p:e:"
 
 #define DEBUGMSG(...) if (debug) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
 
@@ -102,7 +102,7 @@ void print_help() {
     cout << "Usage: traxclient [-h] [-d] [-I image_list] [-O output_file] \n";
     cout << "\t [-f threshold] [-r frames] [-G groundtruth_file] [-e name=value] \n";
     cout << "\t [-p name=value] [-t timeout] [-s] [-T timings_file]\n";
-    cout << "\t <command_part1> <command_part2> ...";
+    cout << "\t -- <command_part1> <command_part2> ...";
 
     cout << "\n\nProgram arguments: \n";
     cout << "\t-h\tPrint this help and exit\n";
@@ -112,6 +112,7 @@ void print_help() {
     cout << "\t-G\tGroundtruth annotations file\n";
     cout << "\t-I\tFile that lists the image sequence files\n";
     cout << "\t-O\tOutput region file\n";
+    cout << "\t-S\tInitialization region file (if different than groundtruth)\n";
     cout << "\t-T\tOutput timings file\n";
     cout << "\t-f\tFailure threshold\n";
     cout << "\t-r\tReinitialization offset\n";
@@ -352,6 +353,9 @@ int main( int argc, char** argv) {
             case 'O':
                 outputFile = string(optarg);
                 break;
+            case 'S':
+                initializationFile = string(optarg);
+                break;
             case 'f':
                 threshold = MIN(1, MAX(0, atof(optarg)));
                 break;
@@ -449,8 +453,14 @@ int main( int argc, char** argv) {
 
             if (initialization.size() > 0) {
 
-                
+                for (; frame < images.size(); frame++) {
+                    if (initialization[frame]) break;
+                    output.push_back(trax_region_create_special(0));
+                }
 
+                if (frame == images.size()) break;
+
+                initialize = initialization[frame];
 
             } else {
 
@@ -595,7 +605,7 @@ int main( int argc, char** argv) {
         trax_image_release(&images[i]);
         trax_region_release(&groundtruth[i]);
         if (output.size() > i && output[i]) trax_region_release(&output[i]);
-
+        if (initialization.size() > i && initialization[i]) trax_region_release(&initialization[i]);
     }
 
     RELEASE_THREAD(watchdog); 
