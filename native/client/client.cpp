@@ -130,7 +130,7 @@ float compute_overlap(trax_region* ra, trax_region* rb) {
 	float iBottom = MIN(ra->data.rectangle.y + ra->data.rectangle.height,
             rb->data.rectangle.y + rb->data.rectangle.height);
 
-	if (iLeft > iRight || iTop > iBottom) return true;
+	if (iLeft > iRight || iTop > iBottom) return 0;
 
 	float intersectArea = (iRight - iLeft) * (iBottom - iTop);
 	float unionArea = (ra->data.rectangle.width * ra->data.rectangle.height) +
@@ -150,7 +150,7 @@ void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth) {
     }
 
     if (!imgFp) {
-        throw std::runtime_error("Image list file  not available.");
+        throw std::runtime_error("Image list file not available.");
     }
 
     size_t linesiz = sizeof(char) * 2048;
@@ -159,6 +159,7 @@ void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth) {
     ssize_t gt_linelen = 0;
     ssize_t img_linelen = 0;
     int x, y, width, height;
+    int line = 0;
 
     while (1) {
 
@@ -168,17 +169,19 @@ void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth) {
         if ((img_linelen=getline(&img_linebuf, &linesiz, imgFp))<1)
             break;
 
+        line ++;
+
         if ((gt_linebuf)[gt_linelen - 1] == '\n') { (gt_linebuf)[gt_linelen - 1] = '\0'; }
         if ((img_linebuf)[img_linelen - 1] == '\n') { (img_linebuf)[img_linelen - 1] = '\0'; }
 
         trax_region* region;
-
-        if (parse_region(gt_linebuf, &region))
+        if (parse_region(gt_linebuf, &region)) {
             groundtruth.push_back(region);
-        else
-            continue; // TODO: do not know how to handle this ... probably a warning
-
-        images.push_back(trax_image_create_path(img_linebuf));
+            images.push_back(trax_image_create_path(img_linebuf));
+        } else 
+            DEBUGMSG("Unable to parse region data at line %d!\n", line); // TODO: do not know how to handle this ... probably a warning
+        
+        
 
     }    
     
@@ -365,10 +368,11 @@ int main( int argc, char** argv) {
         MUTEX_INIT(watchdogMutex);
 
         if (timeout > 0)
-            CREATE_THREAD(&watchdog, watchdog_loop, NULL);
+            CREATE_THREAD(watchdog, watchdog_loop, NULL);
 
         int frame = 0;
         while (frame < images.size()) {
+
 
             trackerProcess = new Process(trackerCommand);
 
@@ -393,8 +397,6 @@ int main( int argc, char** argv) {
 
             if (trax->version > TRAX_VERSION) throw std::runtime_error("Unsupported protocol version");
 
-            if (trax->config.format_region != TRAX_REGION_RECTANGLE)  throw std::runtime_error("Unsupported region format");
-
             if (trax->config.format_image != TRAX_IMAGE_PATH)  throw std::runtime_error("Unsupported image format");
 
             trax_image* image = images[frame];
@@ -408,7 +410,7 @@ int main( int argc, char** argv) {
 
             while (true) {
 
-                trax_region* status;
+                trax_region* status = NULL;
 
                 trax_properties* additional = trax_properties_create();
 
@@ -431,16 +433,15 @@ int main( int argc, char** argv) {
 
                     DEBUGMSG("Region overlap: %.2f\n", overlap);
 
+                    trax_properties_release(&additional);
+
                     if (threshold >= 0 && overlap <= threshold) {
                         break;
                     }
-                   
-                    trax_properties_release(&additional);
-
                     output.push_back(status);
                     timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
 
-                } else if (result == TRAX_STATUS) {                    
+                } else if (result == TRAX_QUIT) {                    
 
                     trax_properties_release(&additional);
                     break;
@@ -472,9 +473,11 @@ int main( int argc, char** argv) {
 
             sleep(0.1);
 
-            trackerProcess->stop();
-            delete trackerProcess;
-            trackerProcess = NULL;
+            if (trackerProcess) {
+                trackerProcess->stop();
+                delete trackerProcess;
+                trackerProcess = NULL;
+            }
 
             if (reinitialize > 0) {
                 int j = frame;
@@ -527,6 +530,8 @@ int main( int argc, char** argv) {
         if (output.size() > i && output[i]) trax_region_release(&output[i]);
 
     }
+
+    RELEASE_THREAD(watchdog); 
 
     exit(result);
 }

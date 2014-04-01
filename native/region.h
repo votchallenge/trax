@@ -23,6 +23,8 @@ extern "C" {
 
 int parse_region(char* buffer, trax_region** region);
 
+char* string_region(trax_region* region);
+
 void print_region(FILE* out, trax_region* region);
 
 trax_region* convert_region(const trax_region* region, int type);

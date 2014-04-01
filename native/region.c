@@ -8,19 +8,22 @@ int _parse_sequence(char* buffer, float** data) {
 
     int i;
 
-    float* numbers = (float*) malloc(sizeof(float) * strlen(buffer) / 2);
+    float* numbers = (float*) malloc(sizeof(float) * (strlen(buffer) / 2));
 
+	char* pch = strtok(buffer, ",");
     for (i = 0; ; i++) {
-        char* pch = strtok(buffer, ",");
+        
         if (pch)
             numbers[i] = atof(pch);
         else 
             break;
+
+		pch = strtok(NULL, ",");
     }
 
-    *data = (float*) realloc(data, sizeof(float) * (i - 1));
+    *data = (float*) realloc(numbers, sizeof(float) * i);
 
-    return i - 1;
+    return i;
 }
 
 int parse_region(char* buffer, trax_region** region) {
@@ -75,16 +78,69 @@ int parse_region(char* buffer, trax_region** region) {
     return 0;
 }
 
-void print_region(FILE* out, trax_region* region) {
+typedef struct string_buffer {
+	char* buffer;
+	int position;
+	int size;
+} string_buffer;
+
+#define BUFFER_CREATE(B, L) {B.size = L; B.buffer = (char*) malloc(sizeof(char) * B.size); B.position = 0;}
+
+#define BUFFER_DESTROY(B) { if (B.buffer) { free(B.buffer); B.buffer = NULL; } }
+
+#define BUFFER_APPEND(B, ...) { \
+		int required = snprintf(&(B.buffer[B.position]), B.size - B.position, __VA_ARGS__); \
+		if (required > B.size - B.position) { \
+			B.size = B.position + required;  \
+			B.buffer = (char*) realloc(B.buffer, sizeof(char) * B.size); \
+			required = snprintf(&(B.buffer[B.position]), B.size - B.position, __VA_ARGS__); \
+		} \
+		B.position += required - 1; \
+  }
+
+#define BUFFER_EXTRACT(B, S) { S = (char*) malloc(sizeof(char) * (B.position + 1)); \
+		 memcpy(S, B.buffer, B.position); \
+		 S[B.position] = '\0'; \
+	}
+
+#define BUFFER_SIZE(B) B.position
+
+char* string_region(trax_region* region) {
 
 	int i;
+	char* result = NULL;
+	string_buffer buffer;
 
-	if (region->type = TRAX_REGION_RECTANGLE) {
-		fprintf(out, "%f,%f,%f,%f", region->data.rectangle.x, region->data.rectangle.y, region->data.rectangle.width, region->data.rectangle.height);
-	} else if (region->type = TRAX_REGION_POLYGON) {
+	BUFFER_CREATE(buffer, 10);
+
+	if (region->type == TRAX_REGION_RECTANGLE) {
+
+		BUFFER_APPEND(buffer, "%f,%f,%f,%f", 
+			region->data.rectangle.x, region->data.rectangle.y, 
+			region->data.rectangle.width, region->data.rectangle.height);
+		
+	} else if (region->type == TRAX_REGION_POLYGON) {
 		for (i = 0; i < region->data.polygon.count; i++)
-			fprintf(out, i == 0 ? "%.2f,%.2f" : ",%.2f,%.2f", region->data.polygon.x[i], region->data.polygon.y[i]);
+			BUFFER_APPEND(buffer, i == 0 ? "%.2f,%.2f" : ",%.2f,%.2f", region->data.polygon.x[i], region->data.polygon.y[i]);
 	}
+
+	if (BUFFER_SIZE(buffer) > 0)
+		BUFFER_EXTRACT(buffer, result);
+
+	BUFFER_DESTROY(buffer);
+
+	return result;
+}
+
+void print_region(FILE* out, trax_region* region) {
+
+	char* buffer = string_region(region);
+
+	if (buffer) {
+		fputs(buffer, out);
+		free(buffer);
+	}
+
 }
 
 trax_region* convert_region(const trax_region* region, int type) {
@@ -124,7 +180,7 @@ trax_region* convert_region(const trax_region* region, int type) {
 				    break;
 				}
 			}
-
+			break;
 		}
 
 		case TRAX_REGION_POLYGON: {
@@ -165,7 +221,7 @@ trax_region* convert_region(const trax_region* region, int type) {
 				    break;
 				}
 			}
-
+			break;
 		}
 
 	}

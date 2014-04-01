@@ -106,8 +106,6 @@ void trax_server_reply(trax_handle* server, trax_region* region, trax_properties
 
 int trax_cleanup(trax_handle** handle);
 
-void trax_log(trax_handle* handle, const char *message);
-
 
 void trax_image_release(trax_image** image);
 

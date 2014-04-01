@@ -21,13 +21,14 @@
 #define VALIDATE_SERVER_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && (H->flags & TRAX_FLAG_SERVER))
 #define VALIDATE_CLIENT_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && !(H->flags & TRAX_FLAG_SERVER))
 
-#define LOG(H, MSG) if (H->log && (H->flags & TRAX_FLAG_LOG_DEBUG)) { fprintf(H->log, "TRAX_LOG: %s\n", MSG); fflush(H->log); }
-#define LOG_IN(H, MSG) if (H->log && (H->flags & TRAX_FLAG_LOG_INPUT)) { fprintf(H->log, "TRAX_INC: <%s>\n", MSG); fflush(H->log); }
-#define LOG_OUT_BEGIN(H) if (H->log && (H->flags & TRAX_FLAG_LOG_OUTPUT)) { fprintf(H->log, "TRAX_OUT: <"); fflush(H->log); }
-#define LOG_OUT_PART(H, MSG) if (H->log && (H->flags & TRAX_FLAG_LOG_OUTPUT)) { fprintf(H->log, "%s", MSG); fflush(H->log); }
-#define LOG_OUT_FORMAT(H, ...) if (H->log && (H->flags & TRAX_FLAG_LOG_OUTPUT)) { fprintf(H->log, __VA_ARGS__); fflush(H->log); }
-#define LOG_OUT_END(H) if (H->log && (H->flags & TRAX_FLAG_LOG_OUTPUT)) { fprintf(H->log, ">\n"); fflush(H->log); }
 #define BUFFER_LENGTH 64
+
+#define OUTPUT(H, ...) if (H->log) { fprintf(H->log, __VA_ARGS__); fflush(H->log); } fprintf(H->output, __VA_ARGS__); fflush(H->output);
+
+#define INPUT(H, LINE) if (handle->log) { fputs(line, handle->log); fputs("\n", handle->log); fflush(handle->log); }
+
+#define LOG(H, ...) if (H->log) { fprintf(H->log, __VA_ARGS__); fflush(H->log); }
+
 
 struct trax_properties {
     StrMap *map;
@@ -40,23 +41,11 @@ int starts_with(const char *pre, const char *str)
     return lenstr < lenpre ? 0 : strncmp(pre, str, lenpre) == 0;
 }
 
-void __output(trax_handle* handle, const char *message) {
-
-    fputs(message, handle->output);
-
-    fflush(handle->output);
-
-    LOG_OUT_PART(handle, message);
-
-}
-
 void __output_enum(const char *key, const char *value, const void *obj) {
     
     const trax_handle* handle = (trax_handle *) obj;
 
-    fprintf(handle->output, " %s=%s", key, value);
-
-    LOG_OUT_FORMAT(handle, " %s=%s", key, value);
+    OUTPUT(handle, " %s=%s", key, value);
 
 }
 
@@ -101,15 +90,17 @@ char* __read_line(FILE* file)
     return linep;
 }
 
-char* __read_protocol_line(FILE* file)
+char* __read_protocol_line(trax_handle* handle)
 {
 
     char* line = NULL;
 
     for (;;) {
-        line = __read_line(file);
+        line = __read_line(handle->input);
 
         if (!line) return NULL;
+
+        INPUT(handle, line);
 
         if (starts_with(TRAX_PREFIX, line))
             return line;
@@ -206,7 +197,6 @@ int __parse_region(const char* line, int* pos, int size, trax_region** region) {
 
 trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) {
 
-    char message[1024];
     int pos = 0;
     char* line = NULL;
     int size = 0;
@@ -221,14 +211,10 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
     client->input = input;
     client->output = output;
 
-    LOG(client, "HELLO wait");
-
-    line = __read_protocol_line(client->input);
+    line = __read_protocol_line(client);
     if (!line) return NULL;
     size = strlen(line) + 1;
     buffer = (char *) malloc(size * sizeof(char));
-
-    LOG_IN(client, line);
 
     if ((pos = __next_token(line, pos, buffer, size, _FLAG_STRING)) < 0) 
     {
@@ -244,8 +230,19 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
 
         __parse_properties(line, &pos, size, config);
 
-        // TODO: parse format info, tracker name, identifier
+        trax_properties_get_int(config, "trax.version", 1);
+
+        char* region_type = trax_properties_get(config, "trax.region");
+
         client->config.format_region = TRAX_REGION_RECTANGLE;
+
+        if (region_type && strcmp(region_type, "polygon") == 0)
+            client->config.format_region = TRAX_REGION_POLYGON;
+            
+        free(region_type);
+
+        // TODO: parse format info, tracker name, identifier
+        
         client->config.format_image = TRAX_IMAGE_PATH;
 
         client->version = trax_properties_get_int(config, "trax.version", 1);
@@ -255,9 +252,10 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
         free(line);
         free(buffer);
 
-        LOG(client, "HELLO rcv");
         return client;
     }
+
+    
 
     free(line);
     free(buffer);
@@ -273,24 +271,22 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
     int size, pos;
     int result = TRAX_ERROR;
 
+    (*region) = NULL;
+
     VALIDATE_CLIENT_HANDLE(client);
 
     pos = 0;
-    line = __read_protocol_line(client->input);
+    line = __read_protocol_line(client);
     if (!line) return result;
 
     size = strlen(line) + 1;
     buffer = (char*) malloc(sizeof(char) * size);
-
-    LOG(client, "STATUS wait");
 
     if (!line) {
         free(buffer);
         return TRAX_ERROR;
 
     }
-
-    LOG_IN(client, line);
 
     if ((pos = __next_token(line, pos, buffer, size, _FLAG_STRING)) < 0) {
         free(line);
@@ -300,31 +296,17 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
     if (strcmp(buffer, __TOKEN_STATUS) == 0) 
     {
-        LOG(client, "STATUS rcv");
-
         result = TRAX_STATUS;
 
-        trax_region* region = NULL;
-
-        if (!__parse_region(line, &pos, size, &region))
-            {result = TRAX_ERROR; goto end;}  
+        if (!__parse_region(line, &pos, size, region)) {
+            LOG(client, "WARNING: unable to parse region.\n");
+            result = TRAX_ERROR; goto end;
+        }  
           
         result = TRAX_STATUS;   
 
-        if (client->config.format_region != region->type) {
-
-            trax_region* converted = convert_region(region, client->config.format_region);
-
-            trax_region_release(&region);
-
-            region = converted;
-
-        }
-
         if (properties) 
             __parse_properties(line, &pos, size, properties);        
-
-        LOG(client, "STATUS ok");
 
 end:
 
@@ -338,7 +320,7 @@ end:
 
         free(buffer);
         free(line);
-        LOG(client, "QUIT rcv");
+
         return TRAX_QUIT;
     } 
 
@@ -352,29 +334,34 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 
     VALIDATE_CLIENT_HANDLE(client);
 
-    assert(client->config.format_region == region->type && client->config.format_image == image->type);
-
-    LOG_OUT_BEGIN(client);
-    fprintf(client->output, "%s ", __TOKEN_INIT);
+    OUTPUT(client, "%s ", __TOKEN_INIT);
 
     if (image->type == TRAX_IMAGE_PATH) {
-        fprintf(client->output, "\"%s\" ", image->data);
+        OUTPUT(client, "\"%s\" ", image->data);
     } else return;
 
-    print_region(client->output, region);
+    char* data = NULL;
+
+    if (client->config.format_region != region->type) {
+
+        trax_region* converted = convert_region(region, client->config.format_region);
+
+        data = string_region(converted);
+
+        trax_region_release(&converted);
+
+    } else data = string_region(region);
+
+    if (data) {
+        OUTPUT(client, "\"%s\" ", data);
+        free(data);
+    }
 
     if (properties) {
         sm_enum(properties->map, __output_enum, client);
     }
 
-    fputs("\n", client->output);
-    fflush(client->output);
-
-    LOG_OUT_END(client);
-
-    fflush(client->output);
-
-    LOG(client, "INIT snd");
+    OUTPUT(client, "\n");
 
 }
 
@@ -386,29 +373,22 @@ void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* 
 
     assert(client->config.format_image == image->type);
 
-    LOG_OUT_BEGIN(client);
-    fprintf(client->output, "%s ", __TOKEN_FRAME);
+    OUTPUT(client, "%s ", __TOKEN_FRAME);
 
     if (image->type == TRAX_IMAGE_PATH) {
-        fprintf(client->output, "\"%s\" ", image->data);
+        OUTPUT(client, "\"%s\" ", image->data);
     } else return;
 
     if (properties) {
         sm_enum(properties->map, __output_enum, client);
     }
 
-    fputs("\n", client->output); fflush(client->output);
-    LOG_OUT_END(client);
-
-    fflush(client->output);
-
-    LOG(client, "FRAME snd");
+    OUTPUT(client, "\n");
 
 }
 
 trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags) {
 
-    char message[1024];
     trax_properties* properties;
     trax_handle* server = malloc(sizeof(trax_handle));
 
@@ -418,26 +398,42 @@ trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags) 
     server->input = stdin;
     server->output = stdout;
 
-    server->config = config;
-
-    LOG(server, "LOG START");
-
-    LOG_OUT_BEGIN(server);
-    sprintf(message, "%s", __TOKEN_HELLO);
-    __output(server, message);
+    OUTPUT(server, __TOKEN_HELLO);
 
     properties = trax_properties_create();
 
     trax_properties_set_int(properties, "trax.version", TRAX_VERSION);
-    trax_properties_set(properties, "trax.region", "rectangle");
-    trax_properties_set(properties, "trax.image", "path");
 
+    switch (config.format_region) {
+        case TRAX_REGION_RECTANGLE:
+            trax_properties_set(properties, "trax.region", "rectangle");
+            break;
+        case TRAX_REGION_POLYGON:
+            trax_properties_set(properties, "trax.region", "polygon");
+            break;
+        default:
+            config.format_region = TRAX_REGION_RECTANGLE;
+            trax_properties_set(properties, "trax.region", "rectangle");
+            break;
+    }
+
+    switch (config.format_image) {
+        case TRAX_IMAGE_PATH:
+            trax_properties_set(properties, "trax.image", "path");
+            break;
+        default:
+            config.format_image = TRAX_IMAGE_PATH;
+            trax_properties_set(properties, "trax.image", "path");
+            break;
+    }
+
+    server->config = config;
+   
     sm_enum(properties->map, __output_enum, server);
 
     trax_properties_release(&properties);
 
-    fputs("\n", server->output); fflush(server->output);
-    LOG_OUT_END(server);
+    OUTPUT(server, "\n");
 
     return server;
 
@@ -448,18 +444,14 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 
     VALIDATE_SERVER_HANDLE(server);
 
-    LOG(server, "FRAME wait");
-
     int pos = 0;
-    char* line = __read_protocol_line(server->input);
+    char* line = __read_protocol_line(server);
     if (!line) return TRAX_ERROR;
     int size = strlen(line) + 1;
     char buffer[size];
     int result = TRAX_ERROR;
 
     if (!line) return TRAX_ERROR;
-
-    LOG_IN(server, line);
 
     if ((pos = __next_token(line, pos, buffer, size, _FLAG_STRING)) < 0) {
         free(line);
@@ -469,11 +461,10 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 
     if (strcmp(buffer, __TOKEN_FRAME) == 0) 
     {
-        LOG(server, "FRAME rcv");
 
         result = TRAX_FRAME;
 
-        switch (server->config.format_region) {
+        switch (server->config.format_image) {
         case TRAX_IMAGE_PATH: {
             char path[TRAX_PATH_MAX_LENGTH];
             if ((pos = __next_token(line, pos, path, TRAX_PATH_MAX_LENGTH, _FLAG_STRING)) < 0) 
@@ -487,8 +478,6 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 
         if (properties) 
             pos = __parse_properties(line, &pos, size, properties);        
-
-        LOG(server, "FRAME ok");
 
         free(line);
         return result;
@@ -498,14 +487,13 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
             pos = __parse_properties(line, &pos, size, properties);        
 
         free(line);
-        LOG(server, "QUIT rcv");
+    
         return TRAX_QUIT;
     } else if (strcmp(buffer, __TOKEN_INIT) == 0) {
 
-        LOG(server, "INIT rcv");
         result = TRAX_INITIALIZE;
 
-        switch (server->config.format_region) {
+        switch (server->config.format_image) {
         case TRAX_IMAGE_PATH: {
             char path[TRAX_PATH_MAX_LENGTH];
             if ((pos = __next_token(line, pos, path, TRAX_PATH_MAX_LENGTH, _FLAG_STRING)) < 0) 
@@ -517,13 +505,13 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
             result = TRAX_ERROR; goto end;
         }
 
-        if (!__parse_region(line, &pos, size, region)) {result = TRAX_ERROR; goto end;}
+        if (!__parse_region(line, &pos, size, region)) {
+            result = TRAX_ERROR; goto end;
+        }
 
         if (properties) {
             __parse_properties(line, &pos, size, properties);
         }
-
-        LOG(server, "INIT ok");
 
 end:
 
@@ -541,24 +529,23 @@ void trax_server_reply(trax_handle* server, trax_region* region, trax_properties
 
     VALIDATE_SERVER_HANDLE(server);
 
-    assert(server->config.format_region == region->type);
+    char* data = string_region(region);
 
-    LOG_OUT_BEGIN(server);
+    if (!data) return;
 
-    fprintf(server->output, "%s ", __TOKEN_STATUS);
+    OUTPUT(server, "%s ", __TOKEN_STATUS);
 
-    print_region(server->output, region);
+
+    if (data) {
+        OUTPUT(server, "\"%s\" ", data);
+        free(data);
+    }
 
     if (properties) {
         sm_enum(properties->map, __output_enum, server);
     }
 
-    fputs("\n", server->output); fflush(server->output);
-    LOG_OUT_END(server);
-
-    fflush(server->output);
-
-    LOG(server, "STATUS snd");
+    OUTPUT(server, "\n");
 
 }
 
@@ -571,7 +558,6 @@ int trax_cleanup(trax_handle** handle) {
 // TODO: send QUIT if client
 
     if ((*handle)->log) {
-        LOG((*handle), "LOG END");
         (*handle)->log = 0;
     }
 
@@ -580,14 +566,6 @@ int trax_cleanup(trax_handle** handle) {
     *handle = 0;
 
     return 0;
-}
-
-void trax_log(trax_handle* handle, const char *message) {
-
-    VALIDATE_HANDLE(handle);
-
-    LOG(handle, message);
-
 }
 
 void trax_image_release(trax_image** image) {
@@ -609,7 +587,8 @@ trax_image* trax_image_create_path(const char* path) {
     img->type = TRAX_IMAGE_PATH;
     img->width = 0;
     img->height = 0;
-    img->data = strcpy((char*) malloc(sizeof(char) * strlen(path)), path);
+    img->data = (char*) malloc(sizeof(char) * (strlen(path) + 1));
+    strcpy(img->data, path);
 
     return img;
 }
@@ -655,8 +634,10 @@ void trax_properties_release(trax_properties** properties) {
     
     if (properties && *properties) {
         if ((*properties)->map) sm_delete((*properties)->map);
+        free((*properties));
         *properties = 0;
     }
+
 }
 
 void trax_properties_clear(trax_properties* properties) {
