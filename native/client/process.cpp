@@ -134,16 +134,17 @@ Process::Process(string command) : pid(0) {
 
 Process::~Process() {
 
-    stop();
-
     int i = 0;
 
     while (arguments[i]) {
-        delete [] arguments[i];
+        free(arguments[i]);
         i++;
     }
 
     delete [] arguments;
+
+    stop();
+
 
 }
 
@@ -172,7 +173,6 @@ bool Process::start() {
     std::vector<char *> vars_c(vars.size() + 1); 
 
     for (std::size_t i = 0; i != vars.size(); ++i) {
-        //printf("%s \n", vars[i].c_str());
         vars_c[i] = &vars[i][0];
     }
 
