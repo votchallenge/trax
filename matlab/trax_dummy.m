@@ -5,13 +5,13 @@ function [] = trax_dummy()
 % Dummy tracker (only reports initialization region)
 %
 
-trax = trax_setup('name', 'Dummy', 'identifier', '1');
+trax = trax_setup('name', 'Dummy', 'identifier', '1', 'region', 'polygon');
 
 memory = [0 0 0 0];
 
 while 1
    
-    [code, image, region] = trax_wait(trax);
+    [code, ~, region] = trax_wait(trax);
     
     switch code
     case 'initialize'

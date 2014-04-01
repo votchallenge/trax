@@ -84,6 +84,7 @@ bool silent = false;
 int reinitialize = 0;
 string imagesFile;
 string groundtruthFile;
+string initializationFile;
 string outputFile;
 string timingFile;
 string trackerCommand;
@@ -156,10 +157,11 @@ float compute_overlap(trax_region* ra, trax_region* rb) {
 
 }
 
-void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth) {
+void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth, vector<trax_region*>& initialization) {
 
     FILE *imgFp = fopen(imagesFile.c_str(), "r");
     FILE *gtFp = fopen(groundtruthFile.c_str(), "r");
+    FILE *itFp = initializationFile.empty() ? NULL : fopen(initializationFile.c_str(), "r");
 
     if (!gtFp) {
         throw std::runtime_error("Groundtruth file not available.");
@@ -171,8 +173,10 @@ void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth) {
 
     size_t linesiz = sizeof(char) * 2048;
     char* gt_linebuf = (char*) malloc(linesiz);
+    char* it_linebuf = (char*) malloc(linesiz);
     char* img_linebuf = (char*) malloc(linesiz);
     ssize_t gt_linelen = 0;
+    ssize_t it_linelen = 0;
     ssize_t img_linelen = 0;
     int x, y, width, height;
     int line = 0;
@@ -197,14 +201,34 @@ void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth) {
         } else 
             DEBUGMSG("Unable to parse region data at line %d!\n", line); // TODO: do not know how to handle this ... probably a warning
         
-        
+        if (itFp) {
+
+            if ((it_linelen=getline(&it_linebuf, &linesiz, itFp))<1) {
+
+                initialization.push_back(NULL);
+
+            } else {
+
+                trax_region* initialization_region;
+
+                if (parse_region(it_linebuf, &initialization_region)) {
+
+                    initialization.push_back(initialization_region);
+
+                } else initialization.push_back(NULL);
+
+            }
+
+        }
 
     }    
     
     fclose(gtFp);
+    if (itFp) fclose(itFp);
     fclose(imgFp);
 
     free(gt_linebuf);
+    free(it_linebuf);
     free(img_linebuf);
 
 }
@@ -291,12 +315,14 @@ int main( int argc, char** argv) {
     imagesFile = string("images.txt");
     groundtruthFile = string("groundtruth.txt");
     outputFile = string("output.txt");
+    initializationFile = string("");
 
     trax_handle* trax = NULL;
     Process* trackerProcess = NULL;
 
     vector<trax_image*> images;
     vector<trax_region*> groundtruth;
+    vector<trax_region*> initialization;
     vector<trax_region*> output;
     vector<long> timings;
     map<string, string> environment;
@@ -378,7 +404,7 @@ int main( int argc, char** argv) {
         if (timeout >= 1)
             DEBUGMSG("Timeout: %d\n", timeout);
 
-        load_data(images, groundtruth);
+        load_data(images, groundtruth, initialization);
 
         watchdogState.process = NULL;
         watchdogState.active = true;
@@ -391,7 +417,6 @@ int main( int argc, char** argv) {
 
         int frame = 0;
         while (frame < images.size()) {
-
 
             trackerProcess = new Process(trackerCommand);
 
@@ -419,11 +444,24 @@ int main( int argc, char** argv) {
             if (trax->config.format_image != TRAX_IMAGE_PATH)  throw std::runtime_error("Unsupported image format");
 
             trax_image* image = images[frame];
-            trax_region* initialize = groundtruth[frame];
+            trax_region* initialize = NULL;
+
+            if (initialization.size() > 0) {
+
+                
+
+
+            } else {
+
+                initialize = groundtruth[frame];
+
+            }
 
             // Start timing
             clock_t timing_toc;
             clock_t timing_tic = clock();
+
+            bool tracking = false;
 
             trax_client_initialize(trax, image, initialize, properties);
 
@@ -457,7 +495,14 @@ int main( int argc, char** argv) {
                     if (threshold >= 0 && overlap <= threshold) {
                         break;
                     }
-                    output.push_back(status);
+
+                    if (tracking)
+                        output.push_back(status);
+                    else {
+                        trax_region_release(&status);
+                        output.push_back(trax_region_create_special(1));
+                    }
+
                     timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
 
                 } else if (result == TRAX_QUIT) {                    
@@ -480,6 +525,8 @@ int main( int argc, char** argv) {
 
                 trax_client_frame(trax, image, NULL);
 
+                tracking = true;
+
             }
 
             trax_cleanup(&trax);
@@ -501,7 +548,7 @@ int main( int argc, char** argv) {
             if (reinitialize > 0) {
                 int j = frame;
                 for (; j < frame + reinitialize && j < images.size(); j++) {
-                    output.push_back(NULL);
+                    output.push_back(trax_region_create_special(j == frame ? 2 : 0));
                     timings.push_back(0);
                 }
                 frame = j;

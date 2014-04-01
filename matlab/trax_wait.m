@@ -43,7 +43,7 @@ while 1
                 error('Unsupported image format');
             end;
 
-            properties = trax_properties(tokens(3:end));
+            properties = split_parameters(tokens(3:end));
             
             return;
             
@@ -65,18 +65,26 @@ while 1
                 error('Unsupported image format');
             end;
             
+			parts = strsplit(tokens{3}, ',');
+
             switch obj.format_region
             case 'rectangle'
-                parts = strsplit(tokens{3}, ',');
                 if length(parts) ~= 4
                     error('Illegal rectangle format');
                 end;
                 region = [str2double(parts{1}), str2double(parts{2}), str2double(parts{3}), str2double(parts{4})]; 
+            case 'polygon'
+                if mod(length(parts), 2) ~= 0 || length(parts) < 6
+                    error('Illegal rectangle format');
+                end;
+                region = cellfun(@(x) str2double(x), parts, 'UniformOutput', 1);
+				region = reshape(region', length(region) / 2, 2); 
+
             otherwise
                 error('Unsupported region format');
             end;
 
-            properties = trax_properties(tokens(4:end));
+            properties = split_parameters(tokens(4:end));
 
             return;
             
@@ -86,7 +94,7 @@ while 1
             
             request = 'quit';
             
-            properties = trax_properties(tokens(2:end));
+            properties = split_parameters(tokens(2:end));
             
             return;
             
@@ -98,4 +106,28 @@ while 1
         
     end
     
+end
+
+end
+
+function [properties] = split_parameters(tokens)
+
+n = length(tokens);
+
+properties = cell(n*2, 1);
+
+for i = 1:n
+    token = tokens{i};
+    split = find(token == '=', 1 );
+    
+    key = token(1:split-1);
+    value = token(split+1:end);
+    
+    properties{i*2-1} = key;
+    properties{i*2} = value;
+    
+end;
+
+properties = struct(properties{:});
+
 end
