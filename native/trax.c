@@ -334,6 +334,8 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 
     VALIDATE_CLIENT_HANDLE(client);
 
+    assert(region->type != TRAX_REGION_SPECIAL);
+
     OUTPUT(client, "%s ", __TOKEN_INIT);
 
     if (image->type == TRAX_IMAGE_PATH) {
@@ -608,6 +610,16 @@ void trax_region_release(trax_region** region) {
     free(*region);
 
     *region = NULL;
+
+}
+
+trax_region* trax_region_create_special(int code) {
+
+    trax_region* reg = __create_region(TRAX_REGION_SPECIAL);
+
+    reg->data.special = code;
+
+    return reg;
 
 }
 

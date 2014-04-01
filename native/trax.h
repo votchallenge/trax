@@ -20,6 +20,7 @@
 #define TRAX_REGION_RECTANGLE 0
 #define TRAX_REGION_POLYGON 1
 #define TRAX_REGION_MASK 2 // Not implemented yet!
+#define TRAX_REGION_SPECIAL -1
 
 #define TRAX_FLAG_VALID 1
 #define TRAX_FLAG_SERVER 2
@@ -59,6 +60,7 @@ typedef struct trax_region {
     union {
         trax_rectangle rectangle;
         trax_polygon polygon;
+        int special;
     } data;
 } trax_region;
 
@@ -112,6 +114,8 @@ void trax_image_release(trax_image** image);
 trax_image* trax_image_create_path(const char* path);
 
 void trax_region_release(trax_region** region);
+
+trax_region* trax_region_create_special(int code);
 
 trax_region* trax_region_create_rectangle(int x, int y, int width, int height);
 

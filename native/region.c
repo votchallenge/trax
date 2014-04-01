@@ -40,7 +40,11 @@ int parse_region(char* buffer, trax_region** region) {
 
 	num = _parse_sequence(buffer, &data);
 
-    if (num == 4) {
+    if (num == 1) {
+		(*region) = (trax_region*) malloc(sizeof(trax_region));
+		(*region)->type = TRAX_REGION_SPECIAL;
+		(*region)->data.special = (int) data[0];
+	} else if (num == 4) {
 		(*region) = (trax_region*) malloc(sizeof(trax_region));
 		(*region)->type = TRAX_REGION_RECTANGLE;
 
@@ -91,11 +95,11 @@ typedef struct string_buffer {
 #define BUFFER_APPEND(B, ...) { \
 		int required = snprintf(&(B.buffer[B.position]), B.size - B.position, __VA_ARGS__); \
 		if (required > B.size - B.position) { \
-			B.size = B.position + required;  \
+			B.size = B.position + required + 1;  \
 			B.buffer = (char*) realloc(B.buffer, sizeof(char) * B.size); \
 			required = snprintf(&(B.buffer[B.position]), B.size - B.position, __VA_ARGS__); \
 		} \
-		B.position += required - 1; \
+		B.position += required; \
   }
 
 #define BUFFER_EXTRACT(B, S) { S = (char*) malloc(sizeof(char) * (B.position + 1)); \
@@ -111,9 +115,13 @@ char* string_region(trax_region* region) {
 	char* result = NULL;
 	string_buffer buffer;
 
-	BUFFER_CREATE(buffer, 10);
+	BUFFER_CREATE(buffer, 32);
 
-	if (region->type == TRAX_REGION_RECTANGLE) {
+	if (region->type == TRAX_REGION_SPECIAL) {
+
+		BUFFER_APPEND(buffer, "%d", region->data.special);	
+
+	} else if (region->type == TRAX_REGION_RECTANGLE) {
 
 		BUFFER_APPEND(buffer, "%f,%f,%f,%f", 
 			region->data.rectangle.x, region->data.rectangle.y, 
@@ -178,6 +186,9 @@ trax_region* convert_region(const trax_region* region, int type) {
 				    reg->data.rectangle.width = right - left;
 				    reg->data.rectangle.height = bottom - top;
 				    break;
+				default:
+					free(reg); reg = NULL;
+					break;
 				}
 			}
 			break;
@@ -219,9 +230,16 @@ trax_region* convert_region(const trax_region* region, int type) {
 					memcpy(reg->data.polygon.y, region->data.polygon.y, sizeof(float) * region->data.polygon.count);
 
 				    break;
+				default:
+					free(reg); reg = NULL;
+					break;
 				}
 			}
 			break;
+
+		default:
+			break;
+
 		}
 
 	}
