@@ -388,8 +388,9 @@ int main( int argc, char** argv) {
 
             trackerCommand = string("");
 
-            for (int i = optind; i < argc; i++)
-                trackerCommand += string(argv[optind]) + string(" ");
+            for (int i = optind; i < argc; i++) {
+                trackerCommand += string(argv[i]) + string(" ");
+            }
 
         } else {
             print_help();
