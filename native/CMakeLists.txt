@@ -1,9 +1,3 @@
-PROJECT (libtrax)
-
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-GET_FILENAME_COMPONENT(PROJECT_ROOT . ABSOLUTE)
-
-SET(CMAKE_MODULE_PATH ${PROJECT_ROOT}/cmake)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -25,7 +19,7 @@ ENDIF (BUILD_CAMSHIFT)
 SET (BUILD_CLIENT FALSE CACHE BOOL "Build a client executable")
 
 IF (BUILD_CLIENT)
-    ADD_EXECUTABLE(traxclient client/client.cpp client/process.cpp client/threads.c)
+    ADD_EXECUTABLE(traxclient client/client.cpp client/process.cpp client/threads.c client/overlap.cpp)
     TARGET_LINK_LIBRARIES(traxclient trax)
 ENDIF (BUILD_CLIENT)
 
@@ -46,3 +40,18 @@ IF (UNIX)
     	INSTALL(TARGETS traxclient RUNTIME DESTINATION bin)
     ENDIF (BUILD_CLIENT)
 ENDIF (UNIX)
+
+CONFIGURE_FILE(../testing/client_dummy.sh.in client_dummy.sh)
+
+ADD_TEST(NAME ClientSimple WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} COMMAND traxclient -h)
+
+ADD_TEST(NAME ClientDummy WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} 
+		COMMAND traxclient -I ${CMAKE_CURRENT_BINARY_DIR}/../testing/images.txt -r 1 -f 0.1 -d -G ${TESTING_PATH}/rectangles.txt ${CMAKE_CURRENT_BINARY_DIR}/dummy)
+
+
+
+
+
+
+
+

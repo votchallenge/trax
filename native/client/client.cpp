@@ -46,6 +46,7 @@
 
 #include "process.h"
 #include "threads.h"
+#include "overlap.h"
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
@@ -57,7 +58,7 @@ inline void sleep(long time) {
 
 using namespace std;
 
-#define CMD_OPTIONS "hdI:G:f:O:r:t:T:p:e:"
+#define CMD_OPTIONS "hsdI:G:f:O:r:t:T:p:e:"
 
 #define DEBUGMSG(...) if (debug) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
 
@@ -79,6 +80,7 @@ typedef struct watchdog_state {
 float threshold = -1;
 int timeout = 30;
 bool debug = false;
+bool silent = false;
 int reinitialize = 0;
 string imagesFile;
 string groundtruthFile;
@@ -98,7 +100,7 @@ void print_help() {
 
     cout << "Usage: traxclient [-h] [-d] [-I image_list] [-O output_file] \n";
     cout << "\t [-f threshold] [-r frames] [-G groundtruth_file] [-e name=value] \n";
-    cout << "\t [-p name=value] [-t timeout]  [-T timings_file]\n";
+    cout << "\t [-p name=value] [-t timeout] [-s] [-T timings_file]\n";
     cout << "\t <command_part1> <command_part2> ...";
 
     cout << "\n\nProgram arguments: \n";
@@ -119,24 +121,38 @@ void print_help() {
     cout << "\n";
 }
 
+#define COPY_POLYGON(TP, P) { P.count = TP->data.polygon.count; P.x = TP->data.polygon.x; P.y = TP->data.polygon.y; }
+
 float compute_overlap(trax_region* ra, trax_region* rb) {
 
-    int type = MIN(ra->type, rb->type);
+    trax_region* ta = ra;
+    trax_region* tb = rb;
+    float overlap = 0;
 
-	float iLeft = MAX(ra->data.rectangle.x, rb->data.rectangle.x);
-	float iTop = MAX(ra->data.rectangle.y, rb->data.rectangle.y);
-	float iRight = MIN(ra->data.rectangle.x + ra->data.rectangle.width, 
-            rb->data.rectangle.x + rb->data.rectangle.width);
-	float iBottom = MIN(ra->data.rectangle.y + ra->data.rectangle.height,
-            rb->data.rectangle.y + rb->data.rectangle.height);
+    if (ra->type == TRAX_REGION_RECTANGLE)
+        ta = convert_region(ra, TRAX_REGION_POLYGON);
+            
+    if (rb->type == TRAX_REGION_RECTANGLE)
+        tb = convert_region(rb, TRAX_REGION_POLYGON);
 
-	if (iLeft > iRight || iTop > iBottom) return 0;
+    if (ta->type == TRAX_REGION_POLYGON && tb->type == TRAX_REGION_POLYGON) {
 
-	float intersectArea = (iRight - iLeft) * (iBottom - iTop);
-	float unionArea = (ra->data.rectangle.width * ra->data.rectangle.height) +
-		  (rb->data.rectangle.width * rb->data.rectangle.height) - intersectArea;
+        Polygon p1, p2;
 
-	return (intersectArea / unionArea);
+        COPY_POLYGON(ta, p1);
+        COPY_POLYGON(tb, p2);
+
+        overlap = compute_overlap(&p1, &p2);
+
+    }
+
+    if (ta != ra)
+        trax_region_release(&ta);
+
+    if (tb != rb)
+        trax_region_release(&tb);
+
+    return overlap;
 
 }
 
@@ -298,6 +314,9 @@ int main( int argc, char** argv) {
             case 'd':
                 debug = true;
                 break;
+            case 's':
+                silent = true;
+                break;
             case 'I':
                 imagesFile = string(optarg);
                 break;
@@ -382,7 +401,7 @@ int main( int argc, char** argv) {
 
             DEBUGMSG("Tracker process ID: %d \n", trackerProcess->get_handle());
 
-            int flags = debug ? (TRAX_FLAG_LOG_INPUT | TRAX_FLAG_LOG_OUTPUT) : 0;
+            int flags = 0;
 
             MUTEX_LOCK(watchdogMutex);
 
@@ -391,7 +410,7 @@ int main( int argc, char** argv) {
 
             MUTEX_UNLOCK(watchdogMutex);
 
-            trax = trax_client_setup(trackerProcess->get_output(), trackerProcess->get_input(), stdout, flags);
+            trax = trax_client_setup(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout, flags);
 
             if (!trax) throw std::runtime_error("Unable to establish connection");
 

@@ -49,7 +49,7 @@ int main( int argc, char** argv)
 
     trax_handle* trax;
     trax_configuration config;
-    config.format_region = TRAX_REGION_RECTANGLE;
+    config.format_region = TRAX_REGION_POLYGON;
     config.format_image = TRAX_IMAGE_PATH;
 
     FILE* log = argc > 0 ? fopen(argv[0], "w") : NULL;
