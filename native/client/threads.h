@@ -25,9 +25,11 @@
 extern "C" {
 #endif
 
-#define CREATE_THREAD(T, R, P) simple_threads_create_thread(T, R, P)
-
 #ifdef WIN32
+
+#define CREATE_THREAD(T, R, P) simple_threads_create_thread(T, R, P)
+#define RELEASE_THREAD(T) CloseHandle(T)
+
 #define THREAD HANDLE
 #define THREAD_MUTEX HANDLE
 #define THREAD_COND HANDLE
@@ -48,9 +50,15 @@ int WINAPI simple_threads_create_thread(HANDLE* h, LPTHREAD_START_ROUTINE lpStar
 
 #else
 
+typedef struct pthread_wrapper {
+	pthread_t thread;
+	pthread_attr_t attr;
+} pthread_wrapper;
 
+#define CREATE_THREAD(T, R, P) simple_threads_create_thread(&T, R, P)
+#define RELEASE_THREAD(T) simple_threads_release_thread(T)
 
-#define THREAD pthread_t
+#define THREAD pthread_wrapper
 #define THREAD_MUTEX pthread_mutex_t
 #define THREAD_COND pthread_cond_t
 #define SSIZE_T ssize_t
@@ -70,7 +78,9 @@ typedef void *LPVOID;
 
 int simple_threads_cond_wait(pthread_cond_t* h, pthread_mutex_t* m, long milisec);
 
-int simple_threads_create_thread(pthread_t* t, void *(*start_routine)(void*), void *arg);
+int simple_threads_create_thread(THREAD* t, void *(*start_routine)(void*), void *arg);
+
+int simple_threads_release_thread(THREAD t);
 
 #endif
 

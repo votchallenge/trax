@@ -3,14 +3,14 @@
 
 #ifdef WIN32
 
-int simple_threads_cond_wait(HANDLE h, HANDLE m, long milisec) {
+int simple_threads_cond_wait(THREAD h, HANDLE m, long milisec) {
 	if (milisec < 0)
 		return WaitForSingleObject(h, INFINITE);
 	
 	return WaitForSingleObject(h, milisec);
 }
 
-int WINAPI simple_threads_create_thread(HANDLE* h, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter) {
+int WINAPI simple_threads_create_thread(THREAD* h, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter) {
 	
 	HANDLE hn = CreateThread(NULL, 0, lpStartAddress, lpParameter, 0, NULL);
 
@@ -24,7 +24,7 @@ int WINAPI simple_threads_create_thread(HANDLE* h, LPTHREAD_START_ROUTINE lpStar
 #else
 
 
-int simple_threads_cond_wait(pthread_cond_t *h, pthread_mutex_t *m, long milisec) {
+int simple_threads_cond_wait(pthread_cond_t * h, pthread_mutex_t *m, long milisec) {
 		struct timespec waittime;
 		struct timeval curtime;
 		int retcode;
@@ -59,15 +59,22 @@ int simple_threads_cond_wait(pthread_cond_t *h, pthread_mutex_t *m, long milisec
 		return retcode;
 }
 
-int simple_threads_create_thread(pthread_t* t, void *(*start_routine)(void*), void *arg) {
+int simple_threads_create_thread(THREAD* t, void *(*start_routine)(void*), void *arg) {
 	
-	pthread_attr_t attr;
+	pthread_attr_init(&(t->attr));
 	
-	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&(t->attr), PTHREAD_CREATE_DETACHED);
 	
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+	return pthread_create(&(t->thread), &(t->attr), start_routine, arg);
+}
+
+int simple_threads_release_thread(THREAD t) {
 	
-	return pthread_create(t, &attr, start_routine, arg);
+	pthread_join(t.thread, NULL);
+
+	pthread_attr_destroy(&(t.attr));
+
+	return 1;
 }
 
 #endif
