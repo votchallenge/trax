@@ -121,7 +121,7 @@ int __next_token(const char* str, int start, char* buffer, int len, int flags)
     {
         if (s < 0 && str[i] != ' ')
         {
-            if ((flags & _FLAG_STRING != 0) && str[i] == '"') 
+            if (((flags & _FLAG_STRING) != 0) && str[i] == '"') 
             {
                 quotes = 1;
                 s = i+1;
@@ -173,7 +173,7 @@ int __parse_properties(const char* line, int* pos, int size, trax_properties* pr
     return 1;
 }
 
-inline trax_region* __create_region(int type) {
+trax_region* __create_region(int type) {
 
     trax_region* reg = (trax_region*) malloc(sizeof(trax_region));
 
@@ -553,7 +553,7 @@ void trax_server_reply(trax_handle* server, trax_region* region, trax_properties
 
 int trax_cleanup(trax_handle** handle) {
 
-    if (!*handle) return;
+    if (!*handle) return -1;
 
     VALIDATE_HANDLE((*handle));
 

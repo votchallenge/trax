@@ -34,6 +34,8 @@
  *
  */
 
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <ctype.h>
 #include <math.h>
@@ -284,7 +286,7 @@ void* watchdog_loop(void* param) {
 
     while (run) {
 
-        usleep(1000000);
+        sleep(3);
         
         MUTEX_LOCK(watchdogMutex);
 
@@ -303,6 +305,8 @@ void* watchdog_loop(void* param) {
         MUTEX_UNLOCK(watchdogMutex);
 
     }
+
+    return NULL;
 
 }
 
@@ -548,7 +552,7 @@ int main( int argc, char** argv) {
 
             MUTEX_UNLOCK(watchdogMutex);
 
-            sleep(0.1);
+            sleep(5);
 
             if (trackerProcess) {
                 trackerProcess->stop();
