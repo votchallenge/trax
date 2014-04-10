@@ -112,8 +112,8 @@ void rasterize_polygon(Polygon* polygon, char* mask, int width, int height) {
 		j = polygon->count - 1;
 
 		for (i = 0; i < polygon->count; i++) {
-			if (polygon->y[i] < (double) pixelY && polygon->y[j] >= (double) pixelY ||
-					 polygon->y[j] < (double) pixelY && polygon->y[i] >= (double) pixelY) {
+			if (((polygon->y[i] < (double) pixelY) && (polygon->y[j] >= (double) pixelY)) ||
+					 ((polygon->y[j] < (double) pixelY) && (polygon->y[i] >= (double) pixelY))) {
 				nodeX[nodes++] = (int) (polygon->x[i] + (pixelY - polygon->y[i]) /
 					 (polygon->y[j] - polygon->y[i]) * (polygon->x[j] - polygon->x[i])); 
 			}
