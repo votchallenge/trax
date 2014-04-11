@@ -107,11 +107,16 @@ int main( int argc, char** argv )
         // tracker how to initialize.
         if (tr == TRAX_INITIALIZE) {
 
+            float x, y, width, height;
+
+            trax_region_get_rectangle(rect, &(x), &(y),
+                &(width), &(height));
+
             // The bounding box of the object is given during initialization
-            selection.x = rect->data.rectangle.x;
-            selection.y = rect->data.rectangle.y;
-            selection.width = rect->data.rectangle.width;
-            selection.height = rect->data.rectangle.height;  
+            selection.x = x;
+            selection.y = y;
+            selection.width = width;
+            selection.height = height;  
 
             // With every parameter master program can also give one or more key-value
             // parameters. This is useful for seting some tracking parameters externally.

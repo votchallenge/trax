@@ -1,13 +1,7 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*- */
 
-
 #ifndef _REGION_H_
 #define _REGION_H_
-
-#include <stdlib.h>
-#include <string.h>
-
-#include "trax.h"
 
 #ifndef MAX
 #define MAX(a,b) ((a) > (b)) ? (a) : (b)
@@ -21,13 +15,60 @@
 extern "C" {
 #endif
 
-int parse_region(char* buffer, trax_region** region);
+enum RegionType {SPECIAL, RECTANGLE, POLYGON};
 
-char* string_region(trax_region* region);
+typedef struct Polygon {
 
-void print_region(FILE* out, trax_region* region);
+	int count;
 
-trax_region* convert_region(const trax_region* region, int type);
+	float* x;
+	float* y;
+
+} Polygon;
+
+typedef struct Rectangle {
+
+    float x;
+    float y;
+    float width;
+    float height;
+
+} Rectangle;
+
+typedef struct Region {
+    enum RegionType type;
+    union {
+        Rectangle rectangle;
+        Polygon polygon;
+        int special;
+    } data;
+} Region;
+
+typedef struct Overlap {
+
+	float overlap;    
+    float only1;
+    float only2;
+
+} Overlap;
+
+Overlap region_compute_overlap(Region* ra, Region* rb);
+
+int region_parse(char* buffer, Region** region);
+
+char* region_string(Region* region);
+
+void region_print(FILE* out, Region* region);
+
+Region* region_convert(const Region* region, int type);
+
+void region_release(Region** region);
+
+Region* region_create_special(int code);
+
+Region* region_create_rectangle(float x, float y, float width, float height);
+
+Region* region_create_polygon(int count);
 
 #ifdef __cplusplus
 }

@@ -48,7 +48,6 @@
 
 #include "process.h"
 #include "threads.h"
-#include "overlap.h"
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
@@ -125,42 +124,7 @@ void print_help() {
     cout << "\n";
 }
 
-#define COPY_POLYGON(TP, P) { P.count = TP->data.polygon.count; P.x = TP->data.polygon.x; P.y = TP->data.polygon.y; }
-
-float compute_overlap(trax_region* ra, trax_region* rb) {
-
-    trax_region* ta = ra;
-    trax_region* tb = rb;
-    float overlap = 0;
-
-    if (ra->type == TRAX_REGION_RECTANGLE)
-        ta = convert_region(ra, TRAX_REGION_POLYGON);
-            
-    if (rb->type == TRAX_REGION_RECTANGLE)
-        tb = convert_region(rb, TRAX_REGION_POLYGON);
-
-    if (ta->type == TRAX_REGION_POLYGON && tb->type == TRAX_REGION_POLYGON) {
-
-        Polygon p1, p2;
-
-        COPY_POLYGON(ta, p1);
-        COPY_POLYGON(tb, p2);
-
-        overlap = compute_overlap(&p1, &p2);
-
-    }
-
-    if (ta != ra)
-        trax_region_release(&ta);
-
-    if (tb != rb)
-        trax_region_release(&tb);
-
-    return overlap;
-
-}
-
-void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth, vector<trax_region*>& initialization) {
+void load_data(vector<trax_image*>& images, vector<Region*>& groundtruth, vector<Region*>& initialization) {
 
     FILE *imgFp = fopen(imagesFile.c_str(), "r");
     FILE *gtFp = fopen(groundtruthFile.c_str(), "r");
@@ -197,8 +161,8 @@ void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth, v
         if ((gt_linebuf)[gt_linelen - 1] == '\n') { (gt_linebuf)[gt_linelen - 1] = '\0'; }
         if ((img_linebuf)[img_linelen - 1] == '\n') { (img_linebuf)[img_linelen - 1] = '\0'; }
 
-        trax_region* region;
-        if (parse_region(gt_linebuf, &region)) {
+        Region* region;
+        if (region_parse(gt_linebuf, &region)) {
             groundtruth.push_back(region);
             images.push_back(trax_image_create_path(img_linebuf));
         } else 
@@ -212,9 +176,9 @@ void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth, v
 
             } else {
 
-                trax_region* initialization_region;
+                Region* initialization_region;
 
-                if (parse_region(it_linebuf, &initialization_region)) {
+                if (region_parse(it_linebuf, &initialization_region)) {
 
                     initialization.push_back(initialization_region);
 
@@ -236,7 +200,7 @@ void load_data(vector<trax_image*>& images, vector<trax_region*>& groundtruth, v
 
 }
 
-void save_data(vector<trax_region*>& output) {
+void save_data(vector<Region*>& output) {
 
     FILE *outFp = fopen(outputFile.c_str(), "w");
 
@@ -246,14 +210,14 @@ void save_data(vector<trax_region*>& output) {
 
     for (int i = 0; i < output.size(); i++) {    
 
-        trax_region* r = output[i];
+        Region* r = output[i];
 
         if (!r) {
             fprintf(outFp, "\n");
             continue;
         }
 
-        print_region(outFp, r);
+        region_print(outFp, r);
         fprintf(outFp, "\n");
 
     }
@@ -326,9 +290,9 @@ int main( int argc, char** argv) {
     Process* trackerProcess = NULL;
 
     vector<trax_image*> images;
-    vector<trax_region*> groundtruth;
-    vector<trax_region*> initialization;
-    vector<trax_region*> output;
+    vector<Region*> groundtruth;
+    vector<Region*> initialization;
+    vector<Region*> output;
     vector<long> timings;
     map<string, string> environment;
     trax_properties* properties = trax_properties_create();
@@ -459,7 +423,7 @@ int main( int argc, char** argv) {
 
                 for (; frame < images.size(); frame++) {
                     if (initialization[frame]) break;
-                    output.push_back(trax_region_create_special(0));
+                    output.push_back(region_create_special(0));
                 }
 
                 if (frame == images.size()) break;
@@ -482,7 +446,7 @@ int main( int argc, char** argv) {
 
             while (true) {
 
-                trax_region* status = NULL;
+                Region* status = NULL;
 
                 trax_properties* additional = trax_properties_create();
 
@@ -492,16 +456,16 @@ int main( int argc, char** argv) {
 
                 MUTEX_UNLOCK(watchdogMutex);
 
-                int result = trax_client_wait(trax, &status, additional);
+                int result = trax_client_wait(trax, (trax_region**) &status, additional);
 
                 // Stop timing
                 timing_toc = clock();
 
                 if (result == TRAX_STATUS) {
 
-                    trax_region* gt = groundtruth[frame];
+                    Region* gt = groundtruth[frame];
 
-                    float overlap = compute_overlap(gt, status);
+                    float overlap = region_compute_overlap(gt, status).overlap;
 
                     DEBUGMSG("Region overlap: %.2f\n", overlap);
 
@@ -514,8 +478,8 @@ int main( int argc, char** argv) {
                     if (tracking)
                         output.push_back(status);
                     else {
-                        trax_region_release(&status);
-                        output.push_back(trax_region_create_special(1));
+                        region_release(&status);
+                        output.push_back(region_create_special(1));
                     }
 
                     timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
@@ -563,7 +527,7 @@ int main( int argc, char** argv) {
             if (reinitialize > 0) {
                 int j = frame;
                 for (; j < frame + reinitialize && j < images.size(); j++) {
-                    output.push_back(trax_region_create_special(j == frame ? 2 : 0));
+                    output.push_back(region_create_special(j == frame ? 2 : 0));
                     timings.push_back(0);
                 }
                 frame = j;
@@ -607,9 +571,9 @@ int main( int argc, char** argv) {
     // Cleanup ...
     for (int i = 0; i < images.size(); i++) {
         trax_image_release(&images[i]);
-        trax_region_release(&groundtruth[i]);
-        if (output.size() > i && output[i]) trax_region_release(&output[i]);
-        if (initialization.size() > i && initialization[i]) trax_region_release(&initialization[i]);
+        region_release(&groundtruth[i]);
+        if (output.size() > i && output[i]) region_release(&output[i]);
+        if (initialization.size() > i && initialization[i]) region_release(&initialization[i]);
     }
 
     RELEASE_THREAD(watchdog); 

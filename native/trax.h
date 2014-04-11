@@ -35,19 +35,6 @@ extern "C" {
 #define TRAX_PREFIX "@@TRAX:"
 #define TRAX_PATH_MAX_LENGTH 1024
 
-typedef struct trax_rectangle {
-    float x;
-    float y;
-    float width;
-    float height;
-} trax_rectangle;
-
-typedef struct trax_polygon {
-    int count;
-    float* x;
-    float* y;
-} trax_polygon;
-
 typedef struct trax_image {
     short type;
     int width;
@@ -55,14 +42,7 @@ typedef struct trax_image {
     char* data;
 } trax_image;
 
-typedef struct trax_region {
-    short type;
-    union {
-        trax_rectangle rectangle;
-        trax_polygon polygon;
-        int special;
-    } data;
-} trax_region;
+typedef void trax_region;
 
 typedef struct trax_configuration {
         int format_region;
@@ -108,18 +88,34 @@ void trax_server_reply(trax_handle* server, trax_region* region, trax_properties
 
 int trax_cleanup(trax_handle** handle);
 
-
 void trax_image_release(trax_image** image);
 
 trax_image* trax_image_create_path(const char* path);
 
+
+
+
 void trax_region_release(trax_region** region);
+
+int trax_region_get_type(trax_region* region);
 
 trax_region* trax_region_create_special(int code);
 
-trax_region* trax_region_create_rectangle(int x, int y, int width, int height);
+void trax_region_set_special(trax_region* region, int code);
+
+trax_region* trax_region_create_rectangle(float x, float y, float width, float height);
+
+void trax_region_set_rectangle(trax_region* region, float x, float y, float width, float height);
+
+void trax_region_get_rectangle(trax_region* region, float* x, float* y, float* width, float* height);
 
 trax_region* trax_region_create_polygon(int count);
+
+void trax_region_set_polygon_point(trax_region* region, int index, float x, float y);
+
+void trax_region_get_polygon_point(trax_region* region, int index, float* x, float* y);
+
+int trax_region_get_polygon_count(trax_region* region);
 
 /**
  * Creates a rectangle region object that bounds the input region (in case the input

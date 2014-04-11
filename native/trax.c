@@ -29,6 +29,11 @@
 
 #define LOG(H, ...) if (H->log) { fprintf(H->log, __VA_ARGS__); fflush(H->log); }
 
+#define REGION(VP) ((Region*) (VP))
+
+#define REGION_TYPE(VP) ((((Region*) (VP))->type == RECTANGLE) ? TRAX_REGION_RECTANGLE : (((Region*) (VP))->type == POLYGON ? TRAX_REGION_POLYGON : TRAX_REGION_SPECIAL))
+
+#define REGION_TYPE_BACK(T) (( T == TRAX_REGION_RECTANGLE ) ? RECTANGLE : ( T == TRAX_REGION_POLYGON ? POLYGON : SPECIAL))
 
 struct trax_properties {
     StrMap *map;
@@ -173,17 +178,8 @@ int __parse_properties(const char* line, int* pos, int size, trax_properties* pr
     return 1;
 }
 
-trax_region* __create_region(int type) {
 
-    trax_region* reg = (trax_region*) malloc(sizeof(trax_region));
-
-    reg->type = type;
-
-    return reg;
-
-}
-
-int __parse_region(const char* line, int* pos, int size, trax_region** region) {
+int __parse_region(const char* line, int* pos, int size, Region** region) {
 
     int i;
     char buffer[size];
@@ -191,7 +187,7 @@ int __parse_region(const char* line, int* pos, int size, trax_region** region) {
     if ( (*pos = __next_token(line, *pos, buffer, size, _FLAG_STRING)) <= 0)
         return 0;
 
-    return parse_region(buffer, region);
+    return region_parse(buffer, region);
 
 }
 
@@ -298,11 +294,15 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
     {
         result = TRAX_STATUS;
 
-        if (!__parse_region(line, &pos, size, region)) {
+        Region* _region = NULL;
+
+        if (!__parse_region(line, &pos, size, &_region)) {
             LOG(client, "WARNING: unable to parse region.\n");
             result = TRAX_ERROR; goto end;
         }  
           
+        (*region) = region;
+
         result = TRAX_STATUS;   
 
         if (properties) 
@@ -334,7 +334,9 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 
     VALIDATE_CLIENT_HANDLE(client);
 
-    assert(region->type != TRAX_REGION_SPECIAL);
+    Region* _region = REGION(region);
+
+    assert(_region->type != SPECIAL);
 
     OUTPUT(client, "%s ", __TOKEN_INIT);
 
@@ -344,15 +346,15 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 
     char* data = NULL;
 
-    if (client->config.format_region != region->type) {
+    if (client->config.format_region != REGION_TYPE(region)) {
 
-        trax_region* converted = convert_region(region, client->config.format_region);
+        trax_region* converted = region_convert(region, client->config.format_region);
 
-        data = string_region(converted);
+        data = region_string(converted);
 
         trax_region_release(&converted);
 
-    } else data = string_region(region);
+    } else data = region_string(region);
 
     if (data) {
         OUTPUT(client, "\"%s\" ", data);
@@ -507,7 +509,7 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
             result = TRAX_ERROR; goto end;
         }
 
-        if (!__parse_region(line, &pos, size, region)) {
+        if (!__parse_region(line, &pos, size, (Region**)region)) {
             result = TRAX_ERROR; goto end;
         }
 
@@ -531,7 +533,7 @@ void trax_server_reply(trax_handle* server, trax_region* region, trax_properties
 
     VALIDATE_SERVER_HANDLE(server);
 
-    char* data = string_region(region);
+    char* data = region_string(REGION(region));
 
     if (!data) return;
 
@@ -597,17 +599,9 @@ trax_image* trax_image_create_path(const char* path) {
 
 void trax_region_release(trax_region** region) {
 
-    switch ((*region)->type) {
-        case TRAX_REGION_RECTANGLE:
-            break;
-        case TRAX_REGION_POLYGON:
-            free((*region)->data.polygon.x);
-            free((*region)->data.polygon.y);
-            (*region)->data.polygon.count = 0;
-            break;
-    }
+    Region* _region = REGION(*region);
 
-    free(*region);
+    region_release(&_region);
 
     *region = NULL;
 
@@ -615,30 +609,91 @@ void trax_region_release(trax_region** region) {
 
 trax_region* trax_region_create_special(int code) {
 
-    trax_region* reg = __create_region(TRAX_REGION_SPECIAL);
-
-    reg->data.special = code;
-
-    return reg;
+    return region_create_special(code);
 
 }
 
-trax_region* trax_region_create_rectangle(int x, int y, int width, int height) {
+trax_region* trax_region_create_rectangle(float x, float y, float width, float height) {
 
-    trax_region* reg = __create_region(TRAX_REGION_RECTANGLE);
-
-    reg->data.rectangle.width = width;
-    reg->data.rectangle.height = height;
-    reg->data.rectangle.x = x;
-    reg->data.rectangle.y = y;
-
-    return reg;
+    return region_create_rectangle(x, y, width, height);
 
 }
 
 trax_region* trax_region_get_bounds(const trax_region* region) {
 
-    return convert_region(region, TRAX_REGION_RECTANGLE);
+    return region_convert(REGION(region), RECTANGLE);
+
+}
+
+int trax_region_get_type(trax_region* region) {
+
+    return REGION_TYPE(region);
+
+}
+
+void trax_region_set_special(trax_region* region, int code) {
+
+    assert(REGION(region)->type == SPECIAL);
+
+    REGION(region)->data.special = code;
+
+}
+
+int trax_region_get_special(trax_region* region) {
+
+    assert(REGION(region)->type == SPECIAL);
+
+    return REGION(region)->data.special;
+
+}
+
+void trax_region_set_rectangle(trax_region* region, float x, float y, float width, float height) {
+
+    assert(REGION(region)->type == RECTANGLE);
+
+    REGION(region)->data.rectangle.x = x;
+    REGION(region)->data.rectangle.y = y;
+    REGION(region)->data.rectangle.width = width;
+    REGION(region)->data.rectangle.height = height;
+
+}
+
+void trax_region_get_rectangle(trax_region* region, float* x, float* y, float* width, float* height) {
+
+    assert(REGION(region)->type == RECTANGLE);
+
+    *x = REGION(region)->data.rectangle.x;
+    *y = REGION(region)->data.rectangle.y;
+    *width = REGION(region)->data.rectangle.width;
+    *height = REGION(region)->data.rectangle.height;
+
+}
+
+void trax_region_set_polygon_point(trax_region* region, int index, float x, float y) {
+
+    assert(REGION(region)->type == POLYGON);
+
+    assert(index >= 0 || index < (REGION(region)->data.polygon.count));
+
+    REGION(region)->data.polygon.x[index] = x;
+    REGION(region)->data.polygon.y[index] = y;
+}
+
+void trax_region_get_polygon_point(trax_region* region, int index, float* x, float* y) {
+
+    assert(REGION(region)->type == POLYGON);
+
+    assert (index >= 0 || index < (REGION(region)->data.polygon.count));
+
+    *x = REGION(region)->data.polygon.x[index];
+    *y = REGION(region)->data.polygon.y[index];
+}
+
+int trax_region_get_polygon_count(trax_region* region) {
+
+    assert(REGION(region)->type == POLYGON);
+
+    return REGION(region)->data.polygon.count;
 
 }
 

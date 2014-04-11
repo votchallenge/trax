@@ -19,7 +19,7 @@ ENDIF (BUILD_CAMSHIFT)
 SET (BUILD_CLIENT FALSE CACHE BOOL "Build a client executable")
 
 IF (BUILD_CLIENT)
-    ADD_EXECUTABLE(traxclient client/client.cpp client/process.cpp client/threads.c client/overlap.cpp)
+    ADD_EXECUTABLE(traxclient client/client.cpp client/process.cpp client/threads.c)
     TARGET_LINK_LIBRARIES(traxclient trax)
 ENDIF (BUILD_CLIENT)
 
