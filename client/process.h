@@ -9,7 +9,7 @@
 
 #ifdef WIN32
 
-
+#include <windows.h>
 
 #else
 
@@ -58,13 +58,17 @@ private:
     int in[2];
     int pid;
 
-    posix_spawn_file_actions_t action;
-
     char** arguments;
     char* program;
 
     string directory;
     map<string, string> env;
+
+#ifdef WIN32
+
+#else
+    posix_spawn_file_actions_t action;
+#endif
 
 };
 

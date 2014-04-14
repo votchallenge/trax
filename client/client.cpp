@@ -39,9 +39,12 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+
 #include <stdexcept>
 #include <iostream>
 #include <map>
+#include <string>
+#include <fstream>
 
 #include "trax.h"
 #include "region.h"
@@ -126,51 +129,59 @@ void print_help() {
 
 void load_data(vector<trax_image*>& images, vector<Region*>& groundtruth, vector<Region*>& initialization) {
 
-    FILE *imgFp = fopen(imagesFile.c_str(), "r");
-    FILE *gtFp = fopen(groundtruthFile.c_str(), "r");
-    FILE *itFp = initializationFile.empty() ? NULL : fopen(initializationFile.c_str(), "r");
+	std::ifstream if_images, if_groundtruth, if_initialization;
 
-    if (!gtFp) {
+	if_images.open(imagesFile.c_str(), std::ifstream::in);
+	if_groundtruth.open(groundtruthFile.c_str(), std::ifstream::in);
+
+    if (!initializationFile.empty())
+	    if_initialization.open(initializationFile.c_str(), std::ifstream::in);
+
+    if (!if_groundtruth.is_open()) {
         throw std::runtime_error("Groundtruth file not available.");
     }
 
-    if (!imgFp) {
+    if (!if_images.is_open()) {
         throw std::runtime_error("Image list file not available.");
     }
 
-    size_t linesiz = sizeof(char) * 2048;
-    char* gt_linebuf = (char*) malloc(linesiz);
-    char* it_linebuf = (char*) malloc(linesiz);
-    char* img_linebuf = (char*) malloc(linesiz);
-    ssize_t gt_linelen = 0;
-    ssize_t it_linelen = 0;
-    ssize_t img_linelen = 0;
+    size_t line_size = sizeof(char) * 2048;
+    char* gt_line_buffer = (char*) malloc(line_size);
+    char* it_line_buffer = (char*) malloc(line_size);
+    char* im_line_buffer = (char*) malloc(line_size);
+
     int x, y, width, height;
     int line = 0;
 
     while (1) {
 
-        if ((gt_linelen=getline(&gt_linebuf, &linesiz, gtFp))<1)
-            break;
+		if_groundtruth.getline(gt_line_buffer, line_size);
 
-        if ((img_linelen=getline(&img_linebuf, &linesiz, imgFp))<1)
-            break;
+		if (!if_groundtruth.good()) break;
 
-        line ++;
+		if_images.getline(im_line_buffer, line_size);
 
-        if ((gt_linebuf)[gt_linelen - 1] == '\n') { (gt_linebuf)[gt_linelen - 1] = '\0'; }
-        if ((img_linebuf)[img_linelen - 1] == '\n') { (img_linebuf)[img_linelen - 1] = '\0'; }
+		if (!if_images.good()) break;
+
+        line++;
 
         Region* region;
-        if (region_parse(gt_linebuf, &region)) {
+
+        if (region_parse(gt_line_buffer, &region)) {
+
             groundtruth.push_back(region);
-            images.push_back(trax_image_create_path(img_linebuf));
+            images.push_back(trax_image_create_path(im_line_buffer));
+
         } else 
             DEBUGMSG("Unable to parse region data at line %d!\n", line); // TODO: do not know how to handle this ... probably a warning
         
-        if (itFp) {
+        if (if_initialization.is_open()) {
 
-            if ((it_linelen=getline(&it_linebuf, &linesiz, itFp))<1) {
+		    if_initialization.getline(it_line_buffer, line_size);
+
+		    if (!if_initialization.good()) break;
+
+            if (!if_initialization.good()) {
 
                 initialization.push_back(NULL);
 
@@ -178,7 +189,7 @@ void load_data(vector<trax_image*>& images, vector<Region*>& groundtruth, vector
 
                 Region* initialization_region;
 
-                if (region_parse(it_linebuf, &initialization_region)) {
+                if (region_parse(it_line_buffer, &initialization_region)) {
 
                     initialization.push_back(initialization_region);
 
@@ -190,13 +201,13 @@ void load_data(vector<trax_image*>& images, vector<Region*>& groundtruth, vector
 
     }    
     
-    fclose(gtFp);
-    if (itFp) fclose(itFp);
-    fclose(imgFp);
+    if_groundtruth.close();
+    if_images.close();
+    if (if_initialization.is_open()) if_initialization.close();
 
-    free(gt_linebuf);
-    free(it_linebuf);
-    free(img_linebuf);
+    free(gt_line_buffer);
+    free(it_line_buffer);
+    free(im_line_buffer);
 
 }
 

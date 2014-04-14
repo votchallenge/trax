@@ -151,6 +151,13 @@ Process::~Process() {
 
 bool Process::start() {
 
+#ifdef WIN32
+
+
+
+
+#else
+
     if (pid) return false;
 
     pipe(out);
@@ -196,14 +203,24 @@ bool Process::start() {
     p_stdin = fdopen(out[1], "w");
     p_stdout = fdopen(in[0], "r");
 
+#endif
+
     return true;
+
 }
 
 bool Process::stop() {
 
     if (!pid) return false;
 
+#ifdef WIN32
+
+
+#else
+
     kill(pid, SIGTERM);
+
+#endif
 
     cleanup();
 
@@ -216,12 +233,19 @@ void Process::cleanup() {
 
     if (!pid) return;
 
+#ifdef WIN32
+
+
+#else
+
     close(out[0]);
     close(in[1]);
     close(out[1]);
     close(in[0]);
 
     posix_spawn_file_actions_destroy(&action);
+
+#endif
 
 }
 
