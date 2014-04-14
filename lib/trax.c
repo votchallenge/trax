@@ -1,6 +1,6 @@
 /* -*- Mode: C; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*- */
 
-#include <unistd.h>
+//#include <unistd.h>
 #include <string.h>
 #include <assert.h>
 
@@ -56,8 +56,8 @@ void __output_enum(const char *key, const char *value, const void *obj) {
 
 char* __read_line(FILE* file)
 {
-
-    char * line = malloc(BUFFER_LENGTH), * linep = line;
+	char * linen;
+    char * line = (char*) malloc(BUFFER_LENGTH), * linep = line;
     size_t lenmax = BUFFER_LENGTH, len = lenmax;
     int c;
 
@@ -77,7 +77,7 @@ char* __read_line(FILE* file)
         if(--len == 0) {
             len += BUFFER_LENGTH;
             lenmax += BUFFER_LENGTH;
-            char * linen = realloc(linep, lenmax);
+            linen = (char *) realloc(linep, lenmax);
 
             if(linen == NULL) {
                 free(linep);
@@ -159,7 +159,7 @@ int __next_token(const char* str, int start, char* buffer, int len, int flags)
 
 int __parse_properties(const char* line, int* pos, int size, trax_properties* properties) {
 
-    char buffer[size];
+    char* buffer = (char *) malloc(sizeof(char) * size);
 
     while ( (*pos = __next_token(line, *pos, buffer, size, _FLAG_STRING)) > 0) 
     {
@@ -167,13 +167,16 @@ int __parse_properties(const char* line, int* pos, int size, trax_properties* pr
         char* split = strstr(buffer, "=");
 
         if (split > 0) {
+			char* value;
             const char* key = buffer;
             *split = '\0';
-            char* value = &(split[1]);
+            value = &(split[1]);
             trax_properties_set(properties, key, value);
         }
 
     }
+
+	free(buffer);
 
     return 1;
 }
@@ -181,14 +184,17 @@ int __parse_properties(const char* line, int* pos, int size, trax_properties* pr
 
 int __parse_region(const char* line, int* pos, int size, Region** region) {
 
-    int i;
-    char buffer[size];
+	int result;
+    char* buffer = (char*) malloc(sizeof(char) * size);
 
     if ( (*pos = __next_token(line, *pos, buffer, size, _FLAG_STRING)) <= 0)
         return 0;
 
-    return region_parse(buffer, region);
+    result = region_parse(buffer, region);
 
+	free(buffer);
+
+	return result;
 }
 
 trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) {
@@ -199,7 +205,7 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
     char* buffer;
     trax_properties* config;
 
-    trax_handle* client = malloc(sizeof(trax_handle));
+    trax_handle* client = (trax_handle*) malloc(sizeof(trax_handle));
 
     client->flags = (flags & ~TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
 
@@ -209,7 +215,7 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
 
     line = __read_protocol_line(client);
     if (!line) return NULL;
-    size = strlen(line) + 1;
+    size = (int)strlen(line) + 1;
     buffer = (char *) malloc(size * sizeof(char));
 
     if ((pos = __next_token(line, pos, buffer, size, _FLAG_STRING)) < 0) 
@@ -221,6 +227,7 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
 
     if (strcmp(buffer, __TOKEN_HELLO) == 0) 
     {
+		char* region_type;
 
         config = trax_properties_create();
 
@@ -228,7 +235,7 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
 
         trax_properties_get_int(config, "trax.version", 1);
 
-        char* region_type = trax_properties_get(config, "trax.region");
+        region_type = trax_properties_get(config, "trax.region");
 
         client->config.format_region = TRAX_REGION_RECTANGLE;
 
@@ -275,7 +282,7 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
     line = __read_protocol_line(client);
     if (!line) return result;
 
-    size = strlen(line) + 1;
+    size = (int)strlen(line) + 1;
     buffer = (char*) malloc(sizeof(char) * size);
 
     if (!line) {
@@ -292,9 +299,9 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
     if (strcmp(buffer, __TOKEN_STATUS) == 0) 
     {
-        result = TRAX_STATUS;
-
         Region* _region = NULL;
+
+        result = TRAX_STATUS;
 
         if (!__parse_region(line, &pos, size, &_region)) {
             LOG(client, "WARNING: unable to parse region.\n");
@@ -332,9 +339,12 @@ end:
 
 void trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties) {
 
+	char* data = NULL;
+	Region* _region;
+
     VALIDATE_CLIENT_HANDLE(client);
 
-    Region* _region = REGION(region);
+    _region = REGION(region);
 
     assert(_region->type != SPECIAL);
 
@@ -344,7 +354,6 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
         OUTPUT(client, "\"%s\" ", image->data);
     } else return;
 
-    char* data = NULL;
 
     if (client->config.format_region != REGION_TYPE(region)) {
 
@@ -371,7 +380,7 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 
 void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties) {
 
-    char message[1024];
+    char* message = (char*) malloc(sizeof(char) * 1024);
 
     VALIDATE_CLIENT_HANDLE(client);
 
@@ -381,7 +390,10 @@ void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* 
 
     if (image->type == TRAX_IMAGE_PATH) {
         OUTPUT(client, "\"%s\" ", image->data);
-    } else return;
+    } else {
+		free(message);
+		return;
+	}
 
     if (properties) {
         sm_enum(properties->map, __output_enum, client);
@@ -389,12 +401,13 @@ void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* 
 
     OUTPUT(client, "\n");
 
+	free(message);
 }
 
 trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags) {
 
     trax_properties* properties;
-    trax_handle* server = malloc(sizeof(trax_handle));
+    trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
 
     server->flags = (flags | TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
 
@@ -446,20 +459,29 @@ trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags) 
 int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties) 
 {
 
+	int pos = 0;
+    char* line;
+	char* buffer;
+	int size;
+	int result;
+
     VALIDATE_SERVER_HANDLE(server);
 
-    int pos = 0;
-    char* line = __read_protocol_line(server);
+    line = __read_protocol_line(server);
     if (!line) return TRAX_ERROR;
-    int size = strlen(line) + 1;
-    char buffer[size];
-    int result = TRAX_ERROR;
+    size = (int) strlen(line) + 1;
 
-    if (!line) return TRAX_ERROR;
+    buffer = (char*) malloc(sizeof(char) * size);
+    result = TRAX_ERROR;
+
+    if (!line) {
+		free(buffer);
+		return TRAX_ERROR;
+	}
 
     if ((pos = __next_token(line, pos, buffer, size, _FLAG_STRING)) < 0) {
         free(line);
-
+		free(buffer);
         return TRAX_ERROR;
     }
 
@@ -482,14 +504,14 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 
         if (properties) 
             pos = __parse_properties(line, &pos, size, properties);        
-
+		free(buffer);
         free(line);
         return result;
     } else if (strcmp(buffer, __TOKEN_QUIT) == 0) {
 
         if (properties) 
             pos = __parse_properties(line, &pos, size, properties);        
-
+		free(buffer);
         free(line);
     
         return TRAX_QUIT;
@@ -518,12 +540,13 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
         }
 
 end:
-
+		free(buffer);
         free(line);
         return result;
 
     }
 
+	free(buffer);
     free(line);
 
     return TRAX_ERROR;
@@ -531,9 +554,11 @@ end:
 
 void trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties) {
 
+	char* data;
+
     VALIDATE_SERVER_HANDLE(server);
 
-    char* data = region_string(REGION(region));
+    data = region_string(REGION(region));
 
     if (!data) return;
 
@@ -750,11 +775,12 @@ void trax_properties_set_float(trax_properties* properties, const char* key, flo
 
 char* trax_properties_get(trax_properties* properties, const char* key) {
 
+	char* value;
     int size = sm_get(properties->map, key, NULL, 0);
 
     if (size < 1) return NULL;
 
-    char* value = (char *) malloc(sizeof(trax_properties) * size);
+    value = (char *) malloc(sizeof(trax_properties) * size);
 
     sm_get(properties->map, key, value, size);
 

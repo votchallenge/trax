@@ -126,7 +126,7 @@ int sm_get(const StrMap *map, const char *key, char *out_buf, unsigned int n_out
 		return 0;
 	}
 	if (out_buf == NULL && n_out_buf == 0) {
-		return strlen(pair->value) + 1;
+		return (int)strlen(pair->value) + 1;
 	}
 	if (out_buf == NULL) {
 		return 0;
@@ -173,8 +173,8 @@ int sm_put(StrMap *map, const char *key, const char *value)
 	if (key == NULL || value == NULL) {
 		return 0;
 	}
-	key_len = strlen(key);
-	value_len = strlen(value);
+	key_len = (int)strlen(key);
+	value_len = (int)strlen(value);
 	/* Get a pointer to the bucket the key string hashes to */
 	index = hash(key) % map->count;
 	bucket = &(map->buckets[index]);

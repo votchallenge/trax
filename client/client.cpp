@@ -49,7 +49,7 @@
 #include "process.h"
 #include "threads.h"
 
-#ifdef PLATFORM_WINDOWS
+#ifdef WIN32
 #include <windows.h>
 #include "getopt_win.h"
 inline void sleep(long time) {

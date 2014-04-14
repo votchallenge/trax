@@ -25,7 +25,11 @@ ENDIF (BUILD_CAMSHIFT)
 SET (BUILD_CLIENT FALSE CACHE BOOL "Build a client executable")
 
 IF (BUILD_CLIENT)
+IF (WIN32)
+    ADD_EXECUTABLE(traxclient client/client.cpp client/process.cpp client/threads.c client/getopt_win.c)
+ELSE (WIN32)
     ADD_EXECUTABLE(traxclient client/client.cpp client/process.cpp client/threads.c)
+ENDIF (WIN32)
     TARGET_LINK_LIBRARIES(traxclient trax)
 ENDIF (BUILD_CLIENT)
 

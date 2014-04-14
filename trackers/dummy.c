@@ -38,10 +38,21 @@
 #include <ctype.h>
 #include "trax.h"
 
+#ifdef WIN32
+#include <windows.h>
+void sleep(long time) {
+	Sleep(time);
+}
+#endif
+
 int main( int argc, char** argv)
 {
-    int f;
+	int run;
     int wait = 0;    
+	FILE* log;
+    trax_image* img = NULL;
+    trax_region* reg = NULL;
+    trax_region* mem = NULL;
 
     // *****************************************
     // TraX: Call trax_server_setup at the beginning
@@ -52,13 +63,11 @@ int main( int argc, char** argv)
     config.format_region = TRAX_REGION_POLYGON;
     config.format_image = TRAX_IMAGE_PATH;
 
-    FILE* log = argc > 0 ? fopen(argv[0], "w") : NULL;
+    log = argc > 0 ? fopen(argv[0], "w") : NULL;
     trax = trax_server_setup(config, log, TRAX_FLAG_LOG_INPUT | TRAX_FLAG_LOG_OUTPUT);
 
-    trax_image* img = NULL;
-    trax_region* reg = NULL;
-    trax_region* mem = NULL;
-    int run = 1;
+
+    run = 1;
 
     while(run)
     {
@@ -79,7 +88,7 @@ int main( int argc, char** argv)
             wait = trax_properties_get_int(prop, "dummy.wait", 0);
 
             // Artificial wait period that can be used for testing
-            if (wait > 0) usleep(wait * 1000000);
+            if (wait > 0) sleep(wait);
 
             if (mem) trax_region_release(&mem);
             mem = trax_region_get_bounds(reg);
@@ -91,7 +100,7 @@ int main( int argc, char** argv)
         if (tr == TRAX_FRAME) {
 
             // Artificial wait period that can be used for testing
-            if (wait > 0) usleep(wait * 1000000);
+            if (wait > 0) sleep(wait);
 
             // Note that the tracker also has an option of sending additional data
             // back to the main program in a form of key-value pairs. We do not use

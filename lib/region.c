@@ -9,6 +9,11 @@
 #include "region.h"
 #include "buffer.h"
 
+#ifdef WIN32
+#define isnan(x) _isnan(x)
+#define isinf(x) (!_finite(x))
+#endif
+
 typedef struct Bounds {
 
 	float top;
@@ -406,9 +411,9 @@ Bounds compute_bounds(Polygon* polygon) {
 
 void rasterize_polygon(Polygon* polygon, char* mask, int width, int height) {
 
-	int nodes, pixelX, pixelY, i, j, swap;
+	int nodes, pixelY, i, j, swap;
 
-	int* nodeX = malloc(sizeof(int) * polygon->count);
+	int* nodeX = (int*) malloc(sizeof(int) * polygon->count);
 
 	memset(mask, 0, width * height * sizeof(char));
 
@@ -460,17 +465,21 @@ void rasterize_polygon(Polygon* polygon, char* mask, int width, int height) {
 float compute_polygon_overlap(Polygon* p1, Polygon* p2, float *only1, float *only2) {
 
 	int i;
+    int mask_1 = 0;
+	int mask_2 = 0;
+	int mask_intersect = 0;
+
 	Bounds b1 = compute_bounds(p1);
 	Bounds b2 = compute_bounds(p2);
 
-	int x = MIN(b1.left, b2.left);
-	int y = MIN(b1.top, b2.top);
+	float x = MIN(b1.left, b2.left);
+	float y = MIN(b1.top, b2.top);
 
-	int width = MAX(b1.right, b2.right) - x;	
-	int height = MAX(b1.bottom, b2.bottom) - y;
+	int width = (int) (MAX(b1.right, b2.right) - x);	
+	int height = (int) (MAX(b1.bottom, b2.bottom) - y);
 
-	char* mask1 = malloc(sizeof(char) * width * height);
-	char* mask2 = malloc(sizeof(char) * width * height);
+	char* mask1 = (char*) malloc(sizeof(char) * width * height);
+	char* mask2 = (char*) malloc(sizeof(char) * width * height);
 
 	Polygon* op1 = offset_polygon(p1, -x, -y);
 	Polygon* op2 = offset_polygon(p2, -x, -y);
@@ -480,8 +489,6 @@ print_polygon(op1);print_polygon(op2);
 */
 	rasterize_polygon(op1, mask1, width, height); 
 	rasterize_polygon(op2, mask2, width, height); 
-
-	int mask_1 = 0, mask_2 = 0, mask_intersect = 0;
 
 	for (i = 0; i < width * height; i++) {
 		if (mask1[i] && mask2[i]) mask_intersect++;
