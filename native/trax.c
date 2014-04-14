@@ -301,7 +301,7 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
             result = TRAX_ERROR; goto end;
         }  
           
-        (*region) = region;
+        (*region) = _region;
 
         result = TRAX_STATUS;   
 

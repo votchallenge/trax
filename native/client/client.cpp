@@ -250,7 +250,7 @@ void* watchdog_loop(void* param) {
 
     while (run) {
 
-        sleep(3);
+        sleep(1);
         
         MUTEX_LOCK(watchdogMutex);
 
@@ -487,6 +487,9 @@ int main( int argc, char** argv) {
                 } else if (result == TRAX_QUIT) {                    
 
                     trax_properties_release(&additional);
+
+                    DEBUGMSG("Termination requested by tracker.\n");
+
                     break;
                 } else {
                     trax_properties_release(&additional);
@@ -516,7 +519,7 @@ int main( int argc, char** argv) {
 
             MUTEX_UNLOCK(watchdogMutex);
 
-            sleep(5);
+            sleep(0);
 
             if (trackerProcess) {
                 trackerProcess->stop();
@@ -533,7 +536,6 @@ int main( int argc, char** argv) {
                 frame = j;
             } else break;
         }
-
 
         if (output.size() > 0)
             save_data(output);
@@ -568,7 +570,8 @@ int main( int argc, char** argv) {
 
     trax_properties_release(&properties);
 
-    // Cleanup ...
+    DEBUGMSG("Cleanup.\n");
+
     for (int i = 0; i < images.size(); i++) {
         trax_image_release(&images[i]);
         region_release(&groundtruth[i]);
