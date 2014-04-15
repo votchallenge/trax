@@ -5,6 +5,12 @@
 
 #include <stdio.h>
 
+#ifdef WIN32
+#define __EXPORT __declspec(dllexport) 
+#else
+#define __EXPORT 
+#endif
+
 #define TRAX_VERSION 1
 
 #define TRAX_ERROR 0
@@ -66,83 +72,83 @@ typedef void(*trax_enumerator)(const char *key, const char *value, const void *o
  *
 **/
 
-trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags);
+__EXPORT trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags);
 
-int trax_client_wait(trax_handle* client, trax_region** region, trax_properties* properties);
+__EXPORT int trax_client_wait(trax_handle* client, trax_region** region, trax_properties* properties);
 
-void trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties);
+__EXPORT void trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties);
 
-void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties);
+__EXPORT void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties);
 
 
 /**
  *   
  *
 **/
-trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags);
+__EXPORT trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags);
 
-int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties);
+__EXPORT int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties);
 
-void trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties);
-
-
-int trax_cleanup(trax_handle** handle);
-
-void trax_image_release(trax_image** image);
-
-trax_image* trax_image_create_path(const char* path);
+__EXPORT void trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties);
 
 
+__EXPORT int trax_cleanup(trax_handle** handle);
+
+__EXPORT void trax_image_release(trax_image** image);
+
+__EXPORT trax_image* trax_image_create_path(const char* path);
 
 
-void trax_region_release(trax_region** region);
 
-int trax_region_get_type(trax_region* region);
 
-trax_region* trax_region_create_special(int code);
+__EXPORT void trax_region_release(trax_region** region);
 
-void trax_region_set_special(trax_region* region, int code);
+__EXPORT int trax_region_get_type(trax_region* region);
 
-trax_region* trax_region_create_rectangle(float x, float y, float width, float height);
+__EXPORT trax_region* trax_region_create_special(int code);
 
-void trax_region_set_rectangle(trax_region* region, float x, float y, float width, float height);
+__EXPORT void trax_region_set_special(trax_region* region, int code);
 
-void trax_region_get_rectangle(trax_region* region, float* x, float* y, float* width, float* height);
+__EXPORT trax_region* trax_region_create_rectangle(float x, float y, float width, float height);
 
-trax_region* trax_region_create_polygon(int count);
+__EXPORT void trax_region_set_rectangle(trax_region* region, float x, float y, float width, float height);
 
-void trax_region_set_polygon_point(trax_region* region, int index, float x, float y);
+__EXPORT void trax_region_get_rectangle(trax_region* region, float* x, float* y, float* width, float* height);
 
-void trax_region_get_polygon_point(trax_region* region, int index, float* x, float* y);
+__EXPORT trax_region* trax_region_create_polygon(int count);
 
-int trax_region_get_polygon_count(trax_region* region);
+__EXPORT void trax_region_set_polygon_point(trax_region* region, int index, float x, float y);
+
+__EXPORT void trax_region_get_polygon_point(trax_region* region, int index, float* x, float* y);
+
+__EXPORT int trax_region_get_polygon_count(trax_region* region);
 
 /**
  * Creates a rectangle region object that bounds the input region (in case the input
  * region is also a rectangle it just clones it).
  **/
-trax_region* trax_region_get_bounds(const trax_region* region);
+__EXPORT trax_region* trax_region_get_bounds(const trax_region* region);
 
 
-void trax_properties_release(trax_properties** properties);
+__EXPORT void trax_properties_release(trax_properties** properties);
 
-void trax_properties_clear(trax_properties* properties);
+__EXPORT void trax_properties_clear(trax_properties* properties);
 
-trax_properties* trax_properties_create();
+__EXPORT trax_properties* trax_properties_create();
 
-void trax_properties_set(trax_properties* properties, const char* key, char* value);
+__EXPORT void trax_properties_set(trax_properties* properties, const char* key, char* value);
 
-void trax_properties_set_int(trax_properties* properties, const char* key, int value);
+__EXPORT void trax_properties_set_int(trax_properties* properties, const char* key, int value);
 
-void trax_properties_set_float(trax_properties* properties, const char* key, float value);
+__EXPORT void trax_properties_set_float(trax_properties* properties, const char* key, float value);
 
-char* trax_properties_get(trax_properties* properties, const char* key);
+__EXPORT char* trax_properties_get(trax_properties* properties, const char* key);
 
-int trax_properties_get_int(trax_properties* properties, const char* key, int def);
+__EXPORT int trax_properties_get_int(trax_properties* properties, const char* key, int def);
 
-float trax_properties_get_float(trax_properties* properties, const char* key, float def);
+__EXPORT float trax_properties_get_float(trax_properties* properties, const char* key, float def);
 
-void trax_properties_enumerate(trax_properties* properties, trax_enumerator enumerator, void* object);
+__EXPORT void trax_properties_enumerate(trax_properties* properties, trax_enumerator enumerator, void* object);
 
 #ifdef __cplusplus
 }

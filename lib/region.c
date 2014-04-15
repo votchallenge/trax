@@ -9,7 +9,7 @@
 #include "region.h"
 #include "buffer.h"
 
-#ifdef WIN32
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER) 
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
 #endif

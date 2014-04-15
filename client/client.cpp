@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <time.h>
 
 #include <stdexcept>
 #include <iostream>
@@ -48,7 +49,6 @@
 
 #include "trax.h"
 #include "region.h"
-
 #include "process.h"
 #include "threads.h"
 
@@ -56,7 +56,7 @@
 #include <windows.h>
 #include "getopt_win.h"
 inline void sleep(long time) {
-	Sleep(time);
+	Sleep(time * 1000);
 }
 #endif
 
@@ -150,7 +150,6 @@ void load_data(vector<trax_image*>& images, vector<Region*>& groundtruth, vector
     char* it_line_buffer = (char*) malloc(line_size);
     char* im_line_buffer = (char*) malloc(line_size);
 
-    int x, y, width, height;
     int line = 0;
 
     while (1) {
@@ -255,7 +254,7 @@ void save_timings(vector<long>& timings) {
 
 }
 
-void* watchdog_loop(void* param) {
+THREAD_CALLBACK(watchdog_loop, param) {
 
     bool run = true;
 
@@ -308,8 +307,6 @@ int main( int argc, char** argv) {
     map<string, string> environment;
     trax_properties* properties = trax_properties_create();
 
-    THREAD watchdog_thread;
-
     try {
 
         while ((c = getopt(argc, argv, CMD_OPTIONS)) != -1)
@@ -336,7 +333,7 @@ int main( int argc, char** argv) {
                 initializationFile = string(optarg);
                 break;
             case 'f':
-                threshold = MIN(1, MAX(0, atof(optarg)));
+                threshold = (float) MIN(1, MAX(0, (float)atof(optarg)));
                 break;
             case 'r':
                 reinitialize = MAX(1, atoi(optarg));
@@ -405,8 +402,11 @@ int main( int argc, char** argv) {
             trackerProcess = new Process(trackerCommand);
 
             trackerProcess->copy_environment();
-
-            trackerProcess->start();
+			//trackerProcess->set_directory("C:\\Users\\ViCoS\\AppData\\Local\\Temp\\tp0c0fbbab_ddac_4cd3_a585_355afe3ad068");
+            if (!trackerProcess->start()) {
+				DEBUGMSG("Unable to start the tracker process\n");
+				break;
+			}
 
             DEBUGMSG("Tracker process ID: %d \n", trackerProcess->get_handle());
 
@@ -450,7 +450,7 @@ int main( int argc, char** argv) {
             // Start timing
             clock_t timing_toc;
             clock_t timing_tic = clock();
-
+			region_print(stdout, (Region*)initialize);
             bool tracking = false;
 
             trax_client_initialize(trax, image, initialize, properties);

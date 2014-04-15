@@ -3,6 +3,12 @@
 #ifndef _REGION_H_
 #define _REGION_H_
 
+#ifdef WIN32
+#define __EXPORT __declspec(dllexport) 
+#else
+#define __EXPORT 
+#endif
+
 #ifndef MAX
 #define MAX(a,b) ((a) > (b)) ? (a) : (b)
 #endif
@@ -52,23 +58,23 @@ typedef struct Overlap {
 
 } Overlap;
 
-Overlap region_compute_overlap(Region* ra, Region* rb);
+__EXPORT Overlap region_compute_overlap(Region* ra, Region* rb);
 
-int region_parse(char* buffer, Region** region);
+__EXPORT int region_parse(char* buffer, Region** region);
 
-char* region_string(Region* region);
+__EXPORT char* region_string(Region* region);
 
-void region_print(FILE* out, Region* region);
+__EXPORT void region_print(FILE* out, Region* region);
 
-Region* region_convert(const Region* region, int type);
+__EXPORT Region* region_convert(const Region* region, int type);
 
-void region_release(Region** region);
+__EXPORT void region_release(Region** region);
 
-Region* region_create_special(int code);
+__EXPORT Region* region_create_special(int code);
 
-Region* region_create_rectangle(float x, float y, float width, float height);
+__EXPORT Region* region_create_rectangle(float x, float y, float width, float height);
 
-Region* region_create_polygon(int count);
+__EXPORT Region* region_create_polygon(int count);
 
 #ifdef __cplusplus
 }

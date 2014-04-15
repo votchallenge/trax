@@ -111,6 +111,8 @@ int main( int argc, char** argv)
         // Any other command is either TRAX_QUIT or illegal, so we exit.
         else {
 
+			printf("QUITTING\n");
+
             trax_properties_release(&prop);
             run = 0;
 

@@ -344,6 +344,8 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 
     VALIDATE_CLIENT_HANDLE(client);
 
+	assert(image && region);
+
     _region = REGION(region);
 
     assert(_region->type != SPECIAL);

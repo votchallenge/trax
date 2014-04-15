@@ -10,6 +10,7 @@
 #ifdef WIN32
 
 #include <windows.h>
+#include <io.h>
 
 #else
 
@@ -56,7 +57,6 @@ private:
 
     int out[2];
     int in[2];
-    int pid;
 
     char** arguments;
     char* program;
@@ -65,8 +65,16 @@ private:
     map<string, string> env;
 
 #ifdef WIN32
-
+	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms682499%28v=vs.85%29.aspx
+	// http://msdn.microsoft.com/en-us/library/dye30d82%28VS.80%29.aspx
+	HANDLE handle_IN_Rd;
+	HANDLE handle_IN_Wr;
+	HANDLE handle_OUT_Rd;
+	HANDLE handle_OUT_Wr;
+	PROCESS_INFORMATION piProcInfo;
 #else
+	int pid;
+
     posix_spawn_file_actions_t action;
 #endif
 

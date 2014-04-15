@@ -19,15 +19,15 @@ typedef struct string_buffer {
 
 #define BUFFER_SIZE(B) B.position
 
-#ifdef WIN32
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER) 
 
 #define BUFFER_APPEND(B, ...) { \
-		int required = _snprintf_s(&(B.buffer[B.position]), B.size - B.position, _TRUNCATE, __VA_ARGS__); \
+		int required = _scprintf(__VA_ARGS__); \
 		if (required > B.size - B.position) { \
-			B.size = B.position + required + 1;  \
+			B.size = B.position + required + 1; \
 			B.buffer = (char*) realloc(B.buffer, sizeof(char) * B.size); \
-			required = _snprintf_s(&(B.buffer[B.position]), B.size - B.position, _TRUNCATE, __VA_ARGS__); \
 		} \
+		required = _snprintf_s(&(B.buffer[B.position]), B.size - B.position, _TRUNCATE, __VA_ARGS__); \
 		B.position += required; \
   }
 

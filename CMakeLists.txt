@@ -11,7 +11,7 @@ ADD_LIBRARY(trax SHARED lib/trax.c lib/region.c lib/strmap.c)
 
 ADD_EXECUTABLE(dummy trackers/dummy.c)
 
-TARGET_LINK_LIBRARIES(dummy trax m)
+TARGET_LINK_LIBRARIES(dummy trax)
 
 SET (BUILD_CAMSHIFT FALSE CACHE BOOL "Build an example using OpenCV CamShift tracker")
 
@@ -19,7 +19,7 @@ IF (BUILD_CAMSHIFT)
 	FIND_PACKAGE(OpenCV REQUIRED)
 	INCLUDE_DIRECTORIES(AFTER ${OpenCV_INCLUDE_DIR})
 	ADD_EXECUTABLE(camshift trackers/camshift.c)
-	TARGET_LINK_LIBRARIES(camshift ${OpenCV_LIBS} trax m)
+	TARGET_LINK_LIBRARIES(camshift ${OpenCV_LIBS} trax)
 ENDIF (BUILD_CAMSHIFT)
 
 SET (BUILD_CLIENT FALSE CACHE BOOL "Build a client executable")

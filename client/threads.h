@@ -27,9 +27,10 @@ extern "C" {
 
 #ifdef WIN32
 
-#define CREATE_THREAD(T, R, P) simple_threads_create_thread(T, R, P)
+#define CREATE_THREAD(T, R, P) simple_threads_create_thread(&T, R, P)
 #define RELEASE_THREAD(T) CloseHandle(T)
 
+#define THREAD_CALLBACK(NAME, ARGUMENT) DWORD WINAPI NAME(void* ARG)
 #define THREAD HANDLE
 #define THREAD_MUTEX HANDLE
 #define THREAD_COND HANDLE
