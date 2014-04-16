@@ -76,6 +76,8 @@ __EXPORT Region* region_create_rectangle(float x, float y, float width, float he
 
 __EXPORT Region* region_create_polygon(int count);
 
+__EXPORT void region_mask(Region* r, char* mask, int width, int height);
+
 #ifdef __cplusplus
 }
 #endif

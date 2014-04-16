@@ -550,4 +550,16 @@ Overlap region_compute_overlap(Region* ra, Region* rb) {
 
 }
 
+void region_mask(Region* r, char* mask, int width, int height) {
 
+    Region* t = r;
+
+    if (r->type == RECTANGLE)
+        t = region_convert(r, POLYGON);
+    
+	rasterize_polygon(&(t->data.polygon), mask, width, height); 
+
+    if (t != r)
+        region_release(&t);
+
+}
