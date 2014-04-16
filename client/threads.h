@@ -59,6 +59,7 @@ typedef struct pthread_wrapper {
 #define CREATE_THREAD(T, R, P) simple_threads_create_thread(&T, R, P)
 #define RELEASE_THREAD(T) simple_threads_release_thread(T)
 
+#define THREAD_CALLBACK(NAME, ARGUMENT) void* NAME(void* ARG)
 #define THREAD pthread_wrapper
 #define THREAD_MUTEX pthread_mutex_t
 #define THREAD_COND pthread_cond_t

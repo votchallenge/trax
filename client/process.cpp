@@ -434,12 +434,10 @@ bool Process::is_alive() {
 int Process::get_handle() {
 
 #ifdef WIN32
-	if (!piProcInfo.hProcess) return 0;
+	if (!piProcInfo.hProcess) return 0; else return (int) piProcInfo.hProcess;
 #else
-    if (!pid) return 0;
+    if (!pid) return 0; else return pid;
 #endif
-
-    return (int) piProcInfo.hProcess;
 
 }
 

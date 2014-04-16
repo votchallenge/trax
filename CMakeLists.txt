@@ -5,13 +5,19 @@ GET_FILENAME_COMPONENT(PROJECT_ROOT . ABSOLUTE)
 
 SET(CMAKE_MODULE_PATH ${PROJECT_ROOT}/cmake)
 
+IF (WIN32)
+    SET(LIBRARIES trax)
+ELSE (WIN32)
+    SET(LIBRARIES trax m)
+ENDIF (WIN32)
+
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
 ADD_LIBRARY(trax SHARED lib/trax.c lib/region.c lib/strmap.c)
 
 ADD_EXECUTABLE(dummy trackers/dummy.c)
 
-TARGET_LINK_LIBRARIES(dummy trax)
+TARGET_LINK_LIBRARIES(dummy ${LIBRARIES})
 
 SET (BUILD_CAMSHIFT FALSE CACHE BOOL "Build an example using OpenCV CamShift tracker")
 
@@ -19,7 +25,7 @@ IF (BUILD_CAMSHIFT)
 	FIND_PACKAGE(OpenCV REQUIRED)
 	INCLUDE_DIRECTORIES(AFTER ${OpenCV_INCLUDE_DIR})
 	ADD_EXECUTABLE(camshift trackers/camshift.c)
-	TARGET_LINK_LIBRARIES(camshift ${OpenCV_LIBS} trax)
+	TARGET_LINK_LIBRARIES(camshift ${OpenCV_LIBS} ${LIBRARIES})
 ENDIF (BUILD_CAMSHIFT)
 
 SET (BUILD_CLIENT FALSE CACHE BOOL "Build a client executable")
@@ -30,7 +36,7 @@ IF (WIN32)
 ELSE (WIN32)
     ADD_EXECUTABLE(traxclient client/client.cpp client/process.cpp client/threads.c)
 ENDIF (WIN32)
-    TARGET_LINK_LIBRARIES(traxclient trax)
+    TARGET_LINK_LIBRARIES(traxclient ${LIBRARIES})
 ENDIF (BUILD_CLIENT)
 
 IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
