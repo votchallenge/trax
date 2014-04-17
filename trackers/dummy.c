@@ -64,7 +64,7 @@ int main( int argc, char** argv)
     config.format_image = TRAX_IMAGE_PATH;
 
     log = argc > 0 ? fopen(argv[0], "w") : NULL;
-    trax = trax_server_setup(config, log, TRAX_FLAG_LOG_INPUT | TRAX_FLAG_LOG_OUTPUT);
+    trax = trax_server_setup_standard(config, log, TRAX_FLAG_LOG_INPUT | TRAX_FLAG_LOG_OUTPUT);
 
 
     run = 1;

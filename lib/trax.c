@@ -66,6 +66,7 @@ char* __read_line(FILE* file)
 
     for(;;) {
         c = fgetc(file);
+printf("%d \n", c);
         if(c == EOF) {
             if (len == lenmax) {
                 free(line);
@@ -87,7 +88,7 @@ char* __read_line(FILE* file)
             linep = linen;
         }
 
-        if (c == '\n') break;
+        if (c == 13) break;
 
         *line++ = c;
     }
@@ -406,7 +407,14 @@ void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* 
 	free(message);
 }
 
-trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags) {
+trax_handle* trax_server_setup_standard(trax_configuration config, FILE* log, int flags) {
+
+    return trax_server_setup(config, stdin, stdout, log, flags);
+
+}
+
+trax_handle* trax_server_setup(trax_configuration config, FILE* input, FILE* output, FILE* log, int flags) {
+
 
     trax_properties* properties;
     trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
@@ -414,8 +422,8 @@ trax_handle* trax_server_setup(trax_configuration config, FILE* log, int flags) 
     server->flags = (flags | TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
 
     server->log = log;
-    server->input = stdin;
-    server->output = stdout;
+    server->input = input;
+    server->output = output;
 
     OUTPUT(server, __TOKEN_HELLO);
 
@@ -640,6 +648,14 @@ trax_region* trax_region_create_special(int code) {
 
 }
 
+trax_region* trax_region_create_polygon(int size) {
+
+    assert(size > 2);
+   
+    return region_create_polygon(size);
+
+}
+
 trax_region* trax_region_create_rectangle(float x, float y, float width, float height) {
 
     return region_create_rectangle(x, y, width, height);
@@ -652,7 +668,7 @@ trax_region* trax_region_get_bounds(const trax_region* region) {
 
 }
 
-int trax_region_get_type(trax_region* region) {
+int trax_region_get_type(const trax_region* region) {
 
     return REGION_TYPE(region);
 
@@ -662,11 +678,12 @@ void trax_region_set_special(trax_region* region, int code) {
 
     assert(REGION(region)->type == SPECIAL);
 
-    REGION(region)->data.special = code;
+    REGION(region)->data.special = (int) code;
 
 }
 
-int trax_region_get_special(trax_region* region) {
+
+int trax_region_get_special(const trax_region* region) {
 
     assert(REGION(region)->type == SPECIAL);
 
@@ -685,7 +702,7 @@ void trax_region_set_rectangle(trax_region* region, float x, float y, float widt
 
 }
 
-void trax_region_get_rectangle(trax_region* region, float* x, float* y, float* width, float* height) {
+void trax_region_get_rectangle(const trax_region* region, float* x, float* y, float* width, float* height) {
 
     assert(REGION(region)->type == RECTANGLE);
 
@@ -706,7 +723,7 @@ void trax_region_set_polygon_point(trax_region* region, int index, float x, floa
     REGION(region)->data.polygon.y[index] = y;
 }
 
-void trax_region_get_polygon_point(trax_region* region, int index, float* x, float* y) {
+void trax_region_get_polygon_point(const trax_region* region, int index, float* x, float* y) {
 
     assert(REGION(region)->type == POLYGON);
 
@@ -716,7 +733,7 @@ void trax_region_get_polygon_point(trax_region* region, int index, float* x, flo
     *y = REGION(region)->data.polygon.y[index];
 }
 
-int trax_region_get_polygon_count(trax_region* region) {
+int trax_region_get_polygon_count(const trax_region* region) {
 
     assert(REGION(region)->type == POLYGON);
 
@@ -753,7 +770,7 @@ trax_properties* trax_properties_create() {
 
 }
 
-void trax_properties_set(trax_properties* properties, const char* key, char* value) {
+void trax_properties_set(trax_properties* properties, const char* key, const char* value) {
 
     sm_put(properties->map, key, value);
 
@@ -775,7 +792,7 @@ void trax_properties_set_float(trax_properties* properties, const char* key, flo
 
 }
 
-char* trax_properties_get(trax_properties* properties, const char* key) {
+char* trax_properties_get(const trax_properties* properties, const char* key) {
 
 	char* value;
     int size = sm_get(properties->map, key, NULL, 0);
@@ -789,7 +806,7 @@ char* trax_properties_get(trax_properties* properties, const char* key) {
     return value;
 }
 
-int trax_properties_get_int(trax_properties* properties, const char* key, int def) {
+int trax_properties_get_int(const trax_properties* properties, const char* key, int def) {
 
     char* end;
     long ret;
@@ -808,7 +825,7 @@ int trax_properties_get_int(trax_properties* properties, const char* key, int de
 }
 
 
-float trax_properties_get_float(trax_properties* properties, const char* key, float def) {
+float trax_properties_get_float(const trax_properties* properties, const char* key, float def) {
 
     char* end;
     float ret;

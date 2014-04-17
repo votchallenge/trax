@@ -88,7 +88,7 @@ int main( int argc, char** argv )
     config.format_image = TRAX_IMAGE_PATH;
 
     // Call trax_server_setup to initialize trax protocol
-    trax = trax_server_setup(config, NULL, 0);
+    trax = trax_server_setup_standard(config, NULL, 0);
 
     trax_image* img = NULL;
     trax_region* rect = NULL;
