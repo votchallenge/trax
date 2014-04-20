@@ -66,7 +66,7 @@ char* __read_line(FILE* file)
 
     for(;;) {
         c = fgetc(file);
-printf("%d \n", c);
+
         if(c == EOF) {
             if (len == lenmax) {
                 free(line);
@@ -88,7 +88,7 @@ printf("%d \n", c);
             linep = linen;
         }
 
-        if (c == 13) break;
+        if (c == '\r' || c == '\n') break;
 
         *line++ = c;
     }

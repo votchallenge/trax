@@ -46,6 +46,7 @@
 #include <map>
 #include <string>
 #include <fstream>
+#include <sstream>
 
 #include "trax.h"
 #include "region.h"
@@ -366,11 +367,14 @@ int main( int argc, char** argv) {
 
         if (optind < argc) {
 
-            trackerCommand = string("");
+            stringstream buffer;
 
             for (int i = optind; i < argc; i++) {
-                trackerCommand += string(argv[i]) + string(" ");
+                buffer << " \"" << string(argv[i]) << "\" ";
             }
+
+            trackerCommand = buffer.str();
+
 
         } else {
             print_help();
@@ -402,6 +406,11 @@ int main( int argc, char** argv) {
             trackerProcess = new Process(trackerCommand);
 
             trackerProcess->copy_environment();
+            
+            std::map<std::string, std::string>::iterator iter;
+            for (iter = environment.begin(); iter != environment.end(); ++iter) {
+               trackerProcess->set_environment(iter->first, iter->second);
+            }
 			//trackerProcess->set_directory("C:\\Users\\ViCoS\\AppData\\Local\\Temp\\tp0c0fbbab_ddac_4cd3_a585_355afe3ad068");
             if (!trackerProcess->start()) {
 				DEBUGMSG("Unable to start the tracker process\n");

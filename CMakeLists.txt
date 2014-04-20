@@ -20,9 +20,9 @@ ADD_LIBRARY(trax SHARED lib/trax.c lib/region.c lib/strmap.c)
 
 ADD_LIBRARY(traxstatic STATIC lib/trax.c lib/region.c lib/strmap.c)
 
-ADD_EXECUTABLE(dummy trackers/dummy.c)
+ADD_EXECUTABLE(static trackers/static.c)
 
-TARGET_LINK_LIBRARIES(dummy ${LIBRARIES})
+TARGET_LINK_LIBRARIES(static ${LIBRARIES})
 
 SET (BUILD_CAMSHIFT FALSE CACHE BOOL "Build an example using OpenCV CamShift tracker")
 

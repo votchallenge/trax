@@ -224,7 +224,7 @@ bool Process::start() {
 	stringstream cmdbuffer;
 	int curargument = 0;
 	while (arguments[curargument]) {
-		cmdbuffer << arguments[curargument] << " ";
+		cmdbuffer << "\"" << arguments[curargument] << "\" ";
 		curargument++;
 	}
 
