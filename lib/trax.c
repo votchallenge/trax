@@ -646,6 +646,14 @@ trax_image* trax_image_create_path(const char* path) {
     return img;
 }
 
+const char* trax_image_get_path(trax_image* image) {
+
+    assert(image->type == TRAX_IMAGE_PATH);
+
+    return image->data;
+
+}
+
 void trax_region_release(trax_region** region) {
 
     Region* _region = REGION(*region);
