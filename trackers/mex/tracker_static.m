@@ -1,27 +1,23 @@
-function [] = trax_dummy()
-%
-% TRAX_DUMMY
-%
-% Dummy tracker (only reports initialization region)
-%
+function [] = tracker_static()
 
-trax = trax_setup('name', 'Dummy', 'identifier', '1', 'region', 'polygon');
+cleanup = onCleanup(@() exit() );
+
+traxserver('setup', 'polygon', 'path');
 
 memory = [0 0 0 0];
 
 while 1
    
-    [code, ~, region] = trax_wait(trax);
-    
-    switch code
-    case 'initialize'
+    [image, region] = traxserver('wait');
+
+    if isempty(image)
+		break;
+	end;
+
+	if ~isempty(region)
         memory = region;
-        trax_status(trax, memory);
-    case 'frame'
-        trax_status(trax, memory);
-    otherwise
-        break;
     end
 
+	traxserver('status', memory);
 end
 

@@ -35,16 +35,11 @@
 
 #define TRAX_FLAG_VALID 1
 #define TRAX_FLAG_SERVER 2
-#define TRAX_FLAG_LOG_INPUT 4
-#define TRAX_FLAG_LOG_OUTPUT 8
-#define TRAX_FLAG_LOG_DEBUG 16
+#define TRAX_FLAG_TERMINATED 4
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define TRAX_PREFIX "@@TRAX:"
-#define TRAX_PATH_MAX_LENGTH 1024
 
 typedef struct trax_image {
     short type;
@@ -77,7 +72,7 @@ typedef void(*trax_enumerator)(const char *key, const char *value, const void *o
  *
 **/
 
-__EXPORT trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags);
+__EXPORT trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log);
 
 __EXPORT int trax_client_wait(trax_handle* client, trax_region** region, trax_properties* properties);
 
@@ -90,9 +85,9 @@ __EXPORT void trax_client_frame(trax_handle* client, trax_image* image, trax_pro
  *   
  *
 **/
-__EXPORT trax_handle* trax_server_setup_standard(trax_configuration config, FILE* log, int flags);
+__EXPORT trax_handle* trax_server_setup_standard(trax_configuration config, FILE* log);
 
-__EXPORT trax_handle* trax_server_setup(trax_configuration config, FILE* input, FILE* output, FILE* log, int flags);
+__EXPORT trax_handle* trax_server_setup(trax_configuration config, FILE* input, FILE* output, FILE* log);
 
 __EXPORT int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties);
 

@@ -10,6 +10,9 @@
 
 // TODO: arbitrary line length (without buffering)
 
+#define TRAX_PREFIX "@@TRAX:"
+#define TRAX_PATH_MAX_LENGTH 1024
+
 #define _HELPER(x) #x
 #define __TOKEN_INIT TRAX_PREFIX "initialize"
 #define __TOKEN_HELLO TRAX_PREFIX "hello"
@@ -17,7 +20,8 @@
 #define __TOKEN_QUIT TRAX_PREFIX "quit"
 #define __TOKEN_STATUS TRAX_PREFIX "status"
 
-#define VALIDATE_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) != 0)
+#define VALIDATE_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID))
+#define VALIDATE_ALIVE_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && !(H->flags & TRAX_FLAG_TERMINATED))
 #define VALIDATE_SERVER_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && (H->flags & TRAX_FLAG_SERVER))
 #define VALIDATE_CLIENT_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && !(H->flags & TRAX_FLAG_SERVER))
 
@@ -198,7 +202,7 @@ int __parse_region(const char* line, int* pos, int size, Region** region) {
 	return result;
 }
 
-trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) {
+trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log) {
 
     int pos = 0;
     char* line = NULL;
@@ -208,7 +212,7 @@ trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log, int flags) 
 
     trax_handle* client = (trax_handle*) malloc(sizeof(trax_handle));
 
-    client->flags = (flags & ~TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
+    client->flags = (0 & ~TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
 
     client->log = log;
     client->input = input;
@@ -277,6 +281,7 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
     (*region) = NULL;
 
+    VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
 
     pos = 0;
@@ -326,6 +331,8 @@ end:
         if (properties) 
             __parse_properties(line, &pos, size, properties);
 
+        client->flags |= TRAX_FLAG_TERMINATED;
+
         free(buffer);
         free(line);
 
@@ -343,6 +350,7 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 	char* data = NULL;
 	Region* _region;
 
+    VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
 
 	assert(image && region);
@@ -385,6 +393,7 @@ void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* 
 
     char* message = (char*) malloc(sizeof(char) * 1024);
 
+    VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
 
     assert(client->config.format_image == image->type);
@@ -407,19 +416,18 @@ void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* 
 	free(message);
 }
 
-trax_handle* trax_server_setup_standard(trax_configuration config, FILE* log, int flags) {
+trax_handle* trax_server_setup_standard(trax_configuration config, FILE* log) {
 
-    return trax_server_setup(config, stdin, stdout, log, flags);
+    return trax_server_setup(config, stdin, stdout, log);
 
 }
 
-trax_handle* trax_server_setup(trax_configuration config, FILE* input, FILE* output, FILE* log, int flags) {
-
+trax_handle* trax_server_setup(trax_configuration config, FILE* input, FILE* output, FILE* log) {
 
     trax_properties* properties;
     trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
 
-    server->flags = (flags | TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
+    server->flags = (TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
 
     server->log = log;
     server->input = input;
@@ -475,6 +483,7 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 	int size;
 	int result;
 
+    VALIDATE_ALIVE_HANDLE(server);
     VALIDATE_SERVER_HANDLE(server);
 
     line = __read_protocol_line(server);
@@ -524,6 +533,8 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 		free(buffer);
         free(line);
     
+        server->flags |= TRAX_FLAG_TERMINATED;
+
         return TRAX_QUIT;
     } else if (strcmp(buffer, __TOKEN_INIT) == 0) {
 
@@ -566,6 +577,7 @@ void trax_server_reply(trax_handle* server, trax_region* region, trax_properties
 
 	char* data;
 
+    VALIDATE_ALIVE_HANDLE(server);
     VALIDATE_SERVER_HANDLE(server);
 
     data = region_string(REGION(region));
@@ -573,7 +585,6 @@ void trax_server_reply(trax_handle* server, trax_region* region, trax_properties
     if (!data) return;
 
     OUTPUT(server, "%s ", __TOKEN_STATUS);
-
 
     if (data) {
         OUTPUT(server, "\"%s\" ", data);
@@ -594,12 +605,15 @@ int trax_cleanup(trax_handle** handle) {
 
     VALIDATE_HANDLE((*handle));
 
-// TODO: send QUIT if client
+    if (!((*handle)->flags & TRAX_FLAG_TERMINATED)) {
+        OUTPUT((*handle), "%s \n", __TOKEN_QUIT);
+    }
+
+    (*handle)->flags |= TRAX_FLAG_TERMINATED;
 
     if ((*handle)->log) {
         (*handle)->log = 0;
     }
-
 
     free(*handle);
     *handle = 0;

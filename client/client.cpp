@@ -419,8 +419,6 @@ int main( int argc, char** argv) {
 
             DEBUGMSG("Tracker process ID: %d \n", trackerProcess->get_handle());
 
-            int flags = 0;
-
             MUTEX_LOCK(watchdogMutex);
 
             watchdogState.counter = timeout;
@@ -428,7 +426,7 @@ int main( int argc, char** argv) {
 
             MUTEX_UNLOCK(watchdogMutex);
 
-            trax = trax_client_setup(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout, flags);
+            trax = trax_client_setup(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);
 
             if (!trax) throw std::runtime_error("Unable to establish connection");
 
