@@ -284,21 +284,18 @@ int main(int argc, char** argv) {
 
 	string matlab_executable("");
 
-#ifndef WIN32
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER)
+	if (!(ep = engOpen(matlab_executable.c_str()))) {
+		fprintf(stderr, "Can't start MATLAB engine\n");
+		return EXIT_FAILURE;
+	}
+    engSetVisible(ep, 0);
+#else
 	if (!getenv("MATLAB_ROOT")) {
 		fprintf(stderr, "MATLAB_ROOT not defined as an environmental variable (this is required on Posix systems)\n");
 		return EXIT_FAILURE;
 	}
 	matlab_executable = string(getenv("MATLAB_ROOT")) + string("/bin/matlab -nodesktop -nosplash");
-#endif
-
-	if (!(ep = engOpen(matlab_executable.c_str()))) {
-		fprintf(stderr, "Can't start MATLAB engine\n");
-		return EXIT_FAILURE;
-	}
-
-#ifdef WIN32
-	engSetVisible(ep, 0);
 #endif
 
 	/* Add paths */
