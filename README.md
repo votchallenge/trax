@@ -4,7 +4,7 @@ About the TraX protocol
 What is TraX protocol?
 ----------------------
 
-Tracking eXchange protocol is a simple protocol that enables easier evaluation of computer vision tracking algorithms. The basic idea is that a tracker communicates with the evaluation software using a set of textual commands over the (standard) input/output streams.
+[Visual Tracking eXchange protocol](http://prints.vicos.si/publications/311/) is a simple protocol that enables easier evaluation of computer vision tracking algorithms. The basic idea is that a tracker communicates with the evaluation software using a set of textual commands over the (standard) input/output streams.
 
 Reference C server and client implementation
 ---------------------------------
@@ -19,8 +19,7 @@ Matlab TraX implementation together with the specific documentation is available
 TODO list
 ---------
 
- * C API documentation
- * Protocol documentation
+ * Better C API documentation
  * Java implementation
  * Python implementation
 
