@@ -370,6 +370,8 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 
         trax_region* converted = region_convert(region, client->config.format_region);
 
+        assert(converted);
+
         data = region_string(converted);
 
         trax_region_release(&converted);

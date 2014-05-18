@@ -204,7 +204,8 @@ Region* region_convert(const Region* region, int type) {
 				    reg->data.rectangle.width = right - left;
 				    reg->data.rectangle.height = bottom - top;
 				    break;
-				default:
+				}
+				default: {
 					free(reg); reg = NULL;
 					break;
 				}
@@ -248,7 +249,8 @@ Region* region_convert(const Region* region, int type) {
 					memcpy(reg->data.polygon.y, region->data.polygon.y, sizeof(float) * region->data.polygon.count);
 
 				    break;
-				default:
+				}
+				default: {
 					free(reg); reg = NULL;
 					break;
 				}

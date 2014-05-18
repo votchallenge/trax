@@ -411,7 +411,7 @@ int main( int argc, char** argv) {
             for (iter = environment.begin(); iter != environment.end(); ++iter) {
                trackerProcess->set_environment(iter->first, iter->second);
             }
-			//trackerProcess->set_directory("C:\\Users\\ViCoS\\AppData\\Local\\Temp\\tp0c0fbbab_ddac_4cd3_a585_355afe3ad068");
+
             if (!trackerProcess->start()) {
 				DEBUGMSG("Unable to start the tracker process\n");
 				break;
@@ -457,7 +457,7 @@ int main( int argc, char** argv) {
             // Start timing
             clock_t timing_toc;
             clock_t timing_tic = clock();
-			region_print(stdout, (Region*)initialize);
+	
             bool tracking = false;
 
             trax_client_initialize(trax, image, initialize, properties);

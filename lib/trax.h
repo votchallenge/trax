@@ -28,10 +28,10 @@
 #define TRAX_IMAGE_URL 1 // Not implemented yet!
 #define TRAX_IMAGE_DATA 2 // Not implemented yet!
 
-#define TRAX_REGION_RECTANGLE 0
-#define TRAX_REGION_POLYGON 1
-#define TRAX_REGION_MASK 2 // Not implemented yet!
-#define TRAX_REGION_SPECIAL -1
+#define TRAX_REGION_RECTANGLE 1
+#define TRAX_REGION_POLYGON 2
+#define TRAX_REGION_MASK 3 // Not implemented yet!
+#define TRAX_REGION_SPECIAL 0
 
 #define TRAX_FLAG_VALID 1
 #define TRAX_FLAG_SERVER 2
