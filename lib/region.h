@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-enum RegionType {SPECIAL, RECTANGLE, POLYGON};
+typedef enum RegionType {SPECIAL, RECTANGLE, POLYGON} RegionType;
 
 typedef struct Polygon {
 
@@ -66,7 +66,7 @@ __EXPORT char* region_string(Region* region);
 
 __EXPORT void region_print(FILE* out, Region* region);
 
-__EXPORT Region* region_convert(const Region* region, int type);
+__EXPORT Region* region_convert(const Region* region, RegionType type);
 
 __EXPORT void region_release(Region** region);
 

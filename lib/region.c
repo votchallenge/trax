@@ -23,7 +23,7 @@ typedef struct Bounds {
 
 } Bounds;
 
-Region* __create_region(int type) {
+Region* __create_region(RegionType type) {
 
     Region* reg = (Region*) malloc(sizeof(Region));
 
@@ -43,14 +43,22 @@ int _parse_sequence(char* buffer, float** data) {
     for (i = 0; ; i++) {
         
         if (pch)
-            numbers[i] = atof(pch);
+            numbers[i] = (float) atof(pch);
         else 
             break;
 
 		pch = strtok(NULL, ",");
     }
 
-    *data = (float*) realloc(numbers, sizeof(float) * i);
+	if (i > 0) {
+		int j;
+		*data = (float*) malloc(sizeof(float) * i);
+		for (j = 0; j < i; j++) { (*data)[j] = numbers[j]; }  //((float*) realloc(numbers, sizeof(float) * i);
+		free(numbers);
+	} else {
+		*data = NULL;
+		free(numbers);
+	}
 
     return i;
 }
@@ -60,6 +68,8 @@ int region_parse(char* buffer, Region** region) {
     float* data = NULL;
     int num;
     
+	char* tmp = buffer;
+
 	(*region) = NULL;
 
 	if (buffer[0] == '<') {
@@ -73,7 +83,6 @@ int region_parse(char* buffer, Region** region) {
 		(*region) = (Region*) malloc(sizeof(Region));
 		(*region)->type = SPECIAL;
 		(*region)->data.special = (int) data[0];
-
 		free(data);
 		return 1;
 
@@ -122,7 +131,7 @@ int region_parse(char* buffer, Region** region) {
 
     }
 
-    free(data);
+	if (data) free(data);
 
     return 0;
 }
@@ -169,7 +178,7 @@ void region_print(FILE* out, Region* region) {
 
 }
 
-Region* region_convert(const Region* region, int type) {
+Region* region_convert(const Region* region, RegionType type) {
 
     Region* reg = NULL;
 
