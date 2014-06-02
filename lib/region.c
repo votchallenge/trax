@@ -53,7 +53,7 @@ int _parse_sequence(char* buffer, float** data) {
 	if (i > 0) {
 		int j;
 		*data = (float*) malloc(sizeof(float) * i);
-		for (j = 0; j < i; j++) { (*data)[j] = numbers[j]; }  //((float*) realloc(numbers, sizeof(float) * i);
+		for (j = 0; j < i; j++) { (*data)[j] = numbers[j]; } 
 		free(numbers);
 	} else {
 		*data = NULL;
