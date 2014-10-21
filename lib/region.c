@@ -14,6 +14,11 @@
 #define isinf(x) (!_finite(x))
 #endif
 
+#if defined (_MSC_VER)
+#define INFINITY (DBL_MAX+DBL_MAX)
+#define NAN (INFINITY-INFINITY)
+#endif
+
 typedef struct Bounds {
 
 	float top;
@@ -42,9 +47,17 @@ int _parse_sequence(char* buffer, float** data) {
 	char* pch = strtok(buffer, ",");
     for (i = 0; ; i++) {
         
-        if (pch)
+        if (pch){
+            #if defined (_MSC_VER)
+            if(tolower(pch[0]) == 'n' && tolower(pch[1]) == 'a' && tolower(pch[2]) == 'n'){    
+               numbers[i] = NAN;
+            }else{
+               numbers[i] = (float) atof(pch);
+            }
+            #else
             numbers[i] = (float) atof(pch);
-        else 
+            #endif 
+        }else 
             break;
 
 		pch = strtok(NULL, ",");
