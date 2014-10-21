@@ -18,11 +18,13 @@
 
 #define TRAX_VERSION 1
 
-#define TRAX_ERROR 0
+#define TRAX_ERROR -1
+#define TRAX_HELLO 0
 #define TRAX_INITIALIZE 1
 #define TRAX_FRAME 2
 #define TRAX_QUIT 3
 #define TRAX_STATUS 4
+#define TRAX_STATE 4
 
 #define TRAX_IMAGE_PATH 0
 #define TRAX_IMAGE_URL 1 // Not implemented yet!

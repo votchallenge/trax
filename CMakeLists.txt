@@ -16,13 +16,17 @@ ENDIF (WIN32)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-ADD_LIBRARY(trax SHARED lib/trax.c lib/region.c lib/strmap.c)
+ADD_LIBRARY(trax SHARED lib/trax.c lib/region.c lib/strmap.c lib/message.c)
 
-ADD_LIBRARY(traxstatic STATIC lib/trax.c lib/region.c lib/strmap.c)
+ADD_LIBRARY(traxstatic STATIC lib/trax.c lib/region.c lib/strmap.c lib/message.c)
 
 ADD_EXECUTABLE(static trackers/static.c)
 
+ADD_EXECUTABLE(test lib/test.c)
+
 TARGET_LINK_LIBRARIES(static ${LIBRARIES})
+
+TARGET_LINK_LIBRARIES(test ${LIBRARIES})
 
 SET (BUILD_CAMSHIFT FALSE CACHE BOOL "Build an example using OpenCV CamShift tracker")
 
