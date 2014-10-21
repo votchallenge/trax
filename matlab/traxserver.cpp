@@ -58,28 +58,52 @@ trax_properties* struct_to_parameters(const mxArray * input) {
     return prop;
 }
 
-void param_enumerator(const char *key, const char *value, const void *obj) {
+typedef struct _param_copy {
+    mxArray *array;
+    int pos;
+    int length;
+} _param_copy;
 
-	mxArray* array = (mxArray*) obj;
+void _param_count_enumerator(const char *key, const char *value, const void *obj) {
 
-	if (mxAddField(array, key) < 0) return;
+	int* length = (int *) obj;
 
-	const char** cp = (const char **) &(value);
-	mxArray* field = mxCreateCharMatrixFromStrings(1, cp);
-
-	mxSetField(array, 0, key, field);
+	(*length) ++;
 
 }
 
-mxArray* parameters_to_struct(trax_properties * input) {
+void _param_copy_enumerator(const char *key, const char *value, const void *obj) {
 
-	const char* fieldnames = NULL;
+	_param_copy* tmp = (_param_copy*) obj;
 
-	mxArray * array = mxCreateStructMatrix(1, 1, 0, &fieldnames);
+	const char** cpkey = (const char **) &(key);
+	mxArray* mxKey = mxCreateCharMatrixFromStrings(1, cpkey);
 
-	trax_properties_enumerate(input, param_enumerator, array);
+	const char** cpval = (const char **) &(value);
+	mxArray* mxVal = mxCreateCharMatrixFromStrings(1, cpval);
 
-	return array;
+    mxSetCell(tmp->array, tmp->pos, mxKey);
+    mxSetCell(tmp->array, tmp->pos + tmp->length, mxVal);
+
+    tmp->pos++;
+
+}
+
+mxArray* parameters_to_cell(trax_properties * input) {
+
+    int length = 0;
+
+	trax_properties_enumerate(input, _param_count_enumerator, &length);
+
+    _param_copy tmp;
+
+    tmp.array = mxCreateCellMatrix(length, 2);
+    tmp.pos = 0;
+    tmp.length = length;
+
+	trax_properties_enumerate(input, _param_copy_enumerator, &tmp);
+
+	return tmp.array;
 
 }
 
@@ -224,13 +248,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 			if (nlhs > 0) plhs[0] = image_to_array(img);
 			if (nlhs > 1) plhs[1] = region_to_array(reg);
-			if (nlhs > 2) plhs[2] = parameters_to_struct(prop);
+			if (nlhs > 2) plhs[2] = parameters_to_cell(prop);
 
 		} else if (tr == TRAX_FRAME) {
 
 			if (nlhs > 0) plhs[0] = image_to_array(img);
 			if (nlhs > 1) plhs[1] = MEX_CREATE_EMTPY;
-			if (nlhs > 2) plhs[2] = parameters_to_struct(prop);
+			if (nlhs > 2) plhs[2] = parameters_to_cell(prop);
 
 		} else {
 
