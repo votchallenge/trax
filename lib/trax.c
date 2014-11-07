@@ -209,7 +209,7 @@ void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* 
 
     if (image->type == TRAX_IMAGE_PATH) {
         LIST_APPEND(arguments, image->data);
-    } goto failure;
+    } else goto failure;
 
     write_message(client->output, client->log, TRAX_FRAME, arguments, properties);
 
