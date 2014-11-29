@@ -146,7 +146,7 @@ int read_message(FILE* input, FILE* log, string_list* arguments, trax_properties
             }		            
             case PARSE_STATE_SPACE: {
 
-                if (chr == ' ') {
+              if (chr == ' ' || chr == '\r') {
                     // Do nothing
                 } else if (chr == '\n') {
                 	complete = TRUE;
