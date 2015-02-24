@@ -57,16 +57,15 @@ int __parse_message_type(const char *str) {
 int read_message(FILE* input, FILE* log, string_list* arguments, trax_properties* properties) {
 		
 	int message_type = -1;
-	
+    int prefix_length = strlen(TRAX_PREFIX);
+	int complete = FALSE;
+    int state = -prefix_length;
+
 	string_buffer key_buffer, value_buffer;
 
     BUFFER_CREATE(key_buffer, 512);
     BUFFER_CREATE(value_buffer, 512);
     LIST_RESET((*arguments));
-
-    int prefix_length = strlen(TRAX_PREFIX);
-	int complete = FALSE;
-    int state = -prefix_length;
 
     while (!complete) {
     	
@@ -443,6 +442,8 @@ void write_message(FILE* output, FILE* log, int type, const string_list argument
 
     }
 
+	{
+
     file_pair pair;
     pair.output = output;
     pair.log = log;
@@ -455,5 +456,6 @@ void write_message(FILE* output, FILE* log, int type, const string_list argument
 
     if (log) fflush(log);
 
+	}
 }
 

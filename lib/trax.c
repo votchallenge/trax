@@ -109,10 +109,10 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
     if (result == TRAX_STATUS) {
 
+		Region *_region = NULL;
+
         if (LIST_SIZE(arguments) != 1)
             goto failure;
-
-        Region* _region = NULL;
 
         result = TRAX_STATUS;
 
@@ -199,9 +199,9 @@ failure:
 
 void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties) {
 
+    string_list arguments;
     VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
-    string_list arguments;
 
     assert(client->config.format_image == image->type);
 
