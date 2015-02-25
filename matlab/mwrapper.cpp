@@ -132,8 +132,10 @@ string string_replace( string src, string const& target, string const& repl)
 }
 
 trax_region* array_to_region(const mxArray* input) {
-
-    trax_region* p = NULL;
+	
+	if (!input) return NULL;
+    
+	trax_region* p = NULL;
 	double *r = (double*)mxGetPr(input);
     int l = mxGetN(input);
     
@@ -156,6 +158,8 @@ trax_region* array_to_region(const mxArray* input) {
 }
 
 mxArray* region_to_array(const trax_region* region) {
+
+	if (!region) return NULL;
 
 	mxArray* val = NULL;
 
@@ -202,9 +206,9 @@ bool executeCommand(Engine *ep, const string& command, bool echo) {
 
 	engOutputBuffer(ep, buffer, BUFFERSIZE);
 
-	string wrapped = string("try \n") + command + string("\n e__ = []; catch e \n e__ = e; \n end");
+	//string wrapped = string("try \n") + command + string("\n e__ = []; catch e \n e__ = e; \n end");
 
-	engEvalString(ep, wrapped.c_str());
+	engEvalString(ep, command.c_str());
 
 	if (echo) {
 		fprintf(stdout, "%s\n", buffer);
@@ -226,6 +230,8 @@ bool executeCommand(Engine *ep, const string& command, bool echo) {
 	}
 
 	mxDestroyArray(err);
+
+	if (echo) fflush(stdout);
 
 	return !failed;
 }
