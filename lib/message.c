@@ -381,7 +381,7 @@ int read_message(FILE* input, FILE* log, string_list* arguments, trax_properties
 #define OUTPUT_STRING(S) { fputs(S, output); if (log) fputs(S, log); }
 #define OUTPUT_ESCAPED(S) { int i = 0; while (1) { \
     if (!S[i]) break; \
-    if (S[i] == '"') { fputc('\\', output); if (log) fputc('\\', log); } \
+    if (S[i] == '"' || S[i] == '\\') { fputc('\\', output); if (log) fputc('\\', log); } \
      fputc(S[i], output); if (log) fputc(S[i], log); i++; } \
     }
 
