@@ -311,10 +311,10 @@ int read_message(FILE* input, FILE* log, string_list* arguments, trax_properties
             case PARSE_STATE_QUOTED_ESCAPE_KEY: {
 
                 if (chr == 'n') {
-                	BUFFER_PUSH(value_buffer, '\n');
+                	BUFFER_PUSH(key_buffer, '\n');
                     state = PARSE_STATE_QUOTED_KEY;
                 } else if (chr != '\n') {
-                	BUFFER_PUSH(value_buffer, chr);
+                	BUFFER_PUSH(key_buffer, chr);
                     state = PARSE_STATE_QUOTED_KEY;
                 } else {
                     state = PARSE_STATE_PASS;
