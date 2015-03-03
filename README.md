@@ -14,14 +14,9 @@ Examples of integration in a tracker are provided in the `trackers` directory. A
 
 Matlab server implementation
 ----------------------------
-Matlab TraX implementation together with the specific documentation is available in the `matlab` directory.
+Matlab TraX implementation together with the specific documentation is available in the `matlab` directory. On Linux and OSX Mex functions can be used to run a TraX server, on Windows you have to use a special program called `mwrapper.exe`.
 
-TODO list
----------
-
- * Better C API documentation
- * Java implementation
- * Python implementation
+It is technically not possible to have a native Matlab client so for now the only option is to run `traxclient` program from Matlab.
 
 License
 -------
@@ -31,5 +26,5 @@ trax is free software: you can redistribute it and/or modify it under the terms 
 trax is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
-along with libtrax. If not, see <http://www.gnu.org/licenses/>.
+along with trax. If not, see <http://www.gnu.org/licenses/>.
 
