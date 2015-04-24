@@ -47,9 +47,9 @@ void sleep(long time) {
 
 int main( int argc, char** argv)
 {
-	int run;
+    int run;
     int wait = 0;    
-	FILE* log;
+    FILE* log;
     trax_image* img = NULL;
     trax_region* reg = NULL;
     trax_region* mem = NULL;
@@ -63,7 +63,7 @@ int main( int argc, char** argv)
     config.format_region = TRAX_REGION_POLYGON;
     config.format_image = TRAX_IMAGE_PATH;
 
-    log = argc > 0 ? fopen(argv[0], "w") : NULL;
+    log = argc > 1 ? fopen(argv[1], "w") : NULL;
     trax = trax_server_setup_standard(config, log);
 
     run = 1;
