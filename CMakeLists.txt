@@ -2,15 +2,20 @@ PROJECT (trax)
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 GET_FILENAME_COMPONENT(PROJECT_ROOT . ABSOLUTE)
-
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-
 SET(CMAKE_MODULE_PATH ${PROJECT_ROOT}/cmake)
 
-IF (WIN32 OR WIN64)
+IF(WIN32 OR WIN64)
     SET(LIBRARIES trax)
+    IF(MINGW)
+        SET(MINGW_LIBRARIES -lws2_32 -lrpcrt4 -liphlpapi)
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+        SET(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+        SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_CXX_FLAGS} -static -static-libgcc -static-libstdc++")
+    ENDIF()
 ELSE ()
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+
     SET(LIBRARIES trax m)
     ADD_EXECUTABLE(test lib/test.c)
 ENDIF ()
