@@ -41,8 +41,8 @@ public:
     bool start();
     bool stop();
 
-    FILE* get_input();
-    FILE* get_output();
+    int get_input();
+    int get_output();
 
     int get_handle();
 
@@ -52,8 +52,8 @@ private:
 
     void cleanup();
 
-    FILE* p_stdout;
-    FILE* p_stdin;
+    int p_stdout;
+    int p_stdin;
 
     int out[2];
     int in[2];

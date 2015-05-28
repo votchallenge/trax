@@ -190,19 +190,16 @@ bool Process::start() {
       return false; 
 
 	// Ensure the read handle to the pipe for STDOUT is not inherited.
+    if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
+        return false; 
 
-   if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
-      return false; 
+    // Create a pipe for the child process's STDIN. 
+    if (! CreatePipe(&handle_IN_Rd, &handle_IN_Wr, &saAttr, 0)) 
+        return false; 
 
-	// Create a pipe for the child process's STDIN. 
- 
-   if (! CreatePipe(&handle_IN_Rd, &handle_IN_Wr, &saAttr, 0)) 
-      return false; 
-
-	// Ensure the write handle to the pipe for STDIN is not inherited. 
- 
-   if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
-      return false; 
+    // Ensure the write handle to the pipe for STDIN is not inherited.  
+    if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
+        return false; 
  
 	STARTUPINFO siStartInfo;
 	BOOL bSuccess = FALSE; 
@@ -232,7 +229,6 @@ bool Process::start() {
 	stringstream envbuffer;
     map<string, string>::iterator iter;
     for (iter = env.begin(); iter != env.end(); ++iter) {
-       // if (iter->first == "PWD") continue;
         envbuffer << iter->first << string("=") << iter->second << '\0';
     }
 
@@ -309,8 +305,10 @@ bool Process::start() {
 
     if (directory.size() > 0) chdir(cwd.c_str());
 
-    p_stdin = fdopen(out[1], "w");
-    p_stdout = fdopen(in[0], "r");
+//    p_stdin = fdopen(out[1], "w");
+//    p_stdout = fdopen(in[0], "r");
+    p_stdin = out[1];
+    p_stdout = in[0];
 
 #endif
 
@@ -383,7 +381,7 @@ void Process::cleanup() {
 
 }
 
-FILE* Process::get_input() {
+int Process::get_input() {
 
 #ifdef WIN32
 	if (!piProcInfo.hProcess) return NULL;
@@ -395,7 +393,7 @@ FILE* Process::get_input() {
 
 }
 
-FILE* Process::get_output() {
+int Process::get_output() {
 
 #ifdef WIN32
 	if (!piProcInfo.hProcess) return NULL;

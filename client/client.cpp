@@ -426,7 +426,7 @@ int main( int argc, char** argv) {
 
             MUTEX_UNLOCK(watchdogMutex);
 
-            trax = trax_client_setup(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);
+            trax = trax_client_setup(trackerProcess->get_output(), trackerProcess->get_input(), silent ? TRAX_NO_LOG : fileno(stdout));
 
             if (!trax) throw std::runtime_error("Unable to establish connection");
 

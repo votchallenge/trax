@@ -5,7 +5,7 @@
  * The main function of this example is to show the developers how to modify
  * their trackers to work with the evaluation environment.
  *
- * Copyright (c) 2013, Luka Cehovin
+ * Copyright (c) 2015, Luka Cehovin
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -49,7 +49,7 @@ int main( int argc, char** argv)
 {
     int run;
     int wait = 0;    
-    FILE* log;
+    int log;
     trax_image* img = NULL;
     trax_region* reg = NULL;
     trax_region* mem = NULL;
@@ -63,7 +63,7 @@ int main( int argc, char** argv)
     config.format_region = TRAX_REGION_POLYGON;
     config.format_image = TRAX_IMAGE_PATH;
 
-    log = argc > 1 ? fopen(argv[1], "w") : NULL;
+    log = argc > 1 ? open(argv[1], O_WRONLY) : TRAX_NO_LOG;
     trax = trax_server_setup_standard(config, log);
 
     run = 1;
@@ -128,7 +128,7 @@ int main( int argc, char** argv)
     // TraX: Call trax_cleanup at the end
     // *************************************
 
-    if (log) fclose(log);
+    if (log != TRAX_NO_LOG) close(log);
     trax_cleanup(&trax);
 
     return 0;

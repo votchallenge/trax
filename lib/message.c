@@ -54,7 +54,7 @@ int __parse_message_type(const char *str) {
     return -1;
 }
 
-int read_message(FILE* input, FILE* log, string_list* arguments, trax_properties* properties) {
+int read_message(int input, int log, string_list* arguments, trax_properties* properties) {
 		
 	int message_type = -1;
     int prefix_length = strlen(TRAX_PREFIX);
@@ -68,22 +68,23 @@ int read_message(FILE* input, FILE* log, string_list* arguments, trax_properties
     LIST_RESET((*arguments));
 
     while (!complete) {
-    	
-    	int val = fgetc(input);
+
     	char chr; 
+    	int n = read(input, &chr, 1);
+
     	//printf("%d\n", val);
-    	if (val == EOF) {
+    	if (n == 0) {
     		if (message_type == -1) break;
     		chr = '\n';
     		complete = TRUE;
-    	} else chr = (char) val;
+    	}
 
-        if (log) fputc(val, log);
+        if (log != TRAX_NO_LOG) write(log, &chr, 1);
 
         switch (state) {
             case PARSE_STATE_TYPE: { // Parsing message type
 
-                if (isalnum(val)) {
+                if (isalnum(chr)) {
 
                     BUFFER_PUSH(key_buffer, chr);
 
@@ -372,28 +373,28 @@ int read_message(FILE* input, FILE* log, string_list* arguments, trax_properties
     BUFFER_DESTROY(key_buffer);
     BUFFER_DESTROY(value_buffer);
 
-    if (log) fflush(log);
+    //if (log != TRAX_NO_LOG) flush(log);
 
     return message_type;
     
 }
 
-#define OUTPUT_STRING(S) { fputs(S, output); if (log) fputs(S, log); }
+#define OUTPUT_STRING(S) { int len = strlen(S); write(output, S, len); if (log != TRAX_NO_LOG) write(log, S, len); }
 #define OUTPUT_ESCAPED(S) { int i = 0; while (1) { \
     if (!S[i]) break; \
-    if (S[i] == '"' || S[i] == '\\') { fputc('\\', output); if (log) fputc('\\', log); } \
-     fputc(S[i], output); if (log) fputc(S[i], log); i++; } \
+    if (S[i] == '"' || S[i] == '\\') { write(output, "\\", 1); if (log != TRAX_NO_LOG) write(log, "\\", 1); } \
+     write(output, &(S[i]), 1); if (log != TRAX_NO_LOG) write(log, &(S[i]), 1); i++; } \
     }
 
 typedef struct file_pair {
-    FILE* output;
-    FILE* log;
+    int output;
+    int log;
 } file_pair;
 
 void __output_properties(const char *key, const char *value, const void *obj) {
     
-    FILE* output = ((file_pair *) obj)->output;
-    FILE* log = ((file_pair *) obj)->log;
+    int output = ((file_pair *) obj)->output;
+    int log = ((file_pair *) obj)->log;
 
     OUTPUT_STRING("\"");
     OUTPUT_STRING(key);
@@ -403,7 +404,7 @@ void __output_properties(const char *key, const char *value, const void *obj) {
 
 }
 
-void write_message(FILE* output, FILE* log, int type, const string_list arguments, trax_properties* properties) {
+void write_message(int output, int log, int type, const string_list arguments, trax_properties* properties) {
 
     int i;
 
@@ -452,9 +453,9 @@ void write_message(FILE* output, FILE* log, int type, const string_list argument
 
     OUTPUT_STRING("\n");
 
-    fflush(output);
+    //flush(output);
 
-    if (log) fflush(log);
+    //if (log != TRAX_NO_LOG) flush(log);
 
 	}
 }

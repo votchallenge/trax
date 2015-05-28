@@ -1,6 +1,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 #include "trax.h"
 #include "message.h"
@@ -22,11 +23,12 @@ int main( int argc, char** argv) {
 
         string_list arguments;
         trax_properties* properties;
-        FILE* input;
+        int input;
+        int output = fileno(stdout);
 
         if (argc != 3) return 0;
 
-        input = fopen(argv[2], "r");
+        input = open(argv[2], O_RDONLY);
 
         LIST_CREATE(arguments, 8);
         properties = trax_properties_create();
@@ -38,15 +40,15 @@ int main( int argc, char** argv) {
             LIST_RESET(arguments);
             trax_properties_clear(properties);
 
-            type = read_message(input, NULL, &arguments, properties);
+            type = read_message(input, TRAX_NO_LOG, &arguments, properties);
 
             if (type == TRAX_ERROR) break;
 
-            write_message(stdout, NULL, type, arguments, properties); 
+            write_message(output, TRAX_NO_LOG, type, arguments, properties); 
 
         }
 
-        fclose(input);
+        close(input);
 
         LIST_DESTROY(arguments);
         trax_properties_release(&properties);

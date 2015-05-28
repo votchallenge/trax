@@ -4,6 +4,7 @@
 #define TRAX_H
 
 #include <stdio.h>
+#include <fcntl.h>
 
 #if defined(_MSC_VER)
     #define __EXPORT __declspec(dllexport)
@@ -14,6 +15,12 @@
 #else
     #define __EXPORT
     #define __IMPORT
+#endif
+
+#ifdef WIN32
+    #define TRAX_NO_LOG (~0)
+#else
+    #define TRAX_NO_LOG -1
 #endif
 
 #define TRAX_VERSION 1
@@ -38,6 +45,8 @@
 #define TRAX_FLAG_VALID 1
 #define TRAX_FLAG_SERVER 2
 #define TRAX_FLAG_TERMINATED 4
+
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -75,10 +84,10 @@ typedef struct trax_configuration {
 typedef struct trax_handle {
     int flags;
     int version;
-    FILE* log;
+    int log;
     trax_configuration config;
-    FILE* input;
-    FILE* output;
+    int input;
+    int output;
 } trax_handle;
 
 /**
@@ -92,7 +101,7 @@ typedef void(*trax_enumerator)(const char *key, const char *value, const void *o
 /**
  * Setups the protocol for the client side and returns a handle object.
 **/
-__EXPORT trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log);
+__EXPORT trax_handle* trax_client_setup(int input, int output, int log);
 
 /**
  * Waits for a valid protocol message from the server.
@@ -112,12 +121,12 @@ __EXPORT void trax_client_frame(trax_handle* client, trax_image* image, trax_pro
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__EXPORT trax_handle* trax_server_setup_standard(trax_configuration config, FILE* log);
+__EXPORT trax_handle* trax_server_setup_standard(trax_configuration config, int log);
 
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__EXPORT trax_handle* trax_server_setup(trax_configuration config, FILE* input, FILE* output, FILE* log);
+__EXPORT trax_handle* trax_server_setup(trax_configuration config, int input, int output, int log);
 
 /**
  * Waits for a valid protocol message from the client.

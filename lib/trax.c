@@ -41,7 +41,7 @@ void copy_properties(trax_properties* source, trax_properties* dest) {
 
 }
 
-trax_handle* trax_client_setup(FILE* input, FILE* output, FILE* log) {
+trax_handle* trax_client_setup(int input, int output, int log) {
 
     trax_properties* tmp_properties;
     string_list arguments;
@@ -218,13 +218,13 @@ failure:
     LIST_DESTROY(arguments);
 }
 
-trax_handle* trax_server_setup_standard(trax_configuration config, FILE* log) {
+trax_handle* trax_server_setup_standard(trax_configuration config, int log) {
 
-    return trax_server_setup(config, stdin, stdout, log);
+    return trax_server_setup(config, fileno(stdin), fileno(stdout), log);
 
 }
 
-trax_handle* trax_server_setup(trax_configuration config, FILE* input, FILE* output, FILE* log) {
+trax_handle* trax_server_setup(trax_configuration config, int input, int output, int log) {
 
     trax_properties* properties;
     trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));

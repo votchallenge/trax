@@ -216,10 +216,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		config.format_region = getRegionCode(getString(prhs[1]));
 		config.format_image = getImageCode(getString(prhs[2]));
 
-		FILE* tmpin = fdopen(0, "r");
-		FILE* tmpout = fdopen(1, "w");
+		int tmpin = 0; // fdopen(0, "r");
+		int tmpout = 1; // fdopen(1, "w");
 
-		FILE* log = NULL; //fopen("log.txt", "w");
+		int log = TRAX_NO_LOG; //open("log.txt", "w");
 
 		if (!tmpin) mexErrMsgTxt("Unable to obtain input stream for reading.");  
 
