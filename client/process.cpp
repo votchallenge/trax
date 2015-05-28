@@ -253,8 +253,8 @@ bool Process::start() {
 		return false;
 	}
 
-    p_stdin = _fdopen(wrfd, "w");
-    p_stdout = _fdopen(rdfd, "r");
+    p_stdin = wrfd; //_fdopen(wrfd, "w");
+    p_stdout = rdfd; //_fdopen(rdfd, "r");
 
 	if (!p_stdin || !p_stdout) {
 		stop();
@@ -358,9 +358,9 @@ void Process::cleanup() {
 	CloseHandle(piProcInfo.hThread);
 
 	if (p_stdin)
-		fclose(p_stdin);
+		close(p_stdin);
 	if (p_stdout)
-		fclose(p_stdout);
+		close(p_stdout);
 
 	CloseHandle(handle_IN_Rd);
 	CloseHandle(handle_IN_Wr);

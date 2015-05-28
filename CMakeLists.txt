@@ -18,6 +18,8 @@ ELSE ()
 
     SET(LIBRARIES trax m)
     ADD_EXECUTABLE(test lib/test.c)
+    TARGET_LINK_LIBRARIES(test ${LIBRARIES})
+
 ENDIF ()
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/lib)
@@ -30,7 +32,6 @@ ADD_EXECUTABLE(static trackers/static.c)
 
 TARGET_LINK_LIBRARIES(static ${LIBRARIES})
 
-TARGET_LINK_LIBRARIES(test ${LIBRARIES})
 
 SET (BUILD_CAMSHIFT FALSE CACHE BOOL "Build an example using OpenCV CamShift tracker")
 
