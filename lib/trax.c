@@ -220,7 +220,16 @@ failure:
 
 trax_handle* trax_server_setup_standard(trax_configuration config, int log) {
 
-    return trax_server_setup(config, fileno(stdin), fileno(stdout), log);
+    int fin = fileno(stdin);
+    int fout = fileno(stdout);
+
+    char* env_in = getenv("TRAX_IN");
+    char* env_out = getenv("TRAX_OUT");
+
+    if (env_in) fin = atoi(env_in);
+    if (env_out) fout = atoi(env_out);
+
+    return trax_server_setup(config, fin, fout, log);
 
 }
 

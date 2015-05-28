@@ -5,7 +5,7 @@
  * The main function of this example is to show the developers how to modify
  * their trackers to work with the evaluation environment.
  *
- * Copyright (c) 2013, Luka Cehovin
+ * Copyright (c) 2015, Luka Cehovin
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -63,7 +63,7 @@ inline void sleep(long time) {
 
 using namespace std;
 
-#define CMD_OPTIONS "hsdI:G:f:O:S:r:t:T:p:e:"
+#define CMD_OPTIONS "hsdI:G:f:O:S:r:t:T:p:e:x"
 
 #define DEBUGMSG(...) if (debug) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
 
@@ -106,7 +106,7 @@ void print_help() {
 
     cout << "Usage: traxclient [-h] [-d] [-I image_list] [-O output_file] \n";
     cout << "\t [-f threshold] [-r frames] [-G groundtruth_file] [-e name=value] \n";
-    cout << "\t [-p name=value] [-t timeout] [-s] [-T timings_file]\n";
+    cout << "\t [-p name=value] [-t timeout] [-s] [-T timings_file] [-x]\n";
     cout << "\t -- <command_part1> <command_part2> ...";
 
     cout << "\n\nProgram arguments: \n";
@@ -123,6 +123,7 @@ void print_help() {
     cout << "\t-r\tReinitialization offset\n";
     cout << "\t-e\tEnvironmental variable (multiple occurences allowed)\n";
     cout << "\t-p\tTracker parameter (multiple occurences allowed)\n";
+    cout << "\t-x\tUse explicit streams, not standard ones.\n";
     cout << "\n";
 
     cout << "\n";
@@ -290,6 +291,7 @@ int main( int argc, char** argv) {
     
     int result = 0;
     int c;
+    bool explicit_mode = false;
     debug = false;
     opterr = 0;
     imagesFile = string("images.txt");
@@ -320,6 +322,9 @@ int main( int argc, char** argv) {
                 break;
             case 's':
                 silent = true;
+                break;
+            case 'x':
+                explicit_mode = true;
                 break;
             case 'I':
                 imagesFile = string(optarg);
@@ -403,7 +408,7 @@ int main( int argc, char** argv) {
         int frame = 0;
         while (frame < images.size()) {
 
-            trackerProcess = new Process(trackerCommand);
+            trackerProcess = new Process(trackerCommand, explicit_mode);
 
             trackerProcess->copy_environment();
             

@@ -5,14 +5,14 @@
 #include <errno.h>
 #include <stdexcept>
 #include <iostream>
+#include <sstream>
+#include <fcntl.h>
 
 #include "process.h"
 
 #ifdef WIN32
 
-#include <sstream>
 
-#include <fcntl.h>
 
 #else
 
@@ -43,6 +43,15 @@ const string __getcwd()
 }
 
 #endif
+
+inline const string int_to_string(int i) {
+
+    stringstream buffer;
+    buffer << i;
+    return buffer.str();
+
+}
+
 
 int __next_token(const char* str, int start, char* buffer, int len) 
 {
@@ -132,7 +141,7 @@ char** parse_command(const char* command) {
 }
 
 
-Process::Process(string command) {
+Process::Process(string command, bool explicit_mode) : explicit_mode(explicit_mode) {
 
 #ifdef WIN32
 	piProcInfo.hProcess = 0;
@@ -189,18 +198,30 @@ bool Process::start() {
    if ( ! CreatePipe(&handle_OUT_Rd, &handle_OUT_Wr, &saAttr, 0) ) 
       return false; 
 
-	// Ensure the read handle to the pipe for STDOUT is not inherited.
-    if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
-        return false; 
-
     // Create a pipe for the child process's STDIN. 
     if (! CreatePipe(&handle_IN_Rd, &handle_IN_Wr, &saAttr, 0)) 
         return false; 
 
-    // Ensure the write handle to the pipe for STDIN is not inherited.  
-    if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
-        return false; 
+    if (explicit_mode) {
  
+        if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 1) )
+            return false; 
+
+        if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 1) )
+            return false; 
+
+    } else {
+
+        // Ensure the write handle to the pipe for STDIN is not inherited.  
+        if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
+            return false; 
+
+	    // Ensure the read handle to the pipe for STDOUT is not inherited.
+        if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
+            return false; 
+ 
+    }
+
 	STARTUPINFO siStartInfo;
 	BOOL bSuccess = FALSE; 
  
@@ -208,15 +229,6 @@ bool Process::start() {
  
 	ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
  
-	// Set up members of the STARTUPINFO structure. 
-	// This structure specifies the STDIN and STDOUT handles for redirection.
- 
-	ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
-	siStartInfo.cb = sizeof(STARTUPINFO); 
-	siStartInfo.hStdError = handle_OUT_Wr;
-	siStartInfo.hStdOutput = handle_OUT_Wr;
-	siStartInfo.hStdInput = handle_IN_Rd;
-	siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
 	stringstream cmdbuffer;
 	int curargument = 0;
@@ -232,7 +244,26 @@ bool Process::start() {
         envbuffer << iter->first << string("=") << iter->second << '\0';
     }
 
-	envbuffer << '\0';
+	// Set up members of the STARTUPINFO structure. 
+	// This structure specifies the STDIN and STDOUT handles for redirection.
+	ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
+	siStartInfo.cb = sizeof(STARTUPINFO); 
+    if (!explicit_mode) {
+	    siStartInfo.hStdError = handle_OUT_Wr;
+	    siStartInfo.hStdOutput = handle_OUT_Wr;
+	    siStartInfo.hStdInput = handle_IN_Rd;
+        siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+    } else {
+        
+	    int infd = _open_osfhandle((intptr_t)handle_IN_Rd, _O_RDONLY);
+	    int outfd = _open_osfhandle((intptr_t)handle_OUT_Wr, 0);
+
+        envbuffer << string("TRAX_IN=") << infd << '\0';
+        envbuffer << string("TRAX_OUT=") << infd << '\0';
+
+    }
+	
+    envbuffer << '\0';
 
 	LPCSTR curdir = directory.empty() ? NULL : directory.c_str();
 
@@ -268,19 +299,24 @@ bool Process::start() {
     pipe(out);
     pipe(in);
 
-    posix_spawn_file_actions_init(&action);
-    posix_spawn_file_actions_adddup2(&action, out[0], 0);
-    posix_spawn_file_actions_addclose(&action, out[1]);
-
-    posix_spawn_file_actions_adddup2(&action, in[1], 1);
-    posix_spawn_file_actions_addclose(&action, in[0]);
-
     vector<string> vars;
 
     map<string, string>::iterator iter;
     for (iter = env.begin(); iter != env.end(); ++iter) {
        // if (iter->first == "PWD") continue;
         vars.push_back(iter->first + string("=") + iter->second);
+    }
+
+    posix_spawn_file_actions_init(&action);
+    posix_spawn_file_actions_addclose(&action, out[1]);
+    posix_spawn_file_actions_addclose(&action, in[0]);
+
+    if (!explicit_mode) {
+        posix_spawn_file_actions_adddup2(&action, out[0], 0);
+        posix_spawn_file_actions_adddup2(&action, in[1], 1);
+    } else {
+        vars.push_back(string("TRAX_OUT=") + int_to_string(in[1]));
+        vars.push_back(string("TRAX_IN=") + int_to_string(out[0]));
     }
 
     std::vector<char *> vars_c(vars.size() + 1); 
@@ -384,9 +420,9 @@ void Process::cleanup() {
 int Process::get_input() {
 
 #ifdef WIN32
-	if (!piProcInfo.hProcess) return NULL;
+	if (!piProcInfo.hProcess) return -1;
 #else
-    if (!pid) return NULL;
+    if (!pid) return -1;
 #endif
 
     return p_stdin;
@@ -396,9 +432,9 @@ int Process::get_input() {
 int Process::get_output() {
 
 #ifdef WIN32
-	if (!piProcInfo.hProcess) return NULL;
+	if (!piProcInfo.hProcess) return -1;
 #else
-    if (!pid) return NULL;
+    if (!pid) return -1;
 #endif
 
     return p_stdout;

@@ -30,7 +30,7 @@ using namespace std;
 class Process {
 public:
 
-    Process(string command);
+    Process(string command, bool explicit_mode = false);
     ~Process();
 
     void set_directory(string pwd);
@@ -48,12 +48,18 @@ public:
 
     bool is_alive();
 
+    // Explicit streams
+    bool is_explicit();
+
 private:
 
     void cleanup();
 
     int p_stdout;
     int p_stdin;
+
+    int p_eout;
+    int p_ein;
 
     int out[2];
     int in[2];
@@ -64,6 +70,8 @@ private:
     string directory;
     map<string, string> env;
 
+    int explicit_mode;
+
 #ifdef WIN32
 	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms682499%28v=vs.85%29.aspx
 	// http://msdn.microsoft.com/en-us/library/dye30d82%28VS.80%29.aspx
@@ -71,6 +79,12 @@ private:
 	HANDLE handle_IN_Wr;
 	HANDLE handle_OUT_Rd;
 	HANDLE handle_OUT_Wr;
+
+	HANDLE handle_explicit_IN_Rd;
+	HANDLE handle_explicit_IN_Wr;
+	HANDLE handle_explicit_OUT_Rd;
+	HANDLE handle_explicit_OUT_Wr;
+
 	PROCESS_INFORMATION piProcInfo;
 #else
 	int pid;
