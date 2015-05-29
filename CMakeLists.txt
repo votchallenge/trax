@@ -5,7 +5,7 @@ GET_FILENAME_COMPONENT(PROJECT_ROOT . ABSOLUTE)
 SET(CMAKE_MODULE_PATH ${PROJECT_ROOT}/cmake)
 
 IF(WIN32 OR WIN64)
-    SET(LIBRARIES trax)
+    SET(LIBRARIES trax wsock32 ws2_32)
     IF(MINGW)
         SET(MINGW_LIBRARIES -lws2_32 -lrpcrt4 -liphlpapi)
         SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
@@ -27,7 +27,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 ADD_LIBRARY(trax SHARED lib/trax.c lib/region.c lib/strmap.c lib/message.c)
 
 ADD_LIBRARY(traxstatic STATIC lib/trax.c lib/region.c lib/strmap.c lib/message.c)
-
+ 
 ADD_EXECUTABLE(static trackers/static.c)
 
 TARGET_LINK_LIBRARIES(static ${LIBRARIES})

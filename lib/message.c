@@ -30,22 +30,27 @@
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
 #include <ctype.h>
 #include <winsock2.h>
+#include <windows.h>
+#pragma comment(lib, "ws2_32.lib")
+
 #define strcmpi _strcmpi
 
 static int initialized = 0;
 static void initialize_sockets(void) {
-    if (initialized) return;
-
     WSADATA data;
     WORD version = 0x101;
+	if (initialized) return;
+
     WSAStartup(version,&data);
     initialized = 1;
     return;
 }
 
-inline void sleep(long time) {
+__inline void sleep(long time) {
 	Sleep(time * 1000);
 }
+
+#define __INLINE __inline
 
 #else
 
@@ -61,6 +66,8 @@ inline void sleep(long time) {
 #endif
 
 #define strcmpi strcasecmp
+
+#define __INLINE inline
 
 static void initialize_sockets(void) {}
 
@@ -135,7 +142,7 @@ message_stream* create_message_stream_socket_connect(char* address) {
 	while (1) {
 
 	    if (connect(sid, (const struct sockaddr *)&pin, sizeof(pin))) {
-            printf("Unable to connect\n");
+            perror("connect");
             sleep(1); // Wait a bit for connection ...
 		    continue;
 	    }
@@ -156,16 +163,17 @@ message_stream* create_message_stream_socket_listen(char* address) {
 
     message_stream* stream = NULL;
 
-	int port;
+	int port = 9090;
 	int sid;
 	int one = 1;
 	struct sockaddr_in sin;
+	struct hostent *hp;
 
 	fd_set readfds,writefds,exceptfds;
 	int asock=-1;
+	char* hostname = "127.0.0.1";
 
-    char* hostname = "127.0.0.1";
-    port = 9090;
+	initialize_sockets();
 
 	if((sid = (int) socket(AF_INET,SOCK_STREAM,0)) == -1) {
 		return NULL;
@@ -176,7 +184,6 @@ message_stream* create_message_stream_socket_listen(char* address) {
 	memset(&sin,0,sizeof(sin));
 	sin.sin_family = AF_INET;
 
-	struct hostent *hp;
 	if((hp = gethostbyname(hostname))==0)
 		sin.sin_addr.s_addr = 
 			((struct in_addr *)hp->h_addr)->s_addr;
@@ -186,11 +193,13 @@ message_stream* create_message_stream_socket_listen(char* address) {
 	sin.sin_port = htons(port);
 
 	if(bind(sid,(struct sockaddr *)&sin,sizeof(sin)) == -1) {
+		perror("bind");
 		closesocket(sid);
 		return NULL;
 	}
 	
 	if(listen(sid, 1)== -1) {
+		perror("listen");
 		closesocket(sid);
 		return NULL;
 	}	
@@ -200,7 +209,6 @@ message_stream* create_message_stream_socket_listen(char* address) {
 	FD_ZERO(&exceptfds);
 	FD_SET(sid,&readfds);
 	FD_SET(sid,&exceptfds);
-
 
     select(sid+1,&readfds,&writefds,&exceptfds,(struct timeval *)0);
 	
@@ -260,7 +268,7 @@ void destroy_message_stream(message_stream** stream) {
 
 }
 
-inline int read_character(message_stream* stream) {
+__INLINE int read_character(message_stream* stream) {
     char chr;
 
     if (stream->flags & TRAX_STREAM_SOCKET) {
@@ -279,7 +287,7 @@ inline int read_character(message_stream* stream) {
 
 }
 
-inline int write_string(message_stream* stream, const char* buf, int len) {
+__INLINE int write_string(message_stream* stream, const char* buf, int len) {
     char chr;
 
     if (stream->flags & TRAX_STREAM_SOCKET) {
@@ -289,7 +297,7 @@ inline int write_string(message_stream* stream, const char* buf, int len) {
 	    while(cnt < len) {
 		    int l = send(stream->input, buf+cnt, len-cnt,0);
 		    if(l == -1) {
-			    return;
+			    return -1;
 		    }
 		    cnt += l;
 	    }
@@ -300,6 +308,7 @@ inline int write_string(message_stream* stream, const char* buf, int len) {
        
     }
 
+	return 1;
 }
 
 

@@ -1,6 +1,6 @@
 function [] = tracker_static()
 
-%cleanup = onCleanup(@() exit() );
+cleanup = onCleanup(@() exit() );
 
 traxserver('setup', 'polygon', 'path');
 
