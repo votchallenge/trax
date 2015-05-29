@@ -103,6 +103,11 @@ typedef void(*trax_enumerator)(const char *key, const char *value, const void *o
 __EXPORT trax_handle* trax_client_setup_file(int input, int output, FILE* log);
 
 /**
+ * Setups the protocol state object for the client and returns a handle object.
+**/
+__EXPORT trax_handle* trax_client_setup_socket(char* address, FILE* log);
+
+/**
  * Waits for a valid protocol message from the server.
 **/
 __EXPORT int trax_client_wait(trax_handle* client, trax_region** region, trax_properties* properties);

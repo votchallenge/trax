@@ -7,6 +7,7 @@
 #include <io.h>
 #else
 #include <unistd.h>
+#include <errno.h>
 #endif
 #include <fcntl.h>
 
@@ -230,12 +231,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		config.format_region = getRegionCode(getString(prhs[1]));
 		config.format_image = getImageCode(getString(prhs[2]));
 
-		int tmpin = 0; // fdopen(0, "r");
-		int tmpout = 1; // fdopen(1, "w");
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 
-		//if (!tmpin) mexErrMsgTxt("Unable to obtain input stream for reading.");  
+        if (!getenv("TRAX_SOCKET")) {
+            mexErrMsgTxt("Socket information not available. Enable socket communication in TraX client.");
+        }
+        
+#endif
 
-		trax = trax_server_setup_file(config, tmpin, tmpout, NULL);
+		trax = trax_server_setup(config, NULL);
 
 		if (nlhs == 1)
         	plhs[0] = mxCreateLogicalScalar(trax > 0);

@@ -3,9 +3,6 @@
 
 #define TRAX_PREFIX "@@TRAX:"
 
-#define TRAX_STREAM_FILES 1
-#define TRAX_STREAM_SOCKET 3
-
 #include <stdio.h>
 #include <assert.h>
 #include "buffer.h"
@@ -31,7 +28,9 @@ typedef struct message_stream {
 
 message_stream* create_message_stream_file(int input, int output);
 
-message_stream* create_message_stream_socket(char* address);
+message_stream* create_message_stream_socket_connect(char* address);
+
+message_stream* create_message_stream_socket_listen(char* address);
 
 void destroy_message_stream(message_stream** stream);
 

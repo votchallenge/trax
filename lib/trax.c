@@ -162,9 +162,9 @@ trax_handle* trax_client_setup_file(int input, int output, FILE* log) {
 
 }
 
-trax_handle* trax_client_setup_socket(char* socket, FILE* log) {
+trax_handle* trax_client_setup_socket(char* address, FILE* log) {
 
-    message_stream* stream = create_message_stream_socket(socket);
+    message_stream* stream = create_message_stream_socket_listen(address);
     
     return client_setup(stream, log);
 
@@ -300,21 +300,33 @@ failure:
 trax_handle* trax_server_setup(trax_configuration config, FILE* log) {
 
     message_stream* stream;
-    int fin = fileno(stdin);
-    int fout = fileno(stdout);
 
-    char* env_in = getenv("TRAX_IN");
-    char* env_out = getenv("TRAX_OUT");
+
+    char* env_socket = getenv("TRAX_SOCKET");
+
+    if (env_socket) {
+
+        stream = create_message_stream_socket_connect(env_socket);
+
+    } else {
+
+        int fin = fileno(stdin);
+        int fout = fileno(stdout);
+
+        char* env_in = getenv("TRAX_IN");
+        char* env_out = getenv("TRAX_OUT");
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER) 
-    if (env_in) fin = get_shared_fd(strtol(env_in, NULL, 16), 1);
-    if (env_out) fout = get_shared_fd(strtol(env_out, NULL, 16), 0);
+        if (env_in) fin = get_shared_fd(strtol(env_in, NULL, 16), 1);
+        if (env_out) fout = get_shared_fd(strtol(env_out, NULL, 16), 0);
 #else
-    if (env_in) fin = get_shared_fd(atoi(env_in), 1);
-    if (env_out) fout = get_shared_fd(atoi(env_out), 0);
+        if (env_in) fin = get_shared_fd(atoi(env_in), 1);
+        if (env_out) fout = get_shared_fd(atoi(env_out), 0);
 #endif
 
-    stream = create_message_stream_file(fin, fout);
+        stream = create_message_stream_file(fin, fout);
+
+    }
 
     return server_setup(config, stream, log);
 

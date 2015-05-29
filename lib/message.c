@@ -15,6 +15,10 @@
 #define PARSE_STATE_QUOTED_ESCAPE_VALUE 10
 #define PARSE_STATE_PASS 100
 
+#define TRAX_STREAM_FILES 1
+#define TRAX_STREAM_SOCKET 2
+#define TRAX_STREAM_SOCKET_LISTEN 8
+
 #ifndef TRUE
 #define TRUE 1
 #endif
@@ -24,12 +28,41 @@
 #endif
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
-	#include <ctype.h>
+#include <ctype.h>
+#include <winsock2.h>
 #define strcmpi _strcmpi
+
+static int initialized = 0;
+static void initialize_sockets(void) {
+    if (initialized) return;
+
+    WSADATA data;
+    WORD version = 0x101;
+    WSAStartup(version,&data);
+    initialized = 1;
+    return;
+}
+
+inline void sleep(long time) {
+	Sleep(time * 1000);
+}
 
 #else
 
+#ifdef _MAC_
+    #include <tcpd.h>
+#else
+    #include <sys/socket.h>
+    #include <unistd.h>
+    #include <sys/select.h>
+    #include <netdb.h>
+    #include <arpa/inet.h>
+    #define closesocket close
+#endif
+
 #define strcmpi strcasecmp
+
+static void initialize_sockets(void) {}
 
 #endif
 
@@ -68,12 +101,130 @@ message_stream* create_message_stream_file(int input, int output) {
     return stream;
 }
 
-message_stream* create_message_stream_socket(char* address) {
+message_stream* create_message_stream_socket_connect(char* address) {
 
-    message_stream* stream = (message_stream*) malloc(sizeof(message_stream));
+    message_stream* stream = NULL;
+
+	int sid;
+	struct hostent *hp;
+	struct sockaddr_in pin;
+	char *hostname;
+	int port;
+
+    initialize_sockets();
+
+	port = 9090;
+	hostname = "127.0.0.1";
+
+	//port = 80;
+	//hostname = "web.vicos.si";
+
+	memset(&pin, 0, sizeof(pin));
+	pin.sin_family = AF_INET;
+	pin.sin_port = htons(port);
+	if((hp = gethostbyname(hostname))!=0) 
+		pin.sin_addr.s_addr = 
+			((struct in_addr *)hp->h_addr)->s_addr;
+	else 
+		pin.sin_addr.s_addr = inet_addr(hostname);
+
+    if((sid = (int)socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+	    return NULL;
+    }
+	
+	while (1) {
+
+	    if (connect(sid, (const struct sockaddr *)&pin, sizeof(pin))) {
+            printf("Unable to connect\n");
+            sleep(1); // Wait a bit for connection ...
+		    continue;
+	    }
+
+        break;
+    }
+
+    stream = (message_stream*) malloc(sizeof(message_stream));
 
     stream->flags = TRAX_STREAM_SOCKET;
-//    TODO
+    stream->input = sid;
+
+    return stream;
+
+}
+
+message_stream* create_message_stream_socket_listen(char* address) {
+
+    message_stream* stream = NULL;
+
+	int port;
+	int sid;
+	int one = 1;
+	struct sockaddr_in sin;
+
+	fd_set readfds,writefds,exceptfds;
+	int asock=-1;
+
+    char* hostname = "127.0.0.1";
+    port = 9090;
+
+	if((sid = (int) socket(AF_INET,SOCK_STREAM,0)) == -1) {
+		return NULL;
+	}
+	setsockopt(sid,SOL_SOCKET,SO_REUSEADDR,
+						 (const char *)&one,sizeof(int));
+
+	memset(&sin,0,sizeof(sin));
+	sin.sin_family = AF_INET;
+
+	struct hostent *hp;
+	if((hp = gethostbyname(hostname))==0)
+		sin.sin_addr.s_addr = 
+			((struct in_addr *)hp->h_addr)->s_addr;
+	else
+		sin.sin_addr.s_addr = inet_addr(hostname);
+
+	sin.sin_port = htons(port);
+
+	if(bind(sid,(struct sockaddr *)&sin,sizeof(sin)) == -1) {
+		closesocket(sid);
+		return NULL;
+	}
+	
+	if(listen(sid, 1)== -1) {
+		closesocket(sid);
+		return NULL;
+	}	
+
+	FD_ZERO(&readfds);
+	FD_ZERO(&writefds);
+	FD_ZERO(&exceptfds);
+	FD_SET(sid,&readfds);
+	FD_SET(sid,&exceptfds);
+
+
+    select(sid+1,&readfds,&writefds,&exceptfds,(struct timeval *)0);
+	
+	if(FD_ISSET(sid,&readfds)) {
+		struct sockaddr_in pin;
+		int addrlen = sizeof(struct sockaddr_in);
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+		asock = (int) accept(sid,(struct sockaddr *)&pin,
+											 (int *)&addrlen);
+#else
+		asock = (int) accept(sid,(struct sockaddr *)&pin,
+												 (socklen_t *)&addrlen);
+#endif
+	} else {
+        closesocket(sid);
+        return NULL;
+    }
+	
+    stream = (message_stream*) malloc(sizeof(message_stream));
+
+    stream->flags = TRAX_STREAM_SOCKET;
+    stream->flags |= TRAX_STREAM_SOCKET_LISTEN;
+    stream->input = asock;
+    stream->output = sid;
 
     return stream;
 
@@ -83,10 +234,74 @@ void destroy_message_stream(message_stream** stream) {
 
     VALIDATE_MESSAGE_STREAM((*stream));
 
+    if ((*stream)->flags & TRAX_STREAM_SOCKET) {
+
+#if !defined(WIN32)
+	    shutdown((*stream)->input, SHUT_RDWR);
+#else
+	    shutdown((*stream)->input, SD_BOTH);
+#endif
+        closesocket((*stream)->input);
+
+        // Close listening socket as well
+        if ((*stream)->flags & TRAX_STREAM_SOCKET_LISTEN) {
+#if !defined(WIN32)
+	        shutdown((*stream)->output, SHUT_RDWR);
+#else
+	        shutdown((*stream)->output, SD_BOTH);
+#endif
+            closesocket((*stream)->output);
+        }
+
+    }
+
     free(*stream);
     *stream = 0;
 
 }
+
+inline int read_character(message_stream* stream) {
+    char chr;
+
+    if (stream->flags & TRAX_STREAM_SOCKET) {
+
+		int val = recv(stream->input, &chr, 1, 0);
+
+        return (val != 1) ? -1 : chr;
+
+    } else {
+
+    	int val = read(stream->input, &chr, 1);
+
+        return (val != 1) ? -1 : chr;
+       
+    }
+
+}
+
+inline int write_string(message_stream* stream, const char* buf, int len) {
+    char chr;
+
+    if (stream->flags & TRAX_STREAM_SOCKET) {
+
+	    int cnt = 0;
+
+	    while(cnt < len) {
+		    int l = send(stream->input, buf+cnt, len-cnt,0);
+		    if(l == -1) {
+			    return;
+		    }
+		    cnt += l;
+	    }
+
+    } else {
+
+    	write(stream->output, buf, len);
+       
+    }
+
+}
+
 
 int read_message(message_stream* stream, FILE* log, string_list* arguments, trax_properties* properties) {
 	
@@ -105,14 +320,14 @@ int read_message(message_stream* stream, FILE* log, string_list* arguments, trax
     while (!complete) {
 
     	char chr; 
-    	int n = read(stream->input, &chr, 1);
+    	int val = read_character(stream);
 
     	//printf("%d\n", val);
-    	if (n == 0) {
+    	if (val < 0) {
     		if (message_type == -1) break;
     		chr = '\n';
     		complete = TRUE;
-    	}
+    	} else chr = (char) val;
 
         if (log) putc(chr, log);
 
@@ -414,11 +629,11 @@ int read_message(message_stream* stream, FILE* log, string_list* arguments, trax
     
 }
 
-#define OUTPUT_STRING(S) { int len = strlen(S); write(stream->output, S, len); if (log) fputs(S, log); }
+#define OUTPUT_STRING(S) { int len = strlen(S); write_string(stream, S, len); if (log) fputs(S, log); }
 #define OUTPUT_ESCAPED(S) { int i = 0; while (1) { \
     if (!S[i]) break; \
-    if (S[i] == '"' || S[i] == '\\') { write(stream->output, "\\", 1); if (log) fputc('\\', log); } \
-     write(stream->output, &(S[i]), 1); if (log) fputc(S[i], log); i++; } \
+    if (S[i] == '"' || S[i] == '\\') { write_string(stream, "\\", 1); if (log) fputc('\\', log); } \
+     write_string(stream, &(S[i]), 1); if (log) fputc(S[i], log); i++; } \
     }
 
 typedef struct file_pair {

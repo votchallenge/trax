@@ -63,7 +63,7 @@ inline void sleep(long time) {
 
 using namespace std;
 
-#define CMD_OPTIONS "hsdI:G:f:O:S:r:t:T:p:e:x"
+#define CMD_OPTIONS "hsdI:G:f:O:S:r:t:T:p:e:xX"
 
 #define DEBUGMSG(...) if (debug) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
 
@@ -106,7 +106,7 @@ void print_help() {
 
     cout << "Usage: traxclient [-h] [-d] [-I image_list] [-O output_file] \n";
     cout << "\t [-f threshold] [-r frames] [-G groundtruth_file] [-e name=value] \n";
-    cout << "\t [-p name=value] [-t timeout] [-s] [-T timings_file] [-x]\n";
+    cout << "\t [-p name=value] [-t timeout] [-s] [-T timings_file] [-x] [-X]\n";
     cout << "\t -- <command_part1> <command_part2> ...";
 
     cout << "\n\nProgram arguments: \n";
@@ -124,6 +124,7 @@ void print_help() {
     cout << "\t-e\tEnvironmental variable (multiple occurences allowed)\n";
     cout << "\t-p\tTracker parameter (multiple occurences allowed)\n";
     cout << "\t-x\tUse explicit streams, not standard ones.\n";
+    cout << "\t-X\tUse TCP/IP sockets instead of file streams.\n";
     cout << "\n";
 
     cout << "\n";
@@ -292,6 +293,7 @@ int main( int argc, char** argv) {
     int result = 0;
     int c;
     bool explicit_mode = false;
+    bool socket_mode = false;
     debug = false;
     opterr = 0;
     imagesFile = string("images.txt");
@@ -325,6 +327,9 @@ int main( int argc, char** argv) {
                 break;
             case 'x':
                 explicit_mode = true;
+                break;
+            case 'X':
+                socket_mode = true;
                 break;
             case 'I':
                 imagesFile = string(optarg);
@@ -417,6 +422,8 @@ int main( int argc, char** argv) {
                trackerProcess->set_environment(iter->first, iter->second);
             }
 
+            if (socket_mode) trackerProcess->set_environment("TRAX_SOCKET", "");
+
             if (!trackerProcess->start()) {
 				DEBUGMSG("Unable to start the tracker process\n");
 				break;
@@ -431,7 +438,12 @@ int main( int argc, char** argv) {
 
             MUTEX_UNLOCK(watchdogMutex);
 
-            trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);
+            if (socket_mode) {
+                trax = trax_client_setup_socket("", silent ? NULL : stdout);
+                DEBUGMSG("Socket opened successfuly.\n");
+            } else {
+                trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);
+            }
 
             if (!trax) throw std::runtime_error("Unable to establish connection");
 
