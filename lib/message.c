@@ -23,14 +23,17 @@
 #define FALSE 0
 #endif
 
-#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER) 
-
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+	#include <ctype.h>
+#define strcmpi _strcmpi
 
 #else
 
 #define strcmpi strcasecmp
 
 #endif
+
+#define VALIDATE_MESSAGE_STREAM(S) assert((S->flags & TRAX_STREAM_FILES) || (S->flags & TRAX_STREAM_SOCKET))
 
 int __is_valid_key(char* c, int len) {
     int i;
@@ -54,14 +57,46 @@ int __parse_message_type(const char *str) {
     return -1;
 }
 
-int read_message(int input, int log, string_list* arguments, trax_properties* properties) {
-		
+
+message_stream* create_message_stream_file(int input, int output) {
+    message_stream* stream = (message_stream*) malloc(sizeof(message_stream));
+
+    stream->flags = TRAX_STREAM_FILES;
+    stream->input = input;
+    stream->output = output;
+
+    return stream;
+}
+
+message_stream* create_message_stream_socket(char* address) {
+
+    message_stream* stream = (message_stream*) malloc(sizeof(message_stream));
+
+    stream->flags = TRAX_STREAM_SOCKET;
+//    TODO
+
+    return stream;
+
+}
+
+void destroy_message_stream(message_stream** stream) {
+
+    VALIDATE_MESSAGE_STREAM((*stream));
+
+    free(*stream);
+    *stream = 0;
+
+}
+
+int read_message(message_stream* stream, FILE* log, string_list* arguments, trax_properties* properties) {
+	
 	int message_type = -1;
     int prefix_length = strlen(TRAX_PREFIX);
 	int complete = FALSE;
     int state = -prefix_length;
-
 	string_buffer key_buffer, value_buffer;
+
+	VALIDATE_MESSAGE_STREAM(stream);
 
     BUFFER_CREATE(key_buffer, 512);
     BUFFER_CREATE(value_buffer, 512);
@@ -70,7 +105,7 @@ int read_message(int input, int log, string_list* arguments, trax_properties* pr
     while (!complete) {
 
     	char chr; 
-    	int n = read(input, &chr, 1);
+    	int n = read(stream->input, &chr, 1);
 
     	//printf("%d\n", val);
     	if (n == 0) {
@@ -79,7 +114,7 @@ int read_message(int input, int log, string_list* arguments, trax_properties* pr
     		complete = TRUE;
     	}
 
-        if (log != TRAX_NO_LOG) write(log, &chr, 1);
+        if (log) putc(chr, log);
 
         switch (state) {
             case PARSE_STATE_TYPE: { // Parsing message type
@@ -373,28 +408,28 @@ int read_message(int input, int log, string_list* arguments, trax_properties* pr
     BUFFER_DESTROY(key_buffer);
     BUFFER_DESTROY(value_buffer);
 
-    //if (log != TRAX_NO_LOG) flush(log);
+    if (log) fflush(log);
 
     return message_type;
     
 }
 
-#define OUTPUT_STRING(S) { int len = strlen(S); write(output, S, len); if (log != TRAX_NO_LOG) write(log, S, len); }
+#define OUTPUT_STRING(S) { int len = strlen(S); write(stream->output, S, len); if (log) fputs(S, log); }
 #define OUTPUT_ESCAPED(S) { int i = 0; while (1) { \
     if (!S[i]) break; \
-    if (S[i] == '"' || S[i] == '\\') { write(output, "\\", 1); if (log != TRAX_NO_LOG) write(log, "\\", 1); } \
-     write(output, &(S[i]), 1); if (log != TRAX_NO_LOG) write(log, &(S[i]), 1); i++; } \
+    if (S[i] == '"' || S[i] == '\\') { write(stream->output, "\\", 1); if (log) fputc('\\', log); } \
+     write(stream->output, &(S[i]), 1); if (log) fputc(S[i], log); i++; } \
     }
 
 typedef struct file_pair {
-    int output;
-    int log;
+    message_stream* stream;
+    FILE* log;
 } file_pair;
 
 void __output_properties(const char *key, const char *value, const void *obj) {
     
-    int output = ((file_pair *) obj)->output;
-    int log = ((file_pair *) obj)->log;
+    message_stream* stream = ((file_pair *) obj)->stream;
+    FILE* log = ((file_pair *) obj)->log;
 
     OUTPUT_STRING("\"");
     OUTPUT_STRING(key);
@@ -404,9 +439,11 @@ void __output_properties(const char *key, const char *value, const void *obj) {
 
 }
 
-void write_message(int output, int log, int type, const string_list arguments, trax_properties* properties) {
+void write_message(message_stream* stream, FILE* log, int type, const string_list arguments, trax_properties* properties) {
 
     int i;
+
+    VALIDATE_MESSAGE_STREAM(stream);
 
     switch (type) {
         case TRAX_HELLO:
@@ -446,7 +483,7 @@ void write_message(int output, int log, int type, const string_list arguments, t
 	{
 
     file_pair pair;
-    pair.output = output;
+    pair.stream = stream;
     pair.log = log;
 
     trax_properties_enumerate(properties, __output_properties, &pair);
@@ -455,7 +492,7 @@ void write_message(int output, int log, int type, const string_list arguments, t
 
     //flush(output);
 
-    //if (log != TRAX_NO_LOG) flush(log);
+    if (log) fflush(log);
 
 	}
 }

@@ -319,7 +319,7 @@ int main(int argc, char** argv) {
     config.format_region = TRAX_REGION_RECTANGLE;
     config.format_image = TRAX_IMAGE_PATH;
 
-	trax = trax_server_setup_standard(config, TRAX_NO_LOG);
+	trax = trax_server_setup(config, NULL);
 	
     int run = 1;
 

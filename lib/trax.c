@@ -23,6 +23,17 @@
 
 #define REGION_TYPE_BACK(T) (( T == TRAX_REGION_RECTANGLE ) ? RECTANGLE : ( T == TRAX_REGION_POLYGON ? POLYGON : SPECIAL))
 
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
+#include <io.h>
+int get_shared_fd(int h, int read) {
+	return _open_osfhandle((intptr_t)h, read ? _O_RDONLY : 0);
+}
+#else
+int get_shared_fd(int h, int read) {
+	return h;
+}
+#endif
+
 struct trax_properties {
     StrMap *map;
 };
@@ -41,7 +52,7 @@ void copy_properties(trax_properties* source, trax_properties* dest) {
 
 }
 
-trax_handle* trax_client_setup(int input, int output, int log) {
+trax_handle* client_setup(message_stream* stream, FILE* log) {
 
     trax_properties* tmp_properties;
     string_list arguments;
@@ -53,13 +64,12 @@ trax_handle* trax_client_setup(int input, int output, int log) {
     client->flags = (0 & ~TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
 
     client->log = log;
-    client->input = input;
-    client->output = output;
+    client->stream = stream;
 
     tmp_properties = trax_properties_create();
     LIST_CREATE(arguments, 8);
     
-    if (read_message(client->input, client->log, &arguments, tmp_properties) != TRAX_HELLO) {
+    if (read_message((message_stream*)client->stream, client->log, &arguments, tmp_properties) != TRAX_HELLO) {
         goto failure;
     }
 
@@ -91,6 +101,75 @@ failure:
 
 }
 
+trax_handle* server_setup(trax_configuration config, message_stream* stream, FILE* log) {
+
+    trax_properties* properties;
+    trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
+    string_list arguments;
+
+    server->flags = (TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
+
+    server->log = log;
+    server->stream = stream;
+
+    properties = trax_properties_create();
+
+    trax_properties_set_int(properties, "trax.version", TRAX_VERSION);
+
+    switch (config.format_region) {
+        case TRAX_REGION_RECTANGLE:
+            trax_properties_set(properties, "trax.region", "rectangle");
+            break;
+        case TRAX_REGION_POLYGON:
+            trax_properties_set(properties, "trax.region", "polygon");
+            break;
+        default:
+            config.format_region = TRAX_REGION_RECTANGLE;
+            trax_properties_set(properties, "trax.region", "rectangle");
+            break;
+    }
+
+    switch (config.format_image) {
+        case TRAX_IMAGE_PATH:
+            trax_properties_set(properties, "trax.image", "path");
+            break;
+        default:
+            config.format_image = TRAX_IMAGE_PATH;
+            trax_properties_set(properties, "trax.image", "path");
+            break;
+    }
+
+    server->config = config;
+   
+    LIST_CREATE(arguments, 1);
+
+    write_message((message_stream*)server->stream, server->log, TRAX_HELLO, arguments, properties);
+
+    trax_properties_release(&properties);
+
+    LIST_DESTROY(arguments);
+
+    return server;
+
+}
+
+
+trax_handle* trax_client_setup_file(int input, int output, FILE* log) {
+
+    message_stream* stream = create_message_stream_file(input, output);
+    
+    return client_setup(stream, log);
+
+}
+
+trax_handle* trax_client_setup_socket(char* socket, FILE* log) {
+
+    message_stream* stream = create_message_stream_socket(socket);
+    
+    return client_setup(stream, log);
+
+}
+
 int trax_client_wait(trax_handle* client, trax_region** region, trax_properties* properties) {
 
     trax_properties* tmp_properties;
@@ -105,7 +184,7 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
     tmp_properties = trax_properties_create();
     LIST_CREATE(arguments, 8);
 
-    result = read_message(client->input, client->log, &arguments, tmp_properties);
+    result = read_message((message_stream*)client->stream, client->log, &arguments, tmp_properties);
 
     if (result == TRAX_STATUS) {
 
@@ -189,7 +268,7 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
         free(data);
     }
 
-    write_message(client->output, client->log, TRAX_INITIALIZE, arguments, properties);
+    write_message((message_stream*)client->stream, client->log, TRAX_INITIALIZE, arguments, properties);
 
 failure:
 
@@ -211,79 +290,41 @@ void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* 
         LIST_APPEND(arguments, image->data);
     } else goto failure;
 
-    write_message(client->output, client->log, TRAX_FRAME, arguments, properties);
+    write_message((message_stream*)client->stream, client->log, TRAX_FRAME, arguments, properties);
 
 failure:
 
     LIST_DESTROY(arguments);
 }
 
-trax_handle* trax_server_setup_standard(trax_configuration config, int log) {
+trax_handle* trax_server_setup(trax_configuration config, FILE* log) {
 
+    message_stream* stream;
     int fin = fileno(stdin);
     int fout = fileno(stdout);
 
     char* env_in = getenv("TRAX_IN");
     char* env_out = getenv("TRAX_OUT");
 
-    if (env_in) fin = atoi(env_in);
-    if (env_out) fout = atoi(env_out);
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER) 
+    if (env_in) fin = get_shared_fd(strtol(env_in, NULL, 16), 1);
+    if (env_out) fout = get_shared_fd(strtol(env_out, NULL, 16), 0);
+#else
+    if (env_in) fin = get_shared_fd(atoi(env_in), 1);
+    if (env_out) fout = get_shared_fd(atoi(env_out), 0);
+#endif
 
-    return trax_server_setup(config, fin, fout, log);
+    stream = create_message_stream_file(fin, fout);
+
+    return server_setup(config, stream, log);
 
 }
 
-trax_handle* trax_server_setup(trax_configuration config, int input, int output, int log) {
+trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, FILE* log) {
 
-    trax_properties* properties;
-    trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
-    string_list arguments;
-
-    server->flags = (TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
-
-    server->log = log;
-    server->input = input;
-    server->output = output;
-
-    properties = trax_properties_create();
-
-    trax_properties_set_int(properties, "trax.version", TRAX_VERSION);
-
-    switch (config.format_region) {
-        case TRAX_REGION_RECTANGLE:
-            trax_properties_set(properties, "trax.region", "rectangle");
-            break;
-        case TRAX_REGION_POLYGON:
-            trax_properties_set(properties, "trax.region", "polygon");
-            break;
-        default:
-            config.format_region = TRAX_REGION_RECTANGLE;
-            trax_properties_set(properties, "trax.region", "rectangle");
-            break;
-    }
-
-    switch (config.format_image) {
-        case TRAX_IMAGE_PATH:
-            trax_properties_set(properties, "trax.image", "path");
-            break;
-        default:
-            config.format_image = TRAX_IMAGE_PATH;
-            trax_properties_set(properties, "trax.image", "path");
-            break;
-    }
-
-    server->config = config;
-   
-    LIST_CREATE(arguments, 1);
-
-    write_message(server->output, server->log, TRAX_HELLO, arguments, properties);
-
-    trax_properties_release(&properties);
-
-    LIST_DESTROY(arguments);
-
-    return server;
-
+    message_stream* stream = create_message_stream_file(input, output);
+    
+    return server_setup(config, stream, log);
 }
 
 int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties) 
@@ -299,7 +340,7 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
     tmp_properties = trax_properties_create();
     LIST_CREATE(arguments, 8);
 
-    result = read_message(server->input, server->log, &arguments, tmp_properties);
+    result = read_message((message_stream*)server->stream, server->log, &arguments, tmp_properties);
 
     if (result == TRAX_FRAME) {
 
@@ -385,7 +426,7 @@ void trax_server_reply(trax_handle* server, trax_region* region, trax_properties
         free(data);
     }
 
-    write_message(server->output, server->log, TRAX_STATUS, arguments, properties);
+    write_message((message_stream*)server->stream, server->log, TRAX_STATUS, arguments, properties);
 
     LIST_DESTROY(arguments);
 
@@ -404,7 +445,7 @@ int trax_cleanup(trax_handle** handle) {
         LIST_CREATE(arguments, 1);
         tmp_properties = trax_properties_create();
 
-        write_message((*handle)->output, (*handle)->log, TRAX_QUIT, arguments, tmp_properties);
+        write_message((message_stream*)(*handle)->stream, (*handle)->log, TRAX_QUIT, arguments, tmp_properties);
 
         LIST_DESTROY(arguments);
         trax_properties_release(&tmp_properties);
@@ -416,6 +457,8 @@ int trax_cleanup(trax_handle** handle) {
     if ((*handle)->log) {
         (*handle)->log = 0;
     }
+
+    destroy_message_stream((message_stream**) &(*handle)->stream);
 
     free(*handle);
     *handle = 0;
