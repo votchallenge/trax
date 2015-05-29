@@ -33,6 +33,8 @@ int main( int argc, char** argv) {
         LIST_CREATE(arguments, 8);
         properties = trax_properties_create();
 
+        message_stream* stream = create_message_stream_file(input, output);
+
         while (1) {
 
             int type;
@@ -40,11 +42,11 @@ int main( int argc, char** argv) {
             LIST_RESET(arguments);
             trax_properties_clear(properties);
 
-            type = read_message(input, TRAX_NO_LOG, &arguments, properties);
+            type = read_message(stream, NULL, &arguments, properties);
 
             if (type == TRAX_ERROR) break;
 
-            write_message(output, TRAX_NO_LOG, type, arguments, properties); 
+            write_message(stream, NULL, type, arguments, properties); 
 
         }
 
@@ -52,6 +54,8 @@ int main( int argc, char** argv) {
 
         LIST_DESTROY(arguments);
         trax_properties_release(&properties);
+
+        destroy_message_stream(&stream);
 
     }
 

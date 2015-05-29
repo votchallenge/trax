@@ -219,11 +219,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		int tmpin = 0; // fdopen(0, "r");
 		int tmpout = 1; // fdopen(1, "w");
 
-		int log = TRAX_NO_LOG; //open("log.txt", "w");
+		//if (!tmpin) mexErrMsgTxt("Unable to obtain input stream for reading.");  
 
-		if (!tmpin) mexErrMsgTxt("Unable to obtain input stream for reading.");  
-
-		trax = trax_server_setup(config, tmpin, tmpout, log);
+		trax = trax_server_setup_file(config, tmpin, tmpout, NULL);
 
 		if (nlhs == 1)
         	plhs[0] = mxCreateLogicalScalar(trax > 0);

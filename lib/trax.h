@@ -84,10 +84,9 @@ typedef struct trax_configuration {
 typedef struct trax_handle {
     int flags;
     int version;
-    int log;
+    void* stream;
+    FILE* log;
     trax_configuration config;
-    int input;
-    int output;
 } trax_handle;
 
 /**
@@ -99,9 +98,9 @@ typedef struct trax_properties trax_properties;
 typedef void(*trax_enumerator)(const char *key, const char *value, const void *obj);
 
 /**
- * Setups the protocol for the client side and returns a handle object.
+ * Setups the protocol state object for the client and returns a handle object.
 **/
-__EXPORT trax_handle* trax_client_setup(int input, int output, int log);
+__EXPORT trax_handle* trax_client_setup_file(int input, int output, FILE* log);
 
 /**
  * Waits for a valid protocol message from the server.
@@ -121,12 +120,12 @@ __EXPORT void trax_client_frame(trax_handle* client, trax_image* image, trax_pro
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__EXPORT trax_handle* trax_server_setup_standard(trax_configuration config, int log);
+__EXPORT trax_handle* trax_server_setup(trax_configuration config, FILE* log);
 
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__EXPORT trax_handle* trax_server_setup(trax_configuration config, int input, int output, int log);
+__EXPORT trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, FILE* log);
 
 /**
  * Waits for a valid protocol message from the client.
