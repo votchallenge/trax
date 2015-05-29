@@ -17,7 +17,7 @@
     #define __IMPORT
 #endif
 
-#ifdef WIN32
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
     #define TRAX_NO_LOG (~0)
 #else
     #define TRAX_NO_LOG -1

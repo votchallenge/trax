@@ -16,10 +16,10 @@ arguments = {['-I', fullfile(trax_path, 'lib')], fullfile(trax_path, 'matlab', '
 mex('-f', engopts, '-output', 'mwrapper', arguments{:});
 
 % Only build traxserver on Unix systems
-if ~ispc
+%if ~ispc
 
     disp('Building traxserver ...');
     arguments = {['-I', fullfile(trax_path, 'lib')], fullfile(trax_path, 'matlab', 'traxserver.cpp'), '-ltraxstatic', ['-L', lib_path]};
     mex(arguments{:});
     
-end;
+%end;

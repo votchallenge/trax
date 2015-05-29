@@ -3,6 +3,13 @@
 #include <string.h>
 #include <string>
 
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+#include <fcntl.h>
+
 #include <trax.h>
 
 #include "mex.h"
@@ -197,6 +204,13 @@ int getImageCode(string str) {
   	return TRAX_IMAGE_PATH;
 }
 
+int fd_is_valid(int fd) {
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
+    return _tell(fd) != -1 || errno != EBADF;
+#else
+    return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
+#endif
+}
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
@@ -219,9 +233,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		int tmpin = 0; // fdopen(0, "r");
 		int tmpout = 1; // fdopen(1, "w");
 
+        if (!fd_is_valid(tmpin))
+            mexErrMsgTxt("Unable to obtain input stream for reading.");  
+        
+        if (!fd_is_valid(tmpout))
+            mexErrMsgTxt("Unable to obtain output stream for writing.");  
+        
 		int log = TRAX_NO_LOG; //open("log.txt", "w");
 
-		if (!tmpin) mexErrMsgTxt("Unable to obtain input stream for reading.");  
+		//if (!tmpin) mexErrMsgTxt("Unable to obtain input stream for reading.");  
 
 		trax = trax_server_setup(config, tmpin, tmpout, log);
 

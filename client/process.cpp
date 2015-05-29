@@ -10,9 +10,10 @@
 
 #include "process.h"
 
-#ifdef WIN32
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 
-
+#include <io.h>
+#include <process.h>
 
 #else
 
@@ -204,14 +205,14 @@ bool Process::start() {
 
     if (explicit_mode) {
  
-        if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 1) )
+        if ( ! SetHandleInformation(handle_IN_Rd, HANDLE_FLAG_INHERIT, 1) )
             return false; 
 
-        if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 1) )
+        if ( ! SetHandleInformation(handle_OUT_Wr, HANDLE_FLAG_INHERIT, 1) )
             return false; 
 
-    } else {
-
+    } /* else {
+	*/
         // Ensure the write handle to the pipe for STDIN is not inherited.  
         if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
             return false; 
@@ -220,7 +221,7 @@ bool Process::start() {
         if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
             return false; 
  
-    }
+    //}
 
 	STARTUPINFO siStartInfo;
 	BOOL bSuccess = FALSE; 
@@ -254,17 +255,21 @@ bool Process::start() {
 	    siStartInfo.hStdInput = handle_IN_Rd;
         siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
     } else {
-        
-	    int infd = _open_osfhandle((intptr_t)handle_IN_Rd, _O_RDONLY);
-	    int outfd = _open_osfhandle((intptr_t)handle_OUT_Wr, 0);
+		HANDLE pHandle = GetCurrentProcess();
+		HANDLE handle_IN_Rd2, handle_OUT_Wr2;
+		DuplicateHandle(pHandle, handle_IN_Rd, pHandle, &handle_IN_Rd2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
+		DuplicateHandle(pHandle, handle_OUT_Wr, pHandle, &handle_OUT_Wr2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
 
-        envbuffer << string("TRAX_IN=") << infd << '\0';
-        envbuffer << string("TRAX_OUT=") << infd << '\0';
+	    //int infd = _open_osfhandle((intptr_t)handle_IN_Rd, _O_RDONLY);
+	    //int outfd = _open_osfhandle((intptr_t)handle_OUT_Wr, 0);
+
+        envbuffer << string("TRAX_IN=") << handle_IN_Rd2 << '\0';
+        envbuffer << string("TRAX_OUT=") << handle_OUT_Wr2 << '\0';
 
     }
 	
     envbuffer << '\0';
-
+	
 	LPCSTR curdir = directory.empty() ? NULL : directory.c_str();
 
 	if (!CreateProcess(NULL, (char *) cmdbuffer.str().c_str(), NULL, NULL, true, 0,
@@ -468,7 +473,7 @@ bool Process::is_alive() {
 int Process::get_handle() {
 
 #ifdef WIN32
-	if (!piProcInfo.hProcess) return 0; else return (int) piProcInfo.hProcess;
+	if (!piProcInfo.hProcess) return 0; else return (int) GetProcessId(piProcInfo.hProcess);
 #else
     if (!pid) return 0; else return pid;
 #endif
