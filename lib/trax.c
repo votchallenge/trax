@@ -17,9 +17,9 @@
 
 #define BUFFER_LENGTH 64
 
-#define REGION(VP) ((Region*) (VP))
+#define REGION(VP) ((region_container*) (VP))
 
-#define REGION_TYPE(VP) ((((Region*) (VP))->type == RECTANGLE) ? TRAX_REGION_RECTANGLE : (((Region*) (VP))->type == POLYGON ? TRAX_REGION_POLYGON : TRAX_REGION_SPECIAL))
+#define REGION_TYPE(VP) ((((region_container*) (VP))->type == RECTANGLE) ? TRAX_REGION_RECTANGLE : (((region_container*) (VP))->type == POLYGON ? TRAX_REGION_POLYGON : TRAX_REGION_SPECIAL))
 
 #define REGION_TYPE_BACK(T) (( T == TRAX_REGION_RECTANGLE ) ? RECTANGLE : ( T == TRAX_REGION_POLYGON ? POLYGON : SPECIAL))
 
@@ -188,7 +188,7 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
     if (result == TRAX_STATUS) {
 
-		Region *_region = NULL;
+		region_container *_region = NULL;
 
         if (LIST_SIZE(arguments) != 1)
             goto failure;
@@ -233,7 +233,7 @@ end:
 void trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties) {
 
 	char* data = NULL;
-	Region* _region;
+	region_container* _region;
     string_list arguments;
 
     VALIDATE_ALIVE_HANDLE(client);
@@ -397,7 +397,7 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
             goto failure;
         }
 
-        if (!region_parse(arguments.buffer[1], (Region**)region)) {
+        if (!region_parse(arguments.buffer[1], (region_container**)region)) {
             goto failure;
         }
 
@@ -513,7 +513,7 @@ const char* trax_image_get_path(trax_image* image) {
 
 void trax_region_release(trax_region** region) {
 
-    Region* _region = REGION(*region);
+    region_container* _region = REGION(*region);
 
     region_release(&_region);
 

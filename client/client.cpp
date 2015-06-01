@@ -130,7 +130,7 @@ void print_help() {
     cout << "\n";
 }
 
-void load_data(vector<trax_image*>& images, vector<Region*>& groundtruth, vector<Region*>& initialization) {
+void load_data(vector<trax_image*>& images, vector<region_container*>& groundtruth, vector<region_container*>& initialization) {
 
 	std::ifstream if_images, if_groundtruth, if_initialization;
 
@@ -167,7 +167,7 @@ void load_data(vector<trax_image*>& images, vector<Region*>& groundtruth, vector
 
         line++;
 
-        Region* region;
+        region_container* region;
 
         if (region_parse(gt_line_buffer, &region)) {
 
@@ -189,7 +189,7 @@ void load_data(vector<trax_image*>& images, vector<Region*>& groundtruth, vector
 
             } else {
 
-                Region* initialization_region;
+                region_container* initialization_region;
 
                 if (region_parse(it_line_buffer, &initialization_region)) {
 
@@ -213,7 +213,7 @@ void load_data(vector<trax_image*>& images, vector<Region*>& groundtruth, vector
 
 }
 
-void save_data(vector<Region*>& output) {
+void save_data(vector<region_container*>& output) {
 
     FILE *outFp = fopen(outputFile.c_str(), "w");
 
@@ -223,7 +223,7 @@ void save_data(vector<Region*>& output) {
 
     for (int i = 0; i < output.size(); i++) {    
 
-        Region* r = output[i];
+        region_container* r = output[i];
 
         if (!r) {
             fprintf(outFp, "\n");
@@ -305,9 +305,9 @@ int main( int argc, char** argv) {
     Process* trackerProcess = NULL;
 
     vector<trax_image*> images;
-    vector<Region*> groundtruth;
-    vector<Region*> initialization;
-    vector<Region*> output;
+    vector<region_container*> groundtruth;
+    vector<region_container*> initialization;
+    vector<region_container*> output;
     vector<long> timings;
     map<string, string> environment;
     trax_properties* properties = trax_properties_create();
@@ -481,7 +481,7 @@ int main( int argc, char** argv) {
 
             while (true) {
 
-                Region* status = NULL;
+                region_container* status = NULL;
 
                 trax_properties* additional = trax_properties_create();
 
@@ -498,7 +498,7 @@ int main( int argc, char** argv) {
 
                 if (result == TRAX_STATUS) {
 
-                    Region* gt = groundtruth[frame];
+                    region_container* gt = groundtruth[frame];
 
                     float overlap = region_compute_overlap(gt, status).overlap;
 

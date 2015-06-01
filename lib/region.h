@@ -21,62 +21,62 @@
 extern "C" {
 #endif
 
-typedef enum RegionType {SPECIAL, RECTANGLE, POLYGON} RegionType;
+typedef enum region_type {SPECIAL, RECTANGLE, POLYGON} region_type;
 
-typedef struct Polygon {
+typedef struct region_polygon {
 
 	int count;
 
 	float* x;
 	float* y;
 
-} Polygon;
+} region_polygon;
 
-typedef struct Rectangle {
+typedef struct region_rectangle {
 
     float x;
     float y;
     float width;
     float height;
 
-} Rectangle;
+} region_rectangle;
 
-typedef struct Region {
-    enum RegionType type;
+typedef struct region_container {
+    enum region_type type;
     union {
-        Rectangle rectangle;
-        Polygon polygon;
+        region_rectangle rectangle;
+        region_polygon polygon;
         int special;
     } data;
-} Region;
+} region_container;
 
-typedef struct Overlap {
+typedef struct region_overlap {
 
 	float overlap;    
     float only1;
     float only2;
 
-} Overlap;
+} region_overlap;
 
-__EXPORT Overlap region_compute_overlap(Region* ra, Region* rb);
+__EXPORT region_overlap region_compute_overlap(region_container* ra, region_container* rb);
 
-__EXPORT int region_parse(char* buffer, Region** region);
+__EXPORT int region_parse(char* buffer, region_container** region);
 
-__EXPORT char* region_string(Region* region);
+__EXPORT char* region_string(region_container* region);
 
-__EXPORT void region_print(FILE* out, Region* region);
+__EXPORT void region_print(FILE* out, region_container* region);
 
-__EXPORT Region* region_convert(const Region* region, RegionType type);
+__EXPORT region_container* region_convert(const region_container* region, region_type type);
 
-__EXPORT void region_release(Region** region);
+__EXPORT void region_release(region_container** region);
 
-__EXPORT Region* region_create_special(int code);
+__EXPORT region_container* region_create_special(int code);
 
-__EXPORT Region* region_create_rectangle(float x, float y, float width, float height);
+__EXPORT region_container* region_create_rectangle(float x, float y, float width, float height);
 
-__EXPORT Region* region_create_polygon(int count);
+__EXPORT region_container* region_create_polygon(int count);
 
-__EXPORT void region_mask(Region* r, char* mask, int width, int height);
+__EXPORT void region_mask(region_container* r, char* mask, int width, int height);
 
 #ifdef __cplusplus
 }

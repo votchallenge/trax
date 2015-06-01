@@ -19,18 +19,18 @@
 #define NAN (INFINITY-INFINITY)
 #endif
 
-typedef struct Bounds {
+typedef struct region_bounds {
 
 	float top;
 	float bottom;
 	float left;
 	float right;
 
-} Bounds;
+} region_bounds;
 
-Region* __create_region(RegionType type) {
+region_container* __create_region(region_type type) {
 
-    Region* reg = (Region*) malloc(sizeof(Region));
+    region_container* reg = (region_container*) malloc(sizeof(region_container));
 
     reg->type = type;
 
@@ -76,7 +76,7 @@ int _parse_sequence(char* buffer, float** data) {
     return i;
 }
 
-int region_parse(char* buffer, Region** region) {
+int region_parse(char* buffer, region_container** region) {
 
     float* data = NULL;
     int num;
@@ -93,7 +93,7 @@ int region_parse(char* buffer, Region** region) {
 	num = _parse_sequence(buffer, &data);
 
     if (num == 1) {
-		(*region) = (Region*) malloc(sizeof(Region));
+		(*region) = (region_container*) malloc(sizeof(region_container));
 		(*region)->type = SPECIAL;
 		(*region)->data.special = (int) data[0];
 		free(data);
@@ -104,13 +104,13 @@ int region_parse(char* buffer, Region** region) {
 		if (isnan(data[0]) && !isnan(data[3])) {
 
 			/* Support for old rectangle format */
-			(*region) = (Region*) malloc(sizeof(Region));
+			(*region) = (region_container*) malloc(sizeof(region_container));
 			(*region)->type = SPECIAL;
 			(*region)->data.special = -(int) data[3];
 
 		} else {
 
-			(*region) = (Region*) malloc(sizeof(Region));
+			(*region) = (region_container*) malloc(sizeof(region_container));
 			(*region)->type = RECTANGLE;
 
 		    (*region)->data.rectangle.x = data[0];
@@ -127,7 +127,7 @@ int region_parse(char* buffer, Region** region) {
 
 		int j;
 
-		(*region) = (Region*) malloc(sizeof(Region));
+		(*region) = (region_container*) malloc(sizeof(region_container));
 		(*region)->type = POLYGON;
 
         (*region)->data.polygon.count = num / 2;
@@ -149,7 +149,7 @@ int region_parse(char* buffer, Region** region) {
     return 0;
 }
 
-char* region_string(Region* region) {
+char* region_string(region_container* region) {
 
 	int i;
 	char* result = NULL;
@@ -180,7 +180,7 @@ char* region_string(Region* region) {
 	return result;
 }
 
-void region_print(FILE* out, Region* region) {
+void region_print(FILE* out, region_container* region) {
 
 	char* buffer = region_string(region);
 
@@ -191,15 +191,15 @@ void region_print(FILE* out, Region* region) {
 
 }
 
-Region* region_convert(const Region* region, RegionType type) {
+region_container* region_convert(const region_container* region, region_type type) {
 
-    Region* reg = NULL;
+    region_container* reg = NULL;
 
 	switch (type) {
 
 		case RECTANGLE: {
 
-			reg = (Region*) malloc(sizeof(Region));
+			reg = (region_container*) malloc(sizeof(region_container));
 			reg->type = type;
 
 			switch (region->type) {
@@ -237,7 +237,7 @@ Region* region_convert(const Region* region, RegionType type) {
 
 		case POLYGON: {
 
-			reg = (Region*) malloc(sizeof(Region));
+			reg = (region_container*) malloc(sizeof(region_container));
 			reg->type = type;
 
 			switch (region->type) {
@@ -290,7 +290,7 @@ Region* region_convert(const Region* region, RegionType type) {
 
 }
 
-void region_release(Region** region) {
+void region_release(region_container** region) {
 
     switch ((*region)->type) {
         case RECTANGLE:
@@ -308,9 +308,9 @@ void region_release(Region** region) {
 
 }
 
-Region* region_create_special(int code) {
+region_container* region_create_special(int code) {
 
-    Region* reg = __create_region(SPECIAL);
+    region_container* reg = __create_region(SPECIAL);
 
     reg->data.special = code;
 
@@ -318,9 +318,9 @@ Region* region_create_special(int code) {
 
 }
 
-Region* region_create_rectangle(float x, float y, float width, float height) {
+region_container* region_create_rectangle(float x, float y, float width, float height) {
 
-    Region* reg = __create_region(RECTANGLE);
+    region_container* reg = __create_region(RECTANGLE);
 
     reg->data.rectangle.width = width;
     reg->data.rectangle.height = height;
@@ -331,13 +331,13 @@ Region* region_create_rectangle(float x, float y, float width, float height) {
 
 }
 
-Region* region_create_polygon(int count) {
+region_container* region_create_polygon(int count) {
 
 	assert(count > 0);
 
 	{
 
-		Region* reg = __create_region(POLYGON);
+		region_container* reg = __create_region(POLYGON);
 
 		reg->data.polygon.count = count;
 		reg->data.polygon.x = (float *) malloc(sizeof(float) * count);
@@ -350,7 +350,7 @@ Region* region_create_polygon(int count) {
 
 #define MAX_MASK 4000
 
-void free_polygon(Polygon* polygon) {
+void free_polygon(region_polygon* polygon) {
 
 	free(polygon->x);
 	free(polygon->y);
@@ -362,9 +362,9 @@ void free_polygon(Polygon* polygon) {
 
 }
 
-Polygon* allocate_polygon(int count) {
+region_polygon* allocate_polygon(int count) {
 
-	Polygon* polygon = (Polygon*) malloc(sizeof(Polygon));
+	region_polygon* polygon = (region_polygon*) malloc(sizeof(region_polygon));
 
 	polygon->count = count;
 
@@ -377,9 +377,9 @@ Polygon* allocate_polygon(int count) {
 	return polygon;
 }
 
-Polygon* clone_polygon(Polygon* polygon) {
+region_polygon* clone_polygon(region_polygon* polygon) {
 
-	Polygon* clone = allocate_polygon(polygon->count);
+	region_polygon* clone = allocate_polygon(polygon->count);
 
 	memcpy(clone->x, polygon->x, sizeof(float) * polygon->count);
 	memcpy(clone->y, polygon->y, sizeof(float) * polygon->count);
@@ -387,10 +387,10 @@ Polygon* clone_polygon(Polygon* polygon) {
 	return clone;
 }
 
-Polygon* offset_polygon(Polygon* polygon, float x, float y) {
+region_polygon* offset_polygon(region_polygon* polygon, float x, float y) {
 
 	int i;
-	Polygon* clone = clone_polygon(polygon);
+	region_polygon* clone = clone_polygon(polygon);
 
 	for (i = 0; i < clone->count; i++) {
 		clone->x[i] += x;
@@ -400,7 +400,7 @@ Polygon* offset_polygon(Polygon* polygon, float x, float y) {
 	return clone;
 }
 
-void print_polygon(Polygon* polygon) {
+void print_polygon(region_polygon* polygon) {
 
 	int i;
 	printf("%d:", polygon->count);
@@ -413,10 +413,10 @@ void print_polygon(Polygon* polygon) {
 
 }
 
-Bounds compute_bounds(Polygon* polygon) {
+region_bounds compute_bounds(region_polygon* polygon) {
 
 	int i;
-	Bounds bounds;
+	region_bounds bounds;
 	bounds.top = MAX_MASK;
 	bounds.bottom = -MAX_MASK;
 	bounds.left = MAX_MASK;
@@ -433,7 +433,7 @@ Bounds compute_bounds(Polygon* polygon) {
 
 }
 
-void rasterize_polygon(Polygon* polygon, char* mask, int width, int height) {
+void rasterize_polygon(region_polygon* polygon, char* mask, int width, int height) {
 
 	int nodes, pixelY, i, j, swap;
 
@@ -486,15 +486,15 @@ void rasterize_polygon(Polygon* polygon, char* mask, int width, int height) {
 
 }
 
-float compute_polygon_overlap(Polygon* p1, Polygon* p2, float *only1, float *only2) {
+float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *only1, float *only2) {
 
 	int i;
     int mask_1 = 0;
 	int mask_2 = 0;
 	int mask_intersect = 0;
 
-	Bounds b1 = compute_bounds(p1);
-	Bounds b2 = compute_bounds(p2);
+	region_bounds b1 = compute_bounds(p1);
+	region_bounds b2 = compute_bounds(p2);
 
 	float x = MIN(b1.left, b2.left);
 	float y = MIN(b1.top, b2.top);
@@ -505,12 +505,9 @@ float compute_polygon_overlap(Polygon* p1, Polygon* p2, float *only1, float *onl
 	char* mask1 = (char*) malloc(sizeof(char) * width * height);
 	char* mask2 = (char*) malloc(sizeof(char) * width * height);
 
-	Polygon* op1 = offset_polygon(p1, -x, -y);
-	Polygon* op2 = offset_polygon(p2, -x, -y);
-/*
-print_polygon(p1);print_polygon(p2);
-print_polygon(op1);print_polygon(op2);
-*/
+	region_polygon* op1 = offset_polygon(p1, -x, -y);
+	region_polygon* op2 = offset_polygon(p2, -x, -y);
+
 	rasterize_polygon(op1, mask1, width, height); 
 	rasterize_polygon(op2, mask2, width, height); 
 
@@ -538,11 +535,11 @@ print_polygon(op1);print_polygon(op2);
 
 #define COPY_POLYGON(TP, P) { P.count = TP->data.polygon.count; P.x = TP->data.polygon.x; P.y = TP->data.polygon.y; }
 
-Overlap region_compute_overlap(Region* ra, Region* rb) {
+region_overlap region_compute_overlap(region_container* ra, region_container* rb) {
 
-    Region* ta = ra;
-    Region* tb = rb;
-    Overlap overlap;
+    region_container* ta = ra;
+    region_container* tb = rb;
+    region_overlap overlap;
 	overlap.overlap = 0;
 	overlap.only1 = 0;
 	overlap.only2 = 0;
@@ -555,7 +552,7 @@ Overlap region_compute_overlap(Region* ra, Region* rb) {
 
     if (ta->type == POLYGON && tb->type == POLYGON) {
 
-        Polygon p1, p2;
+        region_polygon p1, p2;
 
         COPY_POLYGON(ta, p1);
         COPY_POLYGON(tb, p2);
@@ -574,9 +571,9 @@ Overlap region_compute_overlap(Region* ra, Region* rb) {
 
 }
 
-void region_mask(Region* r, char* mask, int width, int height) {
+void region_mask(region_container* r, char* mask, int width, int height) {
 
-    Region* t = r;
+    region_container* t = r;
 
     if (r->type == RECTANGLE)
         t = region_convert(r, POLYGON);
