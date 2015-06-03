@@ -4,7 +4,7 @@ About the TraX protocol
 What is TraX protocol?
 ----------------------
 
-[Visual Tracking eXchange protocol](http://prints.vicos.si/publications/311/) is a simple protocol that enables easier evaluation of computer vision tracking algorithms. The basic idea is that a tracker communicates with the evaluation software using a set of textual commands over the (standard) input/output streams.
+[Visual Tracking eXchange protocol](http://prints.vicos.si/publications/311/) is a simple protocol that enables easier evaluation of computer vision tracking algorithms. The basic idea is that a tracker communicates with the evaluation software using a set of text commands over the (standard) input/output streams.
 
 Reference C server and client implementation
 ---------------------------------
@@ -14,9 +14,8 @@ Examples of integration in a tracker are provided in the `trackers` directory. A
 
 Matlab server implementation
 ----------------------------
-Matlab TraX implementation together with the specific documentation is available in the `matlab` directory. On Linux and OSX Mex functions can be used to run a TraX server, on Windows you have to use a special program called `mwrapper.exe`.
 
-It is technically not possible to have a native Matlab client so for now the only option is to run `traxclient` program from Matlab.
+It is technically not possible to have a Matlab-only implementation of TraX protocol on all platforms because of the way Matlab handles terminal input and output. Therefore, Matlab TraX implementation is available as a MEX function that links the C library. It is available in the `matlab` directory. In case of using Matlab on Windows, the only way to use TraX is to use TCP/IP sockets, which means that both the client and server have to explicitly enable this (see help of `traxclient` for more details).
 
 License
 -------

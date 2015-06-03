@@ -1,4 +1,4 @@
-function [] = tracker_static()
+function [] = matlab_static()
 
 cleanup = onCleanup(@() exit() );
 
