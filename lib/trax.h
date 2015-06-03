@@ -46,7 +46,10 @@
 #define TRAX_FLAG_SERVER 2
 #define TRAX_FLAG_TERMINATED 4
 
-
+#define TRAX_PARAMETER_VERSION 0
+#define TRAX_PARAMETER_CLIENT 1
+#define TRAX_PARAMETER_SOCKET 2
+#define TRAX_PARAMETER_SOCKET_PORT 3
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,7 +108,7 @@ __EXPORT trax_handle* trax_client_setup_file(int input, int output, FILE* log);
 /**
  * Setups the protocol state object for the client and returns a handle object.
 **/
-__EXPORT trax_handle* trax_client_setup_socket(char* address, FILE* log);
+__EXPORT trax_handle* trax_client_setup_socket(FILE* log);
 
 /**
  * Waits for a valid protocol message from the server.
@@ -147,6 +150,16 @@ __EXPORT void trax_server_reply(trax_handle* server, trax_region* region, trax_p
  * Releases the handle structure.
 **/
 __EXPORT int trax_cleanup(trax_handle** handle);
+
+/**
+ * Sets the parameter for the client or server instance.
+**/
+__EXPORT int trax_set_parameter(trax_handle* handle, int id, int value);
+
+/**
+ * Gets the parameter for the client or server instance.
+**/
+__EXPORT int trax_get_parameter(trax_handle* handle, int id, int* value);
 
 /**
  * Releases image structure, frees allocated memory.

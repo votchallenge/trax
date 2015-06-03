@@ -19,6 +19,9 @@
 #define TRAX_STREAM_SOCKET 2
 #define TRAX_STREAM_SOCKET_LISTEN 8
 
+#define TRAX_LOCALHOST "127.0.0.1"
+#define TRAX_DEFAULT_PORT 9090
+
 #ifndef TRUE
 #define TRUE 1
 #endif
@@ -102,13 +105,13 @@ message_stream* create_message_stream_file(int input, int output) {
     message_stream* stream = (message_stream*) malloc(sizeof(message_stream));
 
     stream->flags = TRAX_STREAM_FILES;
-    stream->input = input;
-    stream->output = output;
+    stream->files.input = input;
+    stream->files.output = output;
 
     return stream;
 }
 
-message_stream* create_message_stream_socket_connect(char* address) {
+message_stream* create_message_stream_socket_connect(int port) {
 
     message_stream* stream = NULL;
 
@@ -116,12 +119,10 @@ message_stream* create_message_stream_socket_connect(char* address) {
 	struct hostent *hp;
 	struct sockaddr_in pin;
 	char *hostname;
-	int port;
 
     initialize_sockets();
 
-	port = 9090;
-	hostname = "127.0.0.1";
+	hostname = TRAX_LOCALHOST;
 
 	//port = 80;
 	//hostname = "web.vicos.si";
@@ -153,7 +154,8 @@ message_stream* create_message_stream_socket_connect(char* address) {
     stream = (message_stream*) malloc(sizeof(message_stream));
 
     stream->flags = TRAX_STREAM_SOCKET;
-    stream->input = sid;
+    stream->socket.socket = sid;
+    stream->socket.port = port;
 
     return stream;
 
@@ -163,7 +165,7 @@ message_stream* create_message_stream_socket_listen(char* address) {
 
     message_stream* stream = NULL;
 
-	int port = 9090;
+	int port = TRAX_DEFAULT_PORT;
 	int sid;
 	int one = 1;
 	struct sockaddr_in sin;
@@ -171,7 +173,7 @@ message_stream* create_message_stream_socket_listen(char* address) {
 
 	fd_set readfds,writefds,exceptfds;
 	int asock=-1;
-	char* hostname = "127.0.0.1";
+	char* hostname = TRAX_LOCALHOST;
 
 	initialize_sockets();
 
@@ -181,23 +183,31 @@ message_stream* create_message_stream_socket_listen(char* address) {
 	setsockopt(sid,SOL_SOCKET,SO_REUSEADDR,
 						 (const char *)&one,sizeof(int));
 
-	memset(&sin,0,sizeof(sin));
-	sin.sin_family = AF_INET;
+    while (1) {
 
-	if((hp = gethostbyname(hostname))==0)
-		sin.sin_addr.s_addr = 
-			((struct in_addr *)hp->h_addr)->s_addr;
-	else
-		sin.sin_addr.s_addr = inet_addr(hostname);
+	    memset(&sin,0,sizeof(sin));
+	    sin.sin_family = AF_INET;
 
-	sin.sin_port = htons(port);
+	    if((hp = gethostbyname(hostname))==0)
+		    sin.sin_addr.s_addr = 
+			    ((struct in_addr *)hp->h_addr)->s_addr;
+	    else
+		    sin.sin_addr.s_addr = inet_addr(hostname);
 
-	if(bind(sid,(struct sockaddr *)&sin,sizeof(sin)) == -1) {
-		perror("bind");
-		closesocket(sid);
-		return NULL;
-	}
-	
+	    sin.sin_port = htons(port);
+
+	    if(bind(sid,(struct sockaddr *)&sin,sizeof(sin)) == -1) {
+            port++;
+            if (port > 65535) {
+		        perror("bind");
+		        closesocket(sid);
+		        return NULL;
+            }
+            continue;
+	    }
+	    break;
+    }
+
 	if(listen(sid, 1)== -1) {
 		perror("listen");
 		closesocket(sid);
@@ -231,8 +241,9 @@ message_stream* create_message_stream_socket_listen(char* address) {
 
     stream->flags = TRAX_STREAM_SOCKET;
     stream->flags |= TRAX_STREAM_SOCKET_LISTEN;
-    stream->input = asock;
-    stream->output = sid;
+    stream->socket.server = asock;
+    stream->socket.socket = sid;
+    stream->socket.port = port;
 
     return stream;
 
@@ -245,20 +256,20 @@ void destroy_message_stream(message_stream** stream) {
     if ((*stream)->flags & TRAX_STREAM_SOCKET) {
 
 #if !defined(WIN32)
-	    shutdown((*stream)->input, SHUT_RDWR);
+	    shutdown((*stream)->socket.socket, SHUT_RDWR);
 #else
-	    shutdown((*stream)->input, SD_BOTH);
+	    shutdown((*stream)->socket.socket, SD_BOTH);
 #endif
-        closesocket((*stream)->input);
+        closesocket((*stream)->socket.socket);
 
         // Close listening socket as well
         if ((*stream)->flags & TRAX_STREAM_SOCKET_LISTEN) {
 #if !defined(WIN32)
-	        shutdown((*stream)->output, SHUT_RDWR);
+	        shutdown((*stream)->socket.server, SHUT_RDWR);
 #else
-	        shutdown((*stream)->output, SD_BOTH);
+	        shutdown((*stream)->socket.server, SD_BOTH);
 #endif
-            closesocket((*stream)->output);
+            closesocket((*stream)->socket.server);
         }
 
     }
@@ -268,18 +279,27 @@ void destroy_message_stream(message_stream** stream) {
 
 }
 
+int get_socket_port(message_stream* stream) {
+    VALIDATE_MESSAGE_STREAM(stream);
+
+    if (stream->flags & TRAX_STREAM_SOCKET)
+        return stream->socket.port;
+    else
+        return -1;
+}
+
 __INLINE int read_character(message_stream* stream) {
     char chr;
 
     if (stream->flags & TRAX_STREAM_SOCKET) {
 
-		int val = recv(stream->input, &chr, 1, 0);
+		int val = recv(stream->socket.socket, &chr, 1, 0);
 
         return (val != 1) ? -1 : chr;
 
     } else {
 
-    	int val = read(stream->input, &chr, 1);
+    	int val = read(stream->files.input, &chr, 1);
 
         return (val != 1) ? -1 : chr;
        
@@ -295,7 +315,7 @@ __INLINE int write_string(message_stream* stream, const char* buf, int len) {
 	    int cnt = 0;
 
 	    while(cnt < len) {
-		    int l = send(stream->input, buf+cnt, len-cnt,0);
+		    int l = send(stream->socket.socket, buf+cnt, len-cnt,0);
 		    if(l == -1) {
 			    return -1;
 		    }
@@ -304,7 +324,7 @@ __INLINE int write_string(message_stream* stream, const char* buf, int len) {
 
     } else {
 
-    	write(stream->output, buf, len);
+    	write(stream->files.output, buf, len);
        
     }
 

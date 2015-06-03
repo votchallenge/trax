@@ -422,7 +422,7 @@ int main( int argc, char** argv) {
                trackerProcess->set_environment(iter->first, iter->second);
             }
 
-            if (socket_mode) trackerProcess->set_environment("TRAX_SOCKET", "");
+            if (socket_mode) trackerProcess->set_environment("TRAX_SOCKET", "9090");
 
             if (!trackerProcess->start()) {
 				DEBUGMSG("Unable to start the tracker process\n");
@@ -439,7 +439,7 @@ int main( int argc, char** argv) {
             MUTEX_UNLOCK(watchdogMutex);
 
             if (socket_mode) {
-                trax = trax_client_setup_socket("", silent ? NULL : stdout);
+                trax = trax_client_setup_socket(silent ? NULL : stdout);
                 DEBUGMSG("Socket opened successfuly.\n");
             } else {
                 trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);

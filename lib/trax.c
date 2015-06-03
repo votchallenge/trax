@@ -162,9 +162,9 @@ trax_handle* trax_client_setup_file(int input, int output, FILE* log) {
 
 }
 
-trax_handle* trax_client_setup_socket(char* address, FILE* log) {
+trax_handle* trax_client_setup_socket(FILE* log) {
 
-    message_stream* stream = create_message_stream_socket_listen(address);
+    message_stream* stream = create_message_stream_socket_listen();
     
     return client_setup(stream, log);
 
@@ -306,7 +306,7 @@ trax_handle* trax_server_setup(trax_configuration config, FILE* log) {
 
     if (env_socket) {
 
-        stream = create_message_stream_socket_connect(env_socket);
+        stream = create_message_stream_socket_connect(atoi(env_socket));
 
     } else {
 
@@ -474,6 +474,37 @@ int trax_cleanup(trax_handle** handle) {
 
     free(*handle);
     *handle = 0;
+
+    return 0;
+}
+
+int trax_set_parameter(trax_handle* handle, int id, int value) {
+
+    VALIDATE_ALIVE_HANDLE(handle);
+
+    // No settable parameters at the moment.
+
+    return 0;
+}
+
+int trax_get_parameter(trax_handle* handle, int id, int* value) {
+
+    VALIDATE_ALIVE_HANDLE(handle);
+
+    switch (id) {
+        case TRAX_PARAMETER_VERSION:
+            *value = handle->version;
+            return 1;
+        case TRAX_PARAMETER_CLIENT:
+            *value = !(handle->flags & TRAX_FLAG_SERVER);
+            return 1;
+        case TRAX_PARAMETER_SOCKET:
+            *value = get_socket_port((message_stream*)handle->stream) > 0;
+            return 1;
+        case TRAX_PARAMETER_SOCKET_PORT:
+            *value = get_socket_port((message_stream*)handle->stream);
+            return 1;
+    }
 
     return 0;
 }
