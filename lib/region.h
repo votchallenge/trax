@@ -3,10 +3,10 @@
 #ifndef _REGION_H_
 #define _REGION_H_
 
-#ifdef WIN32
-#define __EXPORT __declspec(dllexport) 
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+#define __TRAX_EXPORT __declspec(dllexport) 
 #else
-#define __EXPORT 
+#define __TRAX_EXPORT 
 #endif
 
 #ifndef MAX
@@ -58,25 +58,25 @@ typedef struct region_overlap {
 
 } region_overlap;
 
-__EXPORT region_overlap region_compute_overlap(region_container* ra, region_container* rb);
+__TRAX_EXPORT region_overlap region_compute_overlap(region_container* ra, region_container* rb);
 
-__EXPORT int region_parse(char* buffer, region_container** region);
+__TRAX_EXPORT int region_parse(char* buffer, region_container** region);
 
-__EXPORT char* region_string(region_container* region);
+__TRAX_EXPORT char* region_string(region_container* region);
 
-__EXPORT void region_print(FILE* out, region_container* region);
+__TRAX_EXPORT void region_print(FILE* out, region_container* region);
 
-__EXPORT region_container* region_convert(const region_container* region, region_type type);
+__TRAX_EXPORT region_container* region_convert(const region_container* region, region_type type);
 
-__EXPORT void region_release(region_container** region);
+__TRAX_EXPORT void region_release(region_container** region);
 
-__EXPORT region_container* region_create_special(int code);
+__TRAX_EXPORT region_container* region_create_special(int code);
 
-__EXPORT region_container* region_create_rectangle(float x, float y, float width, float height);
+__TRAX_EXPORT region_container* region_create_rectangle(float x, float y, float width, float height);
 
-__EXPORT region_container* region_create_polygon(int count);
+__TRAX_EXPORT region_container* region_create_polygon(int count);
 
-__EXPORT void region_mask(region_container* r, char* mask, int width, int height);
+__TRAX_EXPORT void region_mask(region_container* r, char* mask, int width, int height);
 
 #ifdef __cplusplus
 }
