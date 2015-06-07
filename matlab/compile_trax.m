@@ -3,7 +3,7 @@ function [] = compile_trax()
 trax_path = fileparts(fileparts(mfilename('fullpath')));
 
 if ispc
-    lib_path = find_file_recursive(trax_path, 'libtraxstatic.a');
+    lib_path = find_file_recursive(trax_path, 'traxstatic.lib');
 else
     lib_path = find_file_recursive(trax_path, 'libtraxstatic.a');
 end;
@@ -20,7 +20,7 @@ end
 
 function [path] = find_file_recursive(root, filename)
     path = [];
-root
+
     data = dir(root);
     isdir = [data.isdir]; 
     files = {data(~isdir).name}';
