@@ -48,11 +48,6 @@
 #include <fstream>
 #include <sstream>
 
-#include "trax.h"
-#include "process.h"
-#include "region.h"
-#include "threads.h"
-
 #define TRAX_DEFAULT_PORT 9090
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
@@ -60,7 +55,6 @@
 #include <winsock2.h>
 #include <windows.h>
 #include "getopt_win.h"
-#pragma comment(lib, "ws2_32.lib")
 
 #define strcmpi _strcmpi
 
@@ -102,6 +96,10 @@ static void initialize_sockets(void) {}
 
 #endif
 
+#include "trax.h"
+#include "process.h"
+#include "region.h"
+#include "threads.h"
 
 using namespace std;
 
@@ -177,7 +175,6 @@ int create_server_socket(int port) {
 	int sid;
 	int one = 1;
 	struct sockaddr_in sin;
-	struct hostent *hp;
 
 	const char* hostname = TRAX_LOCALHOST;
 
