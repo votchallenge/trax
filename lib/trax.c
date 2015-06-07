@@ -162,9 +162,9 @@ trax_handle* trax_client_setup_file(int input, int output, FILE* log) {
 
 }
 
-trax_handle* trax_client_setup_socket(FILE* log) {
+trax_handle* trax_client_setup_socket(int server, FILE* log) {
 
-    message_stream* stream = create_message_stream_socket_listen();
+    message_stream* stream = create_message_stream_socket_accept(server);
     
     return client_setup(stream, log);
 
@@ -499,10 +499,7 @@ int trax_get_parameter(trax_handle* handle, int id, int* value) {
             *value = !(handle->flags & TRAX_FLAG_SERVER);
             return 1;
         case TRAX_PARAMETER_SOCKET:
-            *value = get_socket_port((message_stream*)handle->stream) > 0;
-            return 1;
-        case TRAX_PARAMETER_SOCKET_PORT:
-            *value = get_socket_port((message_stream*)handle->stream);
+            *value = (((message_stream*)handle->stream)->flags & TRAX_STREAM_SOCKET);
             return 1;
     }
 

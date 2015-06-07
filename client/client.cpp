@@ -49,17 +49,59 @@
 #include <sstream>
 
 #include "trax.h"
-#include "region.h"
 #include "process.h"
+#include "region.h"
 #include "threads.h"
 
-#ifdef WIN32
+#define TRAX_DEFAULT_PORT 9090
+
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+#include <ctype.h>
+#include <winsock2.h>
 #include <windows.h>
 #include "getopt_win.h"
-inline void sleep(long time) {
+#pragma comment(lib, "ws2_32.lib")
+
+#define strcmpi _strcmpi
+
+static int initialized = 0;
+static void initialize_sockets(void) {
+    WSADATA data;
+    WORD version = 0x101;
+	if (initialized) return;
+
+    WSAStartup(version,&data);
+    initialized = 1;
+    return;
+}
+
+__inline void sleep(long time) {
 	Sleep(time * 1000);
 }
+
+#define __INLINE __inline
+
+#else
+
+#ifdef _MAC_
+    #include <tcpd.h>
+#else
+    #include <sys/socket.h>
+    #include <unistd.h>
+    #include <sys/select.h>
+    #include <netdb.h>
+    #include <arpa/inet.h>
+    #define closesocket close
 #endif
+
+#define strcmpi strcasecmp
+
+#define __INLINE inline
+
+static void initialize_sockets(void) {}
+
+#endif
+
 
 using namespace std;
 
@@ -128,6 +170,58 @@ void print_help() {
     cout << "\n";
 
     cout << "\n";
+}
+
+int create_server_socket(int port) {
+
+	int sid;
+	int one = 1;
+	struct sockaddr_in sin;
+	struct hostent *hp;
+
+	const char* hostname = TRAX_LOCALHOST;
+
+	initialize_sockets();
+ 
+	if((sid = (int) socket(AF_INET,SOCK_STREAM,0)) == -1) {
+		return -1;
+	}
+	setsockopt(sid,SOL_SOCKET,SO_REUSEADDR,
+						 (const char *)&one,sizeof(int));
+
+    memset(&sin,0,sizeof(sin));
+    sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = inet_addr(hostname);
+
+    sin.sin_port = htons(port);
+
+    if(bind(sid,(struct sockaddr *)&sin,sizeof(sin)) == -1) {
+        perror("bind");
+        closesocket(sid);
+        return -1;
+    }
+
+	if(listen(sid, 1)== -1) {
+		perror("listen");
+		closesocket(sid);
+		return -1;
+	}
+
+    return sid;
+
+}
+
+void destroy_server_socket(int server) {
+
+    if (server < 0) return;
+
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+    shutdown(server, SD_BOTH);
+#else
+    shutdown(server, SHUT_RDWR);
+#endif
+    closesocket(server);
+
 }
 
 void load_data(vector<trax_image*>& images, vector<region_container*>& groundtruth, vector<region_container*>& initialization) {
@@ -294,6 +388,8 @@ int main( int argc, char** argv) {
     int c;
     bool explicit_mode = false;
     bool socket_mode = false;
+    int socket_id = -1;
+    int socket_port = TRAX_DEFAULT_PORT;
     debug = false;
     opterr = 0;
     imagesFile = string("images.txt");
@@ -399,6 +495,20 @@ int main( int argc, char** argv) {
         if (timeout >= 1)
             DEBUGMSG("Timeout: %d\n", timeout);
 
+        if (socket_mode) {
+
+            while (true) {
+                socket_id = create_server_socket(socket_port);
+                if (socket_id < 0) {
+                    socket_port++;
+                    if (socket_port > 65500) throw std::runtime_error("Unable to configure TCP server connection.");
+                } else break;
+            }
+            
+            DEBUGMSG("Socket opened successfully on port %d.\n", socket_port);
+
+        }
+
         load_data(images, groundtruth, initialization);
 
         watchdogState.process = NULL;
@@ -422,15 +532,6 @@ int main( int argc, char** argv) {
                trackerProcess->set_environment(iter->first, iter->second);
             }
 
-            if (socket_mode) trackerProcess->set_environment("TRAX_SOCKET", "9090");
-
-            if (!trackerProcess->start()) {
-				DEBUGMSG("Unable to start the tracker process\n");
-				break;
-			}
-
-            DEBUGMSG("Tracker process ID: %d \n", trackerProcess->get_handle());
-
             MUTEX_LOCK(watchdogMutex);
 
             watchdogState.counter = timeout;
@@ -439,13 +540,25 @@ int main( int argc, char** argv) {
             MUTEX_UNLOCK(watchdogMutex);
 
             if (socket_mode) {
-                trax = trax_client_setup_socket(silent ? NULL : stdout);
-                DEBUGMSG("Socket opened successfuly.\n");
+                char port_buffer[24];
+                sprintf(port_buffer, "%d", socket_port);
+                trackerProcess->set_environment("TRAX_SOCKET", port_buffer);
+            } 
+
+            if (!trackerProcess->start()) {
+			    DEBUGMSG("Unable to start the tracker process\n");
+			    break;
+		    }
+
+            if (socket_mode) {
+                trax = trax_client_setup_socket(socket_id, silent ? NULL : stdout);
             } else {
                 trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);
             }
 
-            if (!trax) throw std::runtime_error("Unable to establish connection");
+            if (!trax) throw std::runtime_error("Unable to establish connection.");
+
+            DEBUGMSG("Tracker process ID: %d \n", trackerProcess->get_handle());
 
             if (trax->version > TRAX_VERSION) throw std::runtime_error("Unsupported protocol version");
 
@@ -592,6 +705,10 @@ int main( int argc, char** argv) {
 
         result = -1;
 
+    }
+
+    if (socket_mode) {
+        destroy_server_socket(socket_id);
     }
 
     MUTEX_LOCK(watchdogMutex);

@@ -15,13 +15,6 @@
 #define PARSE_STATE_QUOTED_ESCAPE_VALUE 10
 #define PARSE_STATE_PASS 100
 
-#define TRAX_STREAM_FILES 1
-#define TRAX_STREAM_SOCKET 2
-#define TRAX_STREAM_SOCKET_LISTEN 8
-
-#define TRAX_LOCALHOST "127.0.0.1"
-#define TRAX_DEFAULT_PORT 9090
-
 #ifndef TRUE
 #define TRUE 1
 #endif
@@ -65,6 +58,7 @@ __inline void sleep(long time) {
     #include <sys/select.h>
     #include <netdb.h>
     #include <arpa/inet.h>
+    #include <netinet/tcp.h>
     #define closesocket close
 #endif
 
@@ -107,6 +101,8 @@ message_stream* create_message_stream_file(int input, int output) {
     stream->flags = TRAX_STREAM_FILES;
     stream->files.input = input;
     stream->files.output = output;
+    stream->buffer_position = 0;
+    stream->buffer_length = 0;
 
     return stream;
 }
@@ -116,6 +112,7 @@ message_stream* create_message_stream_socket_connect(int port) {
     message_stream* stream = NULL;
 
 	int sid;
+    int one = 1;
 	struct hostent *hp;
 	struct sockaddr_in pin;
 	char *hostname;
@@ -140,6 +137,12 @@ message_stream* create_message_stream_socket_connect(int port) {
 	    return NULL;
     }
 	
+	if (setsockopt(sid, IPPROTO_TCP , TCP_NODELAY,
+						 (const char *)&one, sizeof(int)) == -1) {
+        perror("nodelay");
+        closesocket(sid);
+    }
+
 	while (1) {
 
 	    if (connect(sid, (const struct sockaddr *)&pin, sizeof(pin))) {
@@ -154,99 +157,69 @@ message_stream* create_message_stream_socket_connect(int port) {
     stream = (message_stream*) malloc(sizeof(message_stream));
 
     stream->flags = TRAX_STREAM_SOCKET;
+    stream->socket.server = -1;
     stream->socket.socket = sid;
-    stream->socket.port = port;
+
+    stream->buffer_position = 0;
+    stream->buffer_length = 0;
 
     return stream;
 
 }
 
-message_stream* create_message_stream_socket_listen(char* address) {
-
-    message_stream* stream = NULL;
-
-	int port = TRAX_DEFAULT_PORT;
-	int sid;
-	int one = 1;
-	struct sockaddr_in sin;
-	struct hostent *hp;
+message_stream* create_message_stream_socket_accept(int server) {
 
 	fd_set readfds,writefds,exceptfds;
 	int asock=-1;
-	char* hostname = TRAX_LOCALHOST;
+    int one = 1;
+    message_stream* stream = NULL;
 
 	initialize_sockets();
-
-	if((sid = (int) socket(AF_INET,SOCK_STREAM,0)) == -1) {
+ 
+	if(listen(server, 1)== -1) {
+		perror("listen");
 		return NULL;
 	}
-	setsockopt(sid,SOL_SOCKET,SO_REUSEADDR,
-						 (const char *)&one,sizeof(int));
-
-    while (1) {
-
-	    memset(&sin,0,sizeof(sin));
-	    sin.sin_family = AF_INET;
-
-	    if((hp = gethostbyname(hostname))==0)
-		    sin.sin_addr.s_addr = 
-			    ((struct in_addr *)hp->h_addr)->s_addr;
-	    else
-		    sin.sin_addr.s_addr = inet_addr(hostname);
-
-	    sin.sin_port = htons(port);
-
-	    if(bind(sid,(struct sockaddr *)&sin,sizeof(sin)) == -1) {
-            port++;
-            if (port > 65535) {
-		        perror("bind");
-		        closesocket(sid);
-		        return NULL;
-            }
-            continue;
-	    }
-	    break;
-    }
-
-	if(listen(sid, 1)== -1) {
-		perror("listen");
-		closesocket(sid);
-		return NULL;
-	}	
 
 	FD_ZERO(&readfds);
 	FD_ZERO(&writefds);
 	FD_ZERO(&exceptfds);
-	FD_SET(sid,&readfds);
-	FD_SET(sid,&exceptfds);
+	FD_SET(server,&readfds);
+	FD_SET(server,&exceptfds);
 
-    select(sid+1,&readfds,&writefds,&exceptfds,(struct timeval *)0);
+    select(server+1,&readfds,&writefds,&exceptfds,(struct timeval *)0);
 	
-	if(FD_ISSET(sid,&readfds)) {
+	if(FD_ISSET(server,&readfds)) {
 		struct sockaddr_in pin;
 		int addrlen = sizeof(struct sockaddr_in);
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
-		asock = (int) accept(sid,(struct sockaddr *)&pin,
+		asock = (int) accept(server,(struct sockaddr *)&pin,
 											 (int *)&addrlen);
 #else
-		asock = (int) accept(sid,(struct sockaddr *)&pin,
+		asock = (int) accept(server,(struct sockaddr *)&pin,
 												 (socklen_t *)&addrlen);
 #endif
 	} else {
-        closesocket(sid);
         return NULL;
     }
-	
+
+	if (setsockopt(asock, IPPROTO_TCP , TCP_NODELAY,
+						 (const char *)&one, sizeof(int)) == -1) {
+        perror("nodelay");
+        return NULL;
+    }
+
+
     stream = (message_stream*) malloc(sizeof(message_stream));
 
     stream->flags = TRAX_STREAM_SOCKET;
     stream->flags |= TRAX_STREAM_SOCKET_LISTEN;
-    stream->socket.server = asock;
-    stream->socket.socket = sid;
-    stream->socket.port = port;
+    stream->socket.server = server;
+    stream->socket.socket = asock;
+    stream->buffer_position = 0;
+    stream->buffer_length = 0;
 
     return stream;
-
 }
 
 void destroy_message_stream(message_stream** stream) {
@@ -255,22 +228,12 @@ void destroy_message_stream(message_stream** stream) {
 
     if ((*stream)->flags & TRAX_STREAM_SOCKET) {
 
-#if !defined(WIN32)
-	    shutdown((*stream)->socket.socket, SHUT_RDWR);
-#else
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
 	    shutdown((*stream)->socket.socket, SD_BOTH);
+#else
+	    shutdown((*stream)->socket.socket, SHUT_RDWR);
 #endif
         closesocket((*stream)->socket.socket);
-
-        // Close listening socket as well
-        if ((*stream)->flags & TRAX_STREAM_SOCKET_LISTEN) {
-#if !defined(WIN32)
-	        shutdown((*stream)->socket.server, SHUT_RDWR);
-#else
-	        shutdown((*stream)->socket.server, SD_BOTH);
-#endif
-            closesocket((*stream)->socket.server);
-        }
 
     }
 
@@ -279,31 +242,31 @@ void destroy_message_stream(message_stream** stream) {
 
 }
 
-int get_socket_port(message_stream* stream) {
-    VALIDATE_MESSAGE_STREAM(stream);
-
-    if (stream->flags & TRAX_STREAM_SOCKET)
-        return stream->socket.port;
-    else
-        return -1;
-}
-
 __INLINE int read_character(message_stream* stream) {
     char chr;
 
-    if (stream->flags & TRAX_STREAM_SOCKET) {
+    if (stream->buffer_position >= stream->buffer_length) {
 
-		int val = recv(stream->socket.socket, &chr, 1, 0);
+        if (stream->flags & TRAX_STREAM_SOCKET) {
 
-        return (val != 1) ? -1 : chr;
+		    stream->buffer_length = recv(stream->socket.socket, stream->buffer, TRAX_BUFFER_SIZE, 0);
 
-    } else {
+        } else {
 
-    	int val = read(stream->files.input, &chr, 1);
+        	stream->buffer_length = read(stream->files.input, stream->buffer, TRAX_BUFFER_SIZE);
+           
+        }
 
-        return (val != 1) ? -1 : chr;
-       
+        if (stream->buffer_length < 0) return -1;
+
+        stream->buffer_position = 0;
     }
+
+    chr = stream->buffer[stream->buffer_position];
+
+    stream->buffer_position++;
+
+    return chr;
 
 }
 
@@ -726,17 +689,17 @@ void write_message(message_stream* stream, FILE* log, int type, const string_lis
 
 	{
 
-    file_pair pair;
-    pair.stream = stream;
-    pair.log = log;
+        file_pair pair;
+        pair.stream = stream;
+        pair.log = log;
 
-    trax_properties_enumerate(properties, __output_properties, &pair);
+        trax_properties_enumerate(properties, __output_properties, &pair);
 
-    OUTPUT_STRING("\n");
+        OUTPUT_STRING("\n");
 
-    //flush(output);
+        //flush(output);
 
-    if (log) fflush(log);
+        if (log) fflush(log);
 
 	}
 }

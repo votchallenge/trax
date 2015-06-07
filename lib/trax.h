@@ -49,7 +49,8 @@
 #define TRAX_PARAMETER_VERSION 0
 #define TRAX_PARAMETER_CLIENT 1
 #define TRAX_PARAMETER_SOCKET 2
-#define TRAX_PARAMETER_SOCKET_PORT 3
+
+#define TRAX_LOCALHOST "127.0.0.1"
 
 #ifdef __cplusplus
 extern "C" {
@@ -108,7 +109,7 @@ __EXPORT trax_handle* trax_client_setup_file(int input, int output, FILE* log);
 /**
  * Setups the protocol state object for the client and returns a handle object.
 **/
-__EXPORT trax_handle* trax_client_setup_socket(FILE* log);
+__EXPORT trax_handle* trax_client_setup_socket(int server, FILE* log);
 
 /**
  * Waits for a valid protocol message from the server.
