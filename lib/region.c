@@ -10,8 +10,12 @@
 #include "buffer.h"
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER) 
-#define isnan(x) _isnan(x)
-#define isinf(x) (!_finite(x))
+#ifndef isnan
+    #define isnan(x) _isnan(x)
+#endif
+#ifndef isinf
+    #define isinf(x) (!_finite(x))
+#endif
 #endif
 
 #if defined (_MSC_VER)

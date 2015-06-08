@@ -374,7 +374,7 @@ THREAD_CALLBACK(watchdog_loop, param) {
 
     }
 
-    return NULL;
+    return 0;
 
 }
 

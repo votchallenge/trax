@@ -3,10 +3,14 @@
 #ifndef _REGION_H_
 #define _REGION_H_
 
-#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
-#define __TRAX_EXPORT __declspec(dllexport) 
+#ifndef __TRAX_EXPORT
+#if defined(_MSC_VER)
+    #define __TRAX_EXPORT __declspec(dllexport)
+#elif defined(_GCC)
+    #define __TRAX_EXPORT __attribute__((visibility("default")))
 #else
-#define __TRAX_EXPORT 
+    #define __TRAX_EXPORT
+#endif
 #endif
 
 #ifndef MAX

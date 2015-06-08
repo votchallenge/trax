@@ -5,7 +5,6 @@
 #ifdef WIN32
 #include <windows.h>
 #include <process.h>
-#include <BaseTsd.h>
 #else
 #include <pthread.h>
 #include <sys/types.h>

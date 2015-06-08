@@ -6,15 +6,14 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+#ifndef __TRAX_EXPORT
 #if defined(_MSC_VER)
     #define __TRAX_EXPORT __declspec(dllexport)
-    #define __TRAX_IMPORT __declspec(dllimport)
 #elif defined(_GCC)
     #define __TRAX_EXPORT __attribute__((visibility("default")))
-    #define __TRAX_IMPORT
 #else
     #define __TRAX_EXPORT
-    #define __TRAX_IMPORT
+#endif
 #endif
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)

@@ -185,8 +185,8 @@ bool Process::start() {
 	handle_OUT_Rd = NULL;
 	handle_OUT_Wr = NULL;
 
-	p_stdin = NULL;
-	p_stdout = NULL;
+	p_stdin = -1;
+	p_stdout = -1;
 
 	SECURITY_ATTRIBUTES saAttr; 
 
