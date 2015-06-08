@@ -100,6 +100,8 @@ typedef struct trax_properties trax_properties;
 
 typedef void(*trax_enumerator)(const char *key, const char *value, const void *obj);
 
+__TRAX_EXPORT const char* trax_version();
+
 /**
  * Setups the protocol state object for the client and returns a handle object.
 **/

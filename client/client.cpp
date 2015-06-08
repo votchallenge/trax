@@ -142,6 +142,7 @@ void print_help() {
 
     cout << "TraX Client" << "\n\n";
     cout << "Built on " << __DATE__ << " at " << __TIME__ << "\n";
+    cout << "Library version: " << trax_version() << "\n";
     cout << "Protocol version: " << TRAX_VERSION << "\n\n";
 
     cout << "Usage: traxclient [-h] [-d] [-I image_list] [-O output_file] \n";

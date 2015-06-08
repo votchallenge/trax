@@ -34,6 +34,14 @@ int get_shared_fd(int h, int read) {
 }
 #endif
 
+#ifndef TRAX_BUILD_VERSION
+#define TRAX_BUILD_VERSION "unknown"
+#endif
+
+const char* trax_version() {
+    return (const char*) (TRAX_BUILD_VERSION);
+}
+
 struct trax_properties {
     StrMap *map;
 };
