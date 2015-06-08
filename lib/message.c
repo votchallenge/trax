@@ -42,10 +42,6 @@ static void initialize_sockets(void) {
     return;
 }
 
-__inline void sleep(long time) {
-	Sleep(time * 1000);
-}
-
 #define __INLINE __inline
 
 #else
@@ -146,8 +142,12 @@ message_stream* create_message_stream_socket_connect(int port) {
 	while (1) {
 
 	    if (connect(sid, (const struct sockaddr *)&pin, sizeof(pin))) {
-            perror("connect");
-            sleep(1); // Wait a bit for connection ...
+            perror("connect"); // Wait a bit for connection ...
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+            Sleep(1000);
+#else
+            sleep(1);
+#endif
 		    continue;
 	    }
 
