@@ -213,7 +213,7 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
         goto end;
 
-    } else if (result = TRAX_QUIT) {
+    } else if (result == TRAX_QUIT) {
 
         if (LIST_SIZE(arguments) != 0)
             goto failure;
@@ -261,15 +261,15 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 
     if (client->config.format_region != REGION_TYPE(region)) {
 
-        trax_region* converted = region_convert(region, client->config.format_region);
+        trax_region* converted = region_convert((region_container *)region, (region_type)client->config.format_region);
 
         assert(converted);
 
-        data = region_string(converted);
+        data = region_string((region_container *)converted);
 
         trax_region_release(&converted);
 
-    } else data = region_string(region);
+    } else data = region_string((region_container *)region);
 
     if (data) {
         LIST_APPEND(arguments, data);
@@ -677,7 +677,7 @@ void trax_properties_clear(trax_properties* properties) {
 
 trax_properties* trax_properties_create() {
 
-    trax_properties* prop = malloc(sizeof(trax_properties));
+    trax_properties* prop = (trax_properties*)malloc(sizeof(trax_properties));
 
     prop->map = sm_new(32);
 

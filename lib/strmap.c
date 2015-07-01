@@ -63,12 +63,12 @@ StrMap * sm_new(unsigned int capacity)
 {
 	StrMap *map;
 	
-	map = malloc(sizeof(StrMap));
+	map = (StrMap *)malloc(sizeof(StrMap));
 	if (map == NULL) {
 		return NULL;
 	}
 	map->count = capacity;
-	map->buckets = malloc(map->count * sizeof(Bucket));
+	map->buckets = (Bucket *)malloc(map->count * sizeof(Bucket));
 	if (map->buckets == NULL) {
 		free(map);
 		return NULL;
@@ -189,7 +189,7 @@ int sm_put(StrMap *map, const char *key, const char *value)
 			/* If the new value is larger than the old value, re-allocate
 			 * space for the new larger value.
 			 */
-			tmp_value = realloc(pair->value, (value_len + 1) * sizeof(char));
+			tmp_value = (char*)realloc(pair->value, (value_len + 1) * sizeof(char));
 			if (tmp_value == NULL) {
 				return 0;
 			}
@@ -200,11 +200,11 @@ int sm_put(StrMap *map, const char *key, const char *value)
 		return 1;
 	}
 	/* Allocate space for a new key and value */
-	new_key = malloc((key_len + 1) * sizeof(char));
+	new_key = (char *)malloc((key_len + 1) * sizeof(char));
 	if (new_key == NULL) {
 		return 0;
 	}
-	new_value = malloc((value_len + 1) * sizeof(char));
+	new_value = (char *)malloc((value_len + 1) * sizeof(char));
 	if (new_value == NULL) {
 		free(new_key);
 		return 0;
@@ -214,7 +214,7 @@ int sm_put(StrMap *map, const char *key, const char *value)
 		/* The bucket is empty, lazily allocate space for a single
 		 * key-value pair.
 		 */
-		bucket->pairs = malloc(sizeof(Pair));
+		bucket->pairs = (Pair *)malloc(sizeof(Pair));
 		if (bucket->pairs == NULL) {
 			free(new_key);
 			free(new_value);
@@ -226,7 +226,7 @@ int sm_put(StrMap *map, const char *key, const char *value)
 		/* The bucket wasn't empty but no pair existed that matches the provided
 		 * key, so create a new key-value pair.
 		 */
-		tmp_pairs = realloc(bucket->pairs, (bucket->count + 1) * sizeof(Pair));
+		tmp_pairs = (Pair *)realloc(bucket->pairs, (bucket->count + 1) * sizeof(Pair));
 		if (tmp_pairs == NULL) {
 			free(new_key);
 			free(new_value);
