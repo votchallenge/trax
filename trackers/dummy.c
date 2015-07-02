@@ -45,6 +45,10 @@ void sleep(long time) {
 }
 #endif
 
+#ifndef _MAC_
+#include <unistd.h>
+#endif
+
 int main( int argc, char** argv)
 {
     int run;

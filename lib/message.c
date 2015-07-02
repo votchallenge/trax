@@ -23,8 +23,9 @@
 #define FALSE 0
 #endif
 
-#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
 #include <ctype.h>
+
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
 #include <winsock2.h>
 #include <windows.h>
 #pragma comment(lib, "ws2_32.lib")
