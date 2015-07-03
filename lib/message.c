@@ -53,7 +53,6 @@ static void initialize_sockets(void) {
     #include <sys/socket.h>
     #include <unistd.h>
     #include <sys/select.h>
-    #include <netdb.h>
     #include <arpa/inet.h>
     #include <netinet/tcp.h>
     #define closesocket close
@@ -110,25 +109,14 @@ message_stream* create_message_stream_socket_connect(int port) {
 
 	int sid;
     int one = 1;
-	struct hostent *hp;
 	struct sockaddr_in pin;
-	char *hostname;
 
     initialize_sockets();
-
-	hostname = TRAX_LOCALHOST;
-
-	//port = 80;
-	//hostname = "web.vicos.si";
 
 	memset(&pin, 0, sizeof(pin));
 	pin.sin_family = AF_INET;
 	pin.sin_port = htons(port);
-	if((hp = gethostbyname(hostname))!=0) 
-		pin.sin_addr.s_addr = 
-			((struct in_addr *)hp->h_addr)->s_addr;
-	else 
-		pin.sin_addr.s_addr = inet_addr(hostname);
+	pin.sin_addr.s_addr = inet_addr(TRAX_LOCALHOST);
 
     if((sid = (int)socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 	    return NULL;
