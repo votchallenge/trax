@@ -18,9 +18,6 @@ ENDIF()
 
 ADD_DEFINITIONS(-DTRAX_BUILD_VERSION="${BUILD_VERSION}")
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-
 IF (WIN32 OR WIN64)
     SET(LIBRARIES ws2_32)
 ELSE ()
@@ -40,6 +37,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 ADD_LIBRARY(trax SHARED lib/trax.c lib/region.c lib/strmap.c lib/message.c)
 
 ADD_LIBRARY(traxstatic STATIC lib/trax.c lib/region.c lib/strmap.c lib/message.c)
+SET_TARGET_PROPERTIES(traxstatic PROPERTIES POSITION_INDEPENDENT_CODE 1)
 
 ADD_EXECUTABLE(traxdummy trackers/dummy.c)
 

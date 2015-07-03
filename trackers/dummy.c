@@ -38,15 +38,15 @@
 #include <ctype.h>
 #include "trax.h"
 
-#ifdef WIN32
-#include <windows.h>
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+#  include <windows.h>
 void sleep(long time) {
 	Sleep(time);
 }
-#endif
-
-#ifndef _MAC_
-#include <unistd.h>
+#else
+#  ifndef _MAC_
+#  include <unistd.h>
+#  endif
 #endif
 
 int main( int argc, char** argv)
