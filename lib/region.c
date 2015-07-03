@@ -231,6 +231,10 @@ region_container* region_convert(const region_container* region, region_type typ
 				    reg->data.rectangle.height = bottom - top;
 				    break;
 				}
+		        case SPECIAL: {
+                    free(reg); reg = NULL;
+                    break;
+                }
 				default: {
 					free(reg); reg = NULL;
 					break;
@@ -276,6 +280,10 @@ region_container* region_convert(const region_container* region, region_type typ
 
 				    break;
 				}
+		        case SPECIAL: {
+                    free(reg); reg = NULL;
+                    break;
+                }
 				default: {
 					free(reg); reg = NULL;
 					break;
@@ -284,6 +292,12 @@ region_container* region_convert(const region_container* region, region_type typ
 			break;
 
 		case SPECIAL: {
+            if (region->type == SPECIAL)
+                // If source is also code then just copy the value
+                reg = region_create_special(region->data.special);
+            else
+                // All types are converted to default region
+                reg = region_create_special(0);
             break;
         }
 
@@ -308,6 +322,9 @@ void region_release(region_container** region) {
             free((*region)->data.polygon.y);
             (*region)->data.polygon.count = 0;
             break;
+		case SPECIAL: {
+            break;
+        }
     }
 
     free(*region);
