@@ -59,9 +59,9 @@ static void initialize_sockets(void) {
     #define closesocket close
 #endif
 
-#define strcmpi strcasecmp
+#define __INLINE static inline
 
-#define __INLINE inline
+#define strcmpi strcasecmp
 
 static void initialize_sockets(void) {}
 
