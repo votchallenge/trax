@@ -32,6 +32,17 @@ typedef struct region_bounds {
 
 } region_bounds;
 
+int __is_valid_sequence(float* sequence, int len) {
+    int i;
+
+    for (i = 0; i < len; i++) {
+        if (isnan(sequence[i])) return 0;
+    }
+
+    return 1;
+}
+
+
 region_container* __create_region(region_type type) {
 
     region_container* reg = (region_container*) malloc(sizeof(region_container));
@@ -89,12 +100,26 @@ int region_parse(char* buffer, region_container** region) {
 
 	(*region) = NULL;
 
-	if (buffer[0] == '<') {
+	if (buffer[0] == 'M') {
 		/* TODO: mask */
 		return 0;
 	}
 
 	num = _parse_sequence(buffer, &data);
+    
+    // If at least one of the elements is NaN, then the region cannot be parsed
+    // We return special region with a default code.
+    if (!__is_valid_sequence(data, num) || num == 0) {
+        // Preserve legacy support: if four values are given and the fourth one is a number
+        // then this number is taken as a code.
+        if (num == 4 && !isnan(data[3])) {
+            (*region) = region_create_special(-(int) data[3]);
+        } else {
+            (*region) = region_create_special(TRAX_DEFAULT_CODE);
+        }
+        free(data);
+		return 1; 
+    }
 
     if (num == 1) {
 		(*region) = (region_container*) malloc(sizeof(region_container));
@@ -103,31 +128,22 @@ int region_parse(char* buffer, region_container** region) {
 		free(data);
 		return 1;
 
-	} else if (num == 4) {
+	} 
+    if (num == 4) {
 
-		if (isnan(data[0]) && !isnan(data[3])) {
+		(*region) = (region_container*) malloc(sizeof(region_container));
+		(*region)->type = RECTANGLE;
 
-			/* Support for old rectangle format */
-			(*region) = (region_container*) malloc(sizeof(region_container));
-			(*region)->type = SPECIAL;
-			(*region)->data.special = -(int) data[3];
-
-		} else {
-
-			(*region) = (region_container*) malloc(sizeof(region_container));
-			(*region)->type = RECTANGLE;
-
-		    (*region)->data.rectangle.x = data[0];
-		    (*region)->data.rectangle.y = data[1];
-		    (*region)->data.rectangle.width = data[2];
-		    (*region)->data.rectangle.height = data[3];
-
-		}
+	    (*region)->data.rectangle.x = data[0];
+	    (*region)->data.rectangle.y = data[1];
+	    (*region)->data.rectangle.width = data[2];
+	    (*region)->data.rectangle.height = data[3];
 
 		free(data);
 		return 1;
 
-    } else if (num >= 6 && num % 2 == 0) {
+    }
+    if (num >= 6 && num % 2 == 0) {
 
 		int j;
 
@@ -297,7 +313,7 @@ region_container* region_convert(const region_container* region, region_type typ
                 reg = region_create_special(region->data.special);
             else
                 // All types are converted to default region
-                reg = region_create_special(0);
+                reg = region_create_special(TRAX_DEFAULT_CODE);
             break;
         }
 

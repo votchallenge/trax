@@ -21,6 +21,8 @@
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
+#define TRAX_DEFAULT_CODE 0
+
 #ifdef __cplusplus
 extern "C" {
 #endif
