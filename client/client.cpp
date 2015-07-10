@@ -172,6 +172,27 @@ void print_help() {
     cout << "\n";
 }
 
+void configure_signals() {
+
+    #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+
+    // TODO: anything to do here?
+
+    #else
+
+    struct sigaction sa;
+    sa.sa_handler = SIG_DFL;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_NOCLDWAIT;
+    if (sigaction(SIGCHLD, &sa, 0) == -1) {
+      perror(0);
+      exit(1);
+    }
+
+    #endif
+
+}
+
 int create_server_socket(int port) {
 
 	int sid;
@@ -362,14 +383,25 @@ THREAD_CALLBACK(watchdog_loop, param) {
 
         run = watchdogState.active;
 
-        if (watchdogState.counter > 0)
-            watchdogState.counter--;
-        else {
-            if (watchdogState.process) {
-                DEBUGMSG("Timeout reached. Stopping tracker process ...\n");
-                watchdogState.process->stop();
-                watchdogState.process = NULL;
+        if (watchdogState.process && !watchdogState.process->is_alive()) {
+
+            DEBUGMSG("Remote process has terminated ...\n");
+            watchdogState.process->stop();
+            watchdogState.process = NULL;
+            watchdogState.counter = 0;
+
+        } else {
+
+            if (watchdogState.counter > 0)
+                watchdogState.counter--;
+            else {
+                if (watchdogState.process) {
+                    DEBUGMSG("Timeout reached. Stopping tracker process ...\n");
+                    watchdogState.process->stop();
+                    watchdogState.process = NULL;
+                }
             }
+
         }
 
         MUTEX_UNLOCK(watchdogMutex);
@@ -432,6 +464,8 @@ int main( int argc, char** argv) {
     vector<long> timings;
     map<string, string> environment;
     trax_properties* properties = trax_properties_create();
+
+    configure_signals();
 
     try {
 
