@@ -88,6 +88,8 @@ __inline void sleep(long time) {
     #define closesocket close
 #endif
 
+#include <signal.h>
+
 #define strcmpi strcasecmp
 
 #define __INLINE inline
