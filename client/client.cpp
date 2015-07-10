@@ -103,7 +103,7 @@ static void initialize_sockets(void) {}
 
 using namespace std;
 
-#define CMD_OPTIONS "hsdI:G:f:O:S:r:t:T:p:e:xX"
+#define CMD_OPTIONS "hsdI:G:f:O:S:r:t:T:p:e:xXQ"
 
 #define DEBUGMSG(...) if (debug) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
 
@@ -164,6 +164,7 @@ void print_help() {
     cout << "\t-r\tReinitialization offset\n";
     cout << "\t-e\tEnvironmental variable (multiple occurences allowed)\n";
     cout << "\t-p\tTracker parameter (multiple occurences allowed)\n";
+    cout << "\t-Q\tWait for tracker to respond, then output its information and quit.\n";
     cout << "\t-x\tUse explicit streams, not standard ones.\n";
     cout << "\t-X\tUse TCP/IP sockets instead of file streams.\n";
     cout << "\n";
@@ -379,11 +380,37 @@ THREAD_CALLBACK(watchdog_loop, param) {
 
 }
 
+void watchdog_reset(Process* process, int counter) {
+
+    MUTEX_LOCK(watchdogMutex);
+
+    watchdogState.active = counter > 0;
+    watchdogState.counter = counter;
+    watchdogState.process = process;
+
+    MUTEX_UNLOCK(watchdogMutex);
+
+}
+
+Process* configure_process(const string& command, bool explicitMode, const map<string, string>& environment) {
+
+    Process* process = new Process(trackerCommand, explicitMode);
+
+    process->copy_environment();
+    
+    std::map<std::string, std::string>::const_iterator iter;
+    for (iter = environment.begin(); iter != environment.end(); ++iter) {
+       process->set_environment(iter->first, iter->second);
+    }
+
+    return process;
+}
 
 int main( int argc, char** argv) {
     
     int result = 0;
     int c;
+    bool query_mode = false;
     bool explicit_mode = false;
     bool socket_mode = false;
     int socket_id = -1;
@@ -424,6 +451,9 @@ int main( int argc, char** argv) {
                 break;
             case 'X':
                 socket_mode = true;
+                break;
+            case 'Q':
+                query_mode = true;
                 break;
             case 'I':
                 imagesFile = string(optarg);
@@ -494,12 +524,12 @@ int main( int argc, char** argv) {
             DEBUGMSG("Timeout: %d\n", timeout);
 
         if (socket_mode) {
-
+            // Try to create a listening socket by looking for a free port number.
             while (true) {
                 socket_id = create_server_socket(socket_port);
                 if (socket_id < 0) {
                     socket_port++;
-                    if (socket_port > 65500) throw std::runtime_error("Unable to configure TCP server connection.");
+                    if (socket_port > 65535) throw std::runtime_error("Unable to configure TCP server socket.");
                 } else break;
             }
             
@@ -507,7 +537,8 @@ int main( int argc, char** argv) {
 
         }
 
-        load_data(images, groundtruth, initialization);
+        if (!query_mode)
+            load_data(images, groundtruth, initialization);
 
         watchdogState.process = NULL;
         watchdogState.active = true;
@@ -518,24 +549,12 @@ int main( int argc, char** argv) {
         if (timeout > 0)
             CREATE_THREAD(watchdog, watchdog_loop, NULL);
 
-        int frame = 0;
-        while (frame < images.size()) {
+        if (query_mode) {
+            // In query mode we just start the process and wait for the introduction of the tracker ...
 
-            trackerProcess = new Process(trackerCommand, explicit_mode);
+            trackerProcess = configure_process(trackerCommand, explicit_mode, environment);
 
-            trackerProcess->copy_environment();
-            
-            std::map<std::string, std::string>::iterator iter;
-            for (iter = environment.begin(); iter != environment.end(); ++iter) {
-               trackerProcess->set_environment(iter->first, iter->second);
-            }
-
-            MUTEX_LOCK(watchdogMutex);
-
-            watchdogState.counter = timeout;
-            watchdogState.process = trackerProcess;
-
-            MUTEX_UNLOCK(watchdogMutex);
+            watchdog_reset(trackerProcess, timeout);
 
             if (socket_mode) {
                 char port_buffer[24];
@@ -544,150 +563,184 @@ int main( int argc, char** argv) {
             } 
 
             if (!trackerProcess->start()) {
-			    DEBUGMSG("Unable to start the tracker process\n");
-			    break;
-		    }
+		        DEBUGMSG("Unable to start the tracker process\n");
+		        result = -2;
+	        } else {
 
-            if (socket_mode) {
-                trax = trax_client_setup_socket(socket_id, silent ? NULL : stdout);
-            } else {
-                trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);
-            }
-
-            if (!trax) throw std::runtime_error("Unable to establish connection.");
-
-            DEBUGMSG("Tracker process ID: %d \n", trackerProcess->get_handle());
-
-            if (trax->version > TRAX_VERSION) throw std::runtime_error("Unsupported protocol version");
-
-            if (trax->config.format_image != TRAX_IMAGE_PATH)  throw std::runtime_error("Unsupported image format");
-
-            trax_image* image = images[frame];
-            trax_region* initialize = NULL;
-
-            if (initialization.size() > 0) {
-
-                for (; frame < images.size(); frame++) {
-                    if (initialization[frame]) break;
-                    output.push_back(region_create_special(0));
-                }
-
-                if (frame == images.size()) break;
-
-                initialize = initialization[frame];
-
-            } else {
-
-                initialize = groundtruth[frame];
-
-            }
-
-            // Start timing
-            clock_t timing_toc;
-            clock_t timing_tic = clock();
-	
-            bool tracking = false;
-
-            trax_client_initialize(trax, image, initialize, properties);
-
-            while (true) {
-
-                region_container* status = NULL;
-
-                trax_properties* additional = trax_properties_create();
-
-                MUTEX_LOCK(watchdogMutex);
-
-                watchdogState.counter = timeout;
-
-                MUTEX_UNLOCK(watchdogMutex);
-
-                int result = trax_client_wait(trax, (trax_region**) &status, additional);
-
-                // Stop timing
-                timing_toc = clock();
-
-                if (result == TRAX_STATUS) {
-
-                    region_container* gt = groundtruth[frame];
-
-                    float overlap = region_compute_overlap(gt, status).overlap;
-
-                    DEBUGMSG("Region overlap: %.2f\n", overlap);
-
-                    trax_properties_release(&additional);
-
-                    if (threshold >= 0 && overlap <= threshold) {
-                        break;
-                    }
-
-                    if (tracking)
-                        output.push_back(status);
-                    else {
-                        region_release(&status);
-                        output.push_back(region_create_special(1));
-                    }
-
-                    timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
-
-                } else if (result == TRAX_QUIT) {                    
-
-                    trax_properties_release(&additional);
-
-                    DEBUGMSG("Termination requested by tracker.\n");
-
-                    break;
+                if (socket_mode) {
+                    trax = trax_client_setup_socket(socket_id, silent ? NULL : stdout);
                 } else {
-                    trax_properties_release(&additional);
-                    throw std::runtime_error("Unable to contact tracker.");
+                    trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);
                 }
 
-                frame++;
+                if (!trax) throw std::runtime_error("Unable to establish connection.");
 
-                if (frame >= images.size()) break;
+                trax_cleanup(&trax);
+
+                if (trackerProcess) {
+                    trackerProcess->stop();
+                    delete trackerProcess;
+                    trackerProcess = NULL;
+                }
+
+                result = 0;
+
+            }
+
+        } else {
+
+            int frame = 0;
+            while (frame < images.size()) {
+
+                trackerProcess = configure_process(trackerCommand, explicit_mode, environment);
+
+                watchdog_reset(trackerProcess, timeout);
+
+                if (socket_mode) {
+                    char port_buffer[24];
+                    sprintf(port_buffer, "%d", socket_port);
+                    trackerProcess->set_environment("TRAX_SOCKET", port_buffer);
+                } 
+
+                if (!trackerProcess->start()) {
+			        DEBUGMSG("Unable to start the tracker process\n");
+			        break;
+		        }
+
+                if (socket_mode) {
+                    trax = trax_client_setup_socket(socket_id, silent ? NULL : stdout);
+                } else {
+                    trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);
+                }
+
+                if (!trax) throw std::runtime_error("Unable to establish connection.");
+
+                DEBUGMSG("Tracker process ID: %d \n", trackerProcess->get_handle());
+
+                if (trax->version > TRAX_VERSION) throw std::runtime_error("Unsupported protocol version");
+
+                if (trax->config.format_image != TRAX_IMAGE_PATH)  throw std::runtime_error("Unsupported image format");
 
                 trax_image* image = images[frame];
+                trax_region* initialize = NULL;
 
-                // Start timing
-                timing_tic = clock();
+                if (initialization.size() > 0) {
 
-                trax_client_frame(trax, image, NULL);
+                    for (; frame < images.size(); frame++) {
+                        if (initialization[frame]) break;
+                        output.push_back(region_create_special(0));
+                    }
 
-                tracking = true;
+                    if (frame == images.size()) break;
 
-            }
+                    initialize = initialization[frame];
 
-            trax_cleanup(&trax);
+                } else {
 
-            MUTEX_LOCK(watchdogMutex);
+                    initialize = groundtruth[frame];
 
-            watchdogState.process = NULL;
-
-            MUTEX_UNLOCK(watchdogMutex);
-
-            sleep(0);
-
-            if (trackerProcess) {
-                trackerProcess->stop();
-                delete trackerProcess;
-                trackerProcess = NULL;
-            }
-
-            if (reinitialize > 0) {
-                int j = frame;
-                for (; j < frame + reinitialize && j < images.size(); j++) {
-                    output.push_back(region_create_special(j == frame ? 2 : 0));
-                    timings.push_back(0);
                 }
-                frame = j;
-            } else break;
+
+                // Start timing a frame
+                clock_t timing_toc;
+                clock_t timing_tic = clock();
+	
+                bool tracking = false;
+
+                trax_client_initialize(trax, image, initialize, properties);
+
+                while (true) {
+
+                    region_container* status = NULL;
+
+                    trax_properties* additional = trax_properties_create();
+
+                    watchdog_reset(trackerProcess, timeout);
+
+                    int result = trax_client_wait(trax, (trax_region**) &status, additional);
+
+                    // Stop timing a frame
+                    timing_toc = clock();
+
+                    if (result == TRAX_STATUS) {
+
+                        region_container* gt = groundtruth[frame];
+
+                        float overlap = region_compute_overlap(gt, status).overlap;
+
+                        DEBUGMSG("Region overlap: %.2f\n", overlap);
+
+                        trax_properties_release(&additional);
+
+                        if (threshold >= 0 && overlap <= threshold) {
+                            break;
+                        }
+
+                        if (tracking)
+                            output.push_back(status);
+                        else {
+                            region_release(&status);
+                            output.push_back(region_create_special(1));
+                        }
+
+                        timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
+
+                    } else if (result == TRAX_QUIT) {                    
+
+                        trax_properties_release(&additional);
+
+                        DEBUGMSG("Termination requested by tracker.\n");
+
+                        break;
+                    } else {
+                        trax_properties_release(&additional);
+                        throw std::runtime_error("Unable to contact tracker.");
+                    }
+
+                    frame++;
+
+                    if (frame >= images.size()) break;
+
+                    trax_image* image = images[frame];
+
+                    // Start timing a frame
+                    timing_tic = clock();
+
+                    trax_client_frame(trax, image, NULL);
+
+                    tracking = true;
+
+                }
+
+                trax_cleanup(&trax);
+
+                watchdog_reset(NULL, 0);
+
+                sleep(0);
+
+                if (trackerProcess) {
+                    trackerProcess->stop();
+                    delete trackerProcess;
+                    trackerProcess = NULL;
+                }
+
+                if (reinitialize > 0) {
+                    int j = frame;
+                    for (; j < frame + reinitialize && j < images.size(); j++) {
+                        output.push_back(region_create_special(j == frame ? 2 : 0));
+                        timings.push_back(0);
+                    }
+                    frame = j;
+                } else break;
+            }
+
+            if (output.size() > 0)
+                save_data(output);
+
+            if (timings.size() > 0 && timingFile.size() > 0)
+                save_timings(timings);
+
         }
-
-        if (output.size() > 0)
-            save_data(output);
-
-        if (timings.size() > 0 && timingFile.size() > 0)
-            save_timings(timings);
 
     } catch (std::runtime_error e) {
         
@@ -705,22 +758,17 @@ int main( int argc, char** argv) {
 
     }
 
+    watchdog_reset(NULL, -1);
+
+    DEBUGMSG("Cleaning up.\n");
+
     if (socket_mode) {
         destroy_server_socket(socket_id);
     }
 
-    MUTEX_LOCK(watchdogMutex);
-
-    watchdogState.active = false;
-    watchdogState.process = NULL;
-
-    MUTEX_UNLOCK(watchdogMutex);
-
     MUTEX_DESTROY(watchdogMutex);
 
     trax_properties_release(&properties);
-
-    DEBUGMSG("Cleanup.\n");
 
     for (int i = 0; i < images.size(); i++) {
         trax_image_release(&images[i]);
