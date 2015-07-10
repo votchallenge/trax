@@ -73,6 +73,7 @@ trax_handle* client_setup(message_stream* stream, FILE* log) {
 
     client->log = log;
     client->stream = stream;
+    client->properties = NULL;
 
     tmp_properties = trax_properties_create();
     LIST_CREATE(arguments, 8);
@@ -119,6 +120,7 @@ trax_handle* server_setup(trax_configuration config, message_stream* stream, FIL
 
     server->log = log;
     server->stream = stream;
+    server->properties = NULL;
 
     properties = trax_properties_create();
 
@@ -476,6 +478,10 @@ int trax_cleanup(trax_handle** handle) {
 
     if ((*handle)->log) {
         (*handle)->log = 0;
+    }
+
+    if ((*handle)->properties) {
+        trax_properties_release(&((*handle)->properties));
     }
 
     destroy_message_stream((message_stream**) &(*handle)->stream);

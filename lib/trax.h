@@ -48,6 +48,7 @@
 #define TRAX_PARAMETER_VERSION 0
 #define TRAX_PARAMETER_CLIENT 1
 #define TRAX_PARAMETER_SOCKET 2
+#define TRAX_PARAMETER_REGION 3
 
 #define TRAX_LOCALHOST "127.0.0.1"
 
@@ -58,6 +59,7 @@ extern "C" {
 /**
  * A trax image data structure. At the moment only the path format is supported
  * so a lot of fields are empty.
+ * Use trax_image_* functions to access the data.
 **/
 typedef struct trax_image {
     short type;
@@ -73,6 +75,12 @@ typedef struct trax_image {
 typedef void trax_region;
 
 /**
+ * A placeholder for properties structure. Use the trax_properties_* functions to manipulate
+ * the data.
+**/
+typedef struct trax_properties trax_properties;
+
+/**
  * Some basic configuration data used to set up the server.
 **/
 typedef struct trax_configuration {
@@ -81,22 +89,16 @@ typedef struct trax_configuration {
 } trax_configuration;
 
 /**
- * Core object of the protocol. Do not manipulate it directly unless you know what
- * are you doing.
+ * Core object of the protocol. Do not manipulate it directly.
 **/
 typedef struct trax_handle {
     int flags;
     int version;
     void* stream;
+    trax_properties* properties;
     FILE* log;
     trax_configuration config;
 } trax_handle;
-
-/**
- * A placeholder for properties structure. Use the trax_properties_* functions to manipulate
- * the data.
-**/
-typedef struct trax_properties trax_properties;
 
 typedef void(*trax_enumerator)(const char *key, const char *value, const void *obj);
 
