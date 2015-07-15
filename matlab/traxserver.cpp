@@ -330,8 +330,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       
     } else if (operation == "quit") {
 
-		if (!trax) { MEX_ERROR("Protocol not initialized."); return; }
-
 		trax_cleanup(&trax);
 
 	} else {
