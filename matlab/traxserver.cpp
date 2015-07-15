@@ -20,14 +20,20 @@
 
 #define MEX_CREATE_EMTPY mxCreateDoubleMatrix(0, 0, mxREAL)
 
+//#define MEX_ERROR(M) mexErrMsgTxt(M)
+
+#define MEX_ERROR(M) { mexPrintf("ERROR: "); mexPrintf(M); mexPrintf("\n\n"); }
+
 using namespace std;
 
 trax_handle* trax = NULL;
 
 string getString(const mxArray *arg) {
 
-	if (mxGetM(arg) != 1)
-		mexErrMsgTxt("Must be an array of chars");
+	if (mxGetM(arg) != 1) {
+		MEX_ERROR("Must be an array of chars");
+        return string();
+    }
 
     int l = (int) mxGetN(arg);
 
@@ -42,9 +48,18 @@ string getString(const mxArray *arg) {
     return str;
 }
 
+const mxArray* setString(const char* str) {
+
+    return mxCreateCharMatrixFromStrings(1, &str);
+
+}
+
 trax_properties* struct_to_parameters(const mxArray * input) {
 
-	if (!mxIsStruct(input)) mexErrMsgTxt("Parameter has to be a structure.");   
+	if (!mxIsStruct(input)) {
+        MEX_ERROR("Parameter has to be a structure.");   
+        return NULL;
+    }
 
 	trax_properties* prop = trax_properties_create();
 
@@ -215,17 +230,17 @@ int fd_is_valid(int fd) {
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
-	if( nrhs < 1 ) mexErrMsgTxt("At least one input argument required.");
+	if( nrhs < 1 ) { MEX_ERROR("At least one input argument required."); return; }
     
-    if (! mxIsChar (prhs[0]) || mxGetNumberOfDimensions (prhs[0]) > 2) mexErrMsgTxt ("First argument must be a string");
+    if (! mxIsChar (prhs[0]) || mxGetNumberOfDimensions (prhs[0]) > 2) { MEX_ERROR ("First argument must be a string"); return; }
     
     string operation = getString(prhs[0]);
     
     if (operation == "setup") {
 
-        if( nrhs != 3 ) mexErrMsgTxt("Three parameters required.");   
+        if( nrhs != 3 ) { MEX_ERROR("Three parameters required."); return; }
 
-        if( nlhs > 1 ) mexErrMsgTxt("At most one output argument supported.");
+        if( nlhs > 1 ) { MEX_ERROR("At most one output argument supported."); return; }
 
 		trax_configuration config;
 		config.format_region = getRegionCode(getString(prhs[1]));
@@ -234,7 +249,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 
         if (!getenv("TRAX_SOCKET")) {
-            mexErrMsgTxt("Socket information not available. Enable socket communication in TraX client.");
+            MEX_ERROR("Socket information not available. Enable socket communication in TraX client.");
+            return;
         }
         
 #endif
@@ -246,11 +262,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     } else if (operation == "wait") {
         
-		if (!trax) mexErrMsgTxt("Protocol not initialized.");   
+		if (!trax) { MEX_ERROR("Protocol not initialized."); return; }
 
-        if( nrhs != 1 ) mexErrMsgTxt("No additional parameters required.");   
+        if( nrhs != 1 ) { MEX_ERROR("No additional parameters required."); return; }
 
-        if( nlhs > 3 ) mexErrMsgTxt("At most three output argument supported.");
+        if( nlhs > 3 ) { MEX_ERROR("At most three output argument supported."); return; }
 	
 		trax_image* img = NULL;
 		trax_region* reg = NULL;
@@ -288,19 +304,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 	} else if (operation == "status") {
         
-		if (!trax) mexErrMsgTxt("Protocol not initialized.");   
+		if (!trax) { MEX_ERROR("Protocol not initialized."); return; }
 
-        if( nrhs > 3 ) mexErrMsgTxt("Too many parameters.");   
+        if( nrhs > 3 ) { MEX_ERROR("Too many parameters."); return; }
 
-        if( nrhs < 2 ) mexErrMsgTxt("Must specify region parameter."); 
+        if( nrhs < 2 ) { MEX_ERROR("Must specify region parameter."); return; }
 
-        if( nlhs > 1 ) mexErrMsgTxt("One output parameter allowed.");
+        if( nlhs > 1 ) { MEX_ERROR("One output parameter allowed."); return; }
 	
-		if (!MEX_TEST_DOUBLE(1)) mexErrMsgTxt("Illegal region format.");  
+		if (!MEX_TEST_DOUBLE(1)) { MEX_ERROR("Illegal region format."); return; }
 
 		trax_region* reg = array_to_region(prhs[1]);
 
-		if (!reg) mexErrMsgTxt("Illegal region format.");   
+		if (!reg) { MEX_ERROR("Illegal region format."); return; }
 
 		trax_properties* prop = ( nrhs == 3 ) ? struct_to_parameters(prhs[2]) : NULL;
 
@@ -314,12 +330,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       
     } else if (operation == "quit") {
 
-		if (!trax) mexErrMsgTxt("Protocol not initialized.");  
+		if (!trax) { MEX_ERROR("Protocol not initialized."); return; }
 
 		trax_cleanup(&trax);
 
 	} else {
-        mexErrMsgTxt("Unknown operation.");
+        MEX_ERROR("Unknown operation.");
     }
     
 }
