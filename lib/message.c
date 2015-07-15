@@ -246,7 +246,9 @@ __INLINE int read_character(message_stream* stream) {
            
         }
 
-        if (stream->buffer_length < 0) return -1;
+        if (stream->buffer_length < 0) return -1; // An error has occured
+
+		if (stream->buffer_length == 0) return -1; // The stream was closed
 
         stream->buffer_position = 0;
     }
