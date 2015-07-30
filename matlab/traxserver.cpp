@@ -20,9 +20,8 @@
 
 #define MEX_CREATE_EMTPY mxCreateDoubleMatrix(0, 0, mxREAL)
 
-//#define MEX_ERROR(M) mexErrMsgTxt(M)
-
-#define MEX_ERROR(M) { mexPrintf("ERROR: "); mexPrintf(M); mexPrintf("\n\n"); }
+#define MEX_ERROR(M) mexErrMsgTxt(M)
+//#define MEX_ERROR(M) { mexPrintf("ERROR: "); mexPrintf(M); mexPrintf("\n\n"); }
 
 using namespace std;
 
