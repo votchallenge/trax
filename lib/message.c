@@ -43,7 +43,7 @@ static void initialize_sockets(void) {
     return;
 }
 
-#define __INLINE __inline
+#define __INLINE 
 
 #else
 
