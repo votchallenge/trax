@@ -4,6 +4,8 @@
 #include <string.h>
 #include <assert.h>
 
+#define _TRAX_BUILDING
+
 #include "trax.h"
 #include "region.h"
 #include "strmap.h"

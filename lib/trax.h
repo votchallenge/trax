@@ -8,7 +8,11 @@
 
 #ifndef __TRAX_EXPORT
 #if defined(_MSC_VER)
+#if defined(_TRAX_BUILDING)
     #define __TRAX_EXPORT __declspec(dllexport)
+#else
+	#define __TRAX_EXPORT
+#endif
 #elif defined(_GCC)
     #define __TRAX_EXPORT __attribute__((visibility("default")))
 #else
@@ -18,6 +22,7 @@
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
     #define TRAX_NO_LOG (~0)
+	#pragma comment(lib, "ws2_32.lib")
 #else
     #define TRAX_NO_LOG -1
 #endif
@@ -307,4 +312,3 @@ __TRAX_EXPORT void trax_properties_enumerate(trax_properties* properties, trax_e
 #endif
 
 #endif
-

@@ -5,7 +5,11 @@
 
 #ifndef __TRAX_EXPORT
 #if defined(_MSC_VER)
+#if defined(_TRAX_BUILDING)
     #define __TRAX_EXPORT __declspec(dllexport)
+#else
+	#define __TRAX_EXPORT 
+#endif
 #elif defined(_GCC)
     #define __TRAX_EXPORT __attribute__((visibility("default")))
 #else
