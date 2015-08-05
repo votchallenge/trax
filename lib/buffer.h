@@ -2,6 +2,9 @@
 #ifndef __STRING_BUFFER_H
 #define __STRING_BUFFER_H
 
+// Enable MinGW secure API for _snprintf_s
+#define MINGW_HAS_SECURE_API 1
+
 #include <string.h>
 #include <stdlib.h>
 
