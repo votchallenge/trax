@@ -43,6 +43,7 @@ public:
 
     int get_input();
     int get_output();
+    int get_error();
 
     int get_handle();
 
@@ -57,12 +58,14 @@ private:
 
     int p_stdout;
     int p_stdin;
-
+    int p_stderr;
     int p_eout;
     int p_ein;
+    int p_eerr;
 
     int out[2];
     int in[2];
+    int err[2];
 
     char** arguments;
     char* program;
@@ -79,11 +82,15 @@ private:
 	HANDLE handle_IN_Wr;
 	HANDLE handle_OUT_Rd;
 	HANDLE handle_OUT_Wr;
+	HANDLE handle_ERR_Rd;
+	HANDLE handle_ERR_Wr;
 
 	HANDLE handle_explicit_IN_Rd;
 	HANDLE handle_explicit_IN_Wr;
 	HANDLE handle_explicit_OUT_Rd;
 	HANDLE handle_explicit_OUT_Wr;
+	HANDLE handle_explicit_ERR_Rd;
+	HANDLE handle_explicit_ERR_Wr;
 
 	PROCESS_INFORMATION piProcInfo;
 #else

@@ -105,6 +105,8 @@ static void initialize_sockets(void) {}
 
 using namespace std;
 
+#define LOGGER_BUFFER_SIZE 1024
+
 #define CMD_OPTIONS "hsdI:G:f:O:S:r:t:T:p:e:xXQ"
 
 #define DEBUGMSG(...) if (debug) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
@@ -123,6 +125,15 @@ typedef struct watchdog_state {
     Process* process;
 } watchdog_state;
 
+typedef struct logger_state {
+    bool active;
+    char stdout_buffer[LOGGER_BUFFER_SIZE];
+    int stdout_position;
+    char stderr_buffer[LOGGER_BUFFER_SIZE];
+    int stderr_position;
+    Process* process;
+    FILE* stream;
+} logger_state;
 
 float threshold = -1;
 int timeout = 30;
@@ -135,6 +146,10 @@ string initializationFile;
 string outputFile;
 string timingFile;
 string trackerCommand;
+
+THREAD logger;
+THREAD_MUTEX loggerMutex;
+logger_state loggerState;
 
 THREAD watchdog;
 THREAD_MUTEX watchdogMutex;
@@ -414,6 +429,73 @@ THREAD_CALLBACK(watchdog_loop, param) {
 
 }
 
+THREAD_CALLBACK(logger_loop, param) {
+
+    bool run = true;
+    int err = -1;
+
+    while (run) {
+
+        if (err == -1) {
+
+            run = loggerState.active;
+
+            MUTEX_LOCK(loggerMutex);
+
+            if (loggerState.process && loggerState.process->is_alive()) {
+                
+                err = loggerState.process->get_error();
+
+            }
+
+            MUTEX_UNLOCK(loggerMutex);
+
+            if (err == -1) {
+                sleep(0);
+                continue;
+            }
+
+        }
+
+        char chr;
+        bool flush = false;
+        if (read(err, &chr, 1) != 1) {
+
+            err = -1;
+            flush = true;
+
+        } else {
+        
+            loggerState.stderr_buffer[loggerState.stderr_position++] = chr;
+
+            flush = loggerState.stderr_position == (LOGGER_BUFFER_SIZE-1) || chr == '\n';
+
+        }
+
+        if (flush) {
+
+            loggerState.stderr_buffer[loggerState.stderr_position] = 0;
+
+            MUTEX_LOCK(loggerMutex);
+
+            if (!silent) {
+                fputs(loggerState.stderr_buffer, loggerState.stream);
+                fflush(loggerState.stream);
+            }
+
+            loggerState.stderr_position = 0;
+
+            MUTEX_UNLOCK(loggerMutex);
+
+        }
+
+    }
+
+    return 0;
+
+}
+
+
 void watchdog_reset(Process* process, int counter) {
 
     MUTEX_LOCK(watchdogMutex);
@@ -423,6 +505,62 @@ void watchdog_reset(Process* process, int counter) {
     watchdogState.process = process;
 
     MUTEX_UNLOCK(watchdogMutex);
+
+}
+
+void logger_reset(Process* process) {
+
+    MUTEX_LOCK(loggerMutex);
+
+    loggerState.active = process != NULL;
+    loggerState.process = process;
+    loggerState.stderr_position = 0;
+    loggerState.stdout_position = 0;
+    loggerState.stream = stdout;
+
+    MUTEX_UNLOCK(loggerMutex);
+
+}
+
+void client_logger(const char *string) {
+
+    if (!string) {
+
+        loggerState.stdout_buffer[loggerState.stdout_position] = 0;
+
+        MUTEX_LOCK(loggerMutex);
+
+        fputs(loggerState.stdout_buffer, loggerState.stream);
+        loggerState.stdout_position = 0;
+        fflush(loggerState.stream);
+
+        MUTEX_UNLOCK(loggerMutex);
+
+    } else {
+
+        while (*string) {
+            
+            loggerState.stdout_buffer[loggerState.stdout_position++] = *string;
+
+            if (loggerState.stdout_position == (LOGGER_BUFFER_SIZE-1) || *string == '\n') {
+
+                loggerState.stdout_buffer[loggerState.stdout_position] = 0;
+
+                MUTEX_LOCK(loggerMutex);
+
+                fputs(loggerState.stdout_buffer, loggerState.stream);
+                loggerState.stdout_position = 0;
+                fflush(loggerState.stream);
+
+                MUTEX_UNLOCK(loggerMutex);
+
+            }
+
+            string++;
+
+        }
+
+    }
 
 }
 
@@ -580,10 +718,16 @@ int main( int argc, char** argv) {
         watchdogState.active = true;
         watchdogState.counter = timeout;
 
+        loggerState.process = NULL;
+        loggerState.active = true;
+
         MUTEX_INIT(watchdogMutex);
+        MUTEX_INIT(loggerMutex);
 
         if (timeout > 0)
             CREATE_THREAD(watchdog, watchdog_loop, NULL);
+
+        CREATE_THREAD(logger, logger_loop, NULL);
 
         if (query_mode) {
             // In query mode we just start the process and wait for the introduction of the tracker ...
@@ -591,6 +735,7 @@ int main( int argc, char** argv) {
             trackerProcess = configure_process(trackerCommand, explicit_mode, environment);
 
             watchdog_reset(trackerProcess, timeout);
+            logger_reset(trackerProcess);
 
             if (socket_mode) {
                 char port_buffer[24];
@@ -604,9 +749,9 @@ int main( int argc, char** argv) {
 	        } else {
 
                 if (socket_mode) {
-                    trax = trax_client_setup_socket(socket_id, silent ? NULL : trax_stdout_logger);
+                    trax = trax_client_setup_socket(socket_id, silent ? NULL : client_logger);
                 } else {
-                    trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : trax_stdout_logger);
+                    trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : client_logger);
                 }
 
                 if (!trax) throw std::runtime_error("Unable to establish connection.");
@@ -631,6 +776,7 @@ int main( int argc, char** argv) {
                 trackerProcess = configure_process(trackerCommand, explicit_mode, environment);
 
                 watchdog_reset(trackerProcess, timeout);
+                logger_reset(trackerProcess);
 
                 if (socket_mode) {
                     char port_buffer[24];
@@ -644,9 +790,9 @@ int main( int argc, char** argv) {
 		        }
 
                 if (socket_mode) {
-                    trax = trax_client_setup_socket(socket_id, silent ? NULL : trax_stdout_logger);
+                    trax = trax_client_setup_socket(socket_id, silent ? NULL : client_logger);
                 } else {
-                    trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : trax_stdout_logger);
+                    trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : client_logger);
                 }
 
                 if (!trax) throw std::runtime_error("Unable to establish connection.");
@@ -795,6 +941,7 @@ int main( int argc, char** argv) {
     }
 
     watchdog_reset(NULL, -1);
+    logger_reset(NULL);
 
     DEBUGMSG("Cleaning up.\n");
 
@@ -803,6 +950,7 @@ int main( int argc, char** argv) {
     }
 
     MUTEX_DESTROY(watchdogMutex);
+    MUTEX_DESTROY(loggerMutex);
 
     trax_properties_release(&properties);
 
@@ -814,6 +962,7 @@ int main( int argc, char** argv) {
     }
 
     RELEASE_THREAD(watchdog); 
+    RELEASE_THREAD(logger); 
 
     exit(result);
 }

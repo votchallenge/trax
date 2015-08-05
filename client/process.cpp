@@ -184,9 +184,12 @@ bool Process::start() {
 	handle_IN_Wr = NULL;
 	handle_OUT_Rd = NULL;
 	handle_OUT_Wr = NULL;
+	handle_ERR_Rd = NULL;
+	handle_ERR_Wr = NULL;
 
 	p_stdin = -1;
 	p_stdout = -1;
+	p_stderr = -1;
 
 	SECURITY_ATTRIBUTES saAttr; 
 
@@ -195,8 +198,11 @@ bool Process::start() {
 	saAttr.lpSecurityDescriptor = NULL; 
 
 	// Create a pipe for the child process's STDOUT. 
- 
    if ( ! CreatePipe(&handle_OUT_Rd, &handle_OUT_Wr, &saAttr, 0) ) 
+      return false; 
+
+	// Create a pipe for the child process's STDERR. 
+   if ( ! CreatePipe(&handle_ERR_Rd, &handle_ERR_Wr, &saAttr, 0) ) 
       return false; 
 
     // Create a pipe for the child process's STDIN. 
@@ -211,17 +217,20 @@ bool Process::start() {
         if ( ! SetHandleInformation(handle_OUT_Wr, HANDLE_FLAG_INHERIT, 1) )
             return false; 
 
-    } /* else {
-	*/
-        // Ensure the write handle to the pipe for STDIN is not inherited.  
-        if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
-            return false; 
+    } 
 
-	    // Ensure the read handle to the pipe for STDOUT is not inherited.
-        if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
-            return false; 
- 
-    //}
+    // Ensure the write handle to the pipe for STDIN is not inherited.  
+    if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
+        return false; 
+
+    // Ensure the read handle to the pipe for STDOUT is not inherited.
+    if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
+        return false; 
+
+    // Ensure the read handle to the pipe for STDERR is not inherited.
+    if ( ! SetHandleInformation(handle_ERR_Rd, HANDLE_FLAG_INHERIT, 0) )
+        return false; 
+
 
 	STARTUPINFO siStartInfo;
 	BOOL bSuccess = FALSE; 
@@ -250,22 +259,18 @@ bool Process::start() {
 	ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
 	siStartInfo.cb = sizeof(STARTUPINFO); 
     if (!explicit_mode) {
-	    siStartInfo.hStdError = handle_OUT_Wr;
+	    siStartInfo.hStdError = handle_ERR_Wr;
 	    siStartInfo.hStdOutput = handle_OUT_Wr;
 	    siStartInfo.hStdInput = handle_IN_Rd;
         siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
     } else {
+	    siStartInfo.hStdError = handle_ERR_Wr;
 		HANDLE pHandle = GetCurrentProcess();
 		HANDLE handle_IN_Rd2, handle_OUT_Wr2;
 		DuplicateHandle(pHandle, handle_IN_Rd, pHandle, &handle_IN_Rd2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
 		DuplicateHandle(pHandle, handle_OUT_Wr, pHandle, &handle_OUT_Wr2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
-
-	    //int infd = _open_osfhandle((intptr_t)handle_IN_Rd, _O_RDONLY);
-	    //int outfd = _open_osfhandle((intptr_t)handle_OUT_Wr, 0);
-
         envbuffer << string("TRAX_IN=") << handle_IN_Rd2 << '\0';
         envbuffer << string("TRAX_OUT=") << handle_OUT_Wr2 << '\0';
-
     }
 	
     envbuffer << '\0';
@@ -283,14 +288,16 @@ bool Process::start() {
 
 	int wrfd = _open_osfhandle((intptr_t)handle_IN_Wr, 0);
 	int rdfd = _open_osfhandle((intptr_t)handle_OUT_Rd, _O_RDONLY);
+	int erfd = _open_osfhandle((intptr_t)handle_ERR_Rd, _O_RDONLY);
 
 	if (wrfd == -1 || rdfd == -1) {
 		stop();
 		return false;
 	}
 
-    p_stdin = wrfd; //_fdopen(wrfd, "w");
-    p_stdout = rdfd; //_fdopen(rdfd, "r");
+    p_stdin = wrfd;
+    p_stdout = rdfd;
+    p_stderr = erfd;
 
 	if (!p_stdin || !p_stdout) {
 		stop();
@@ -303,6 +310,7 @@ bool Process::start() {
 
     pipe(out);
     pipe(in);
+    pipe(err);
 
     vector<string> vars;
 
@@ -315,11 +323,14 @@ bool Process::start() {
     posix_spawn_file_actions_init(&action);
     posix_spawn_file_actions_addclose(&action, out[1]);
     posix_spawn_file_actions_addclose(&action, in[0]);
+    posix_spawn_file_actions_addclose(&action, err[0]);
 
     if (!explicit_mode) {
         posix_spawn_file_actions_adddup2(&action, out[0], 0);
         posix_spawn_file_actions_adddup2(&action, in[1], 1);
+        posix_spawn_file_actions_adddup2(&action, err[1], 2);
     } else {
+        posix_spawn_file_actions_adddup2(&action, err[1], 2);
         vars.push_back(string("TRAX_OUT=") + int_to_string(in[1]));
         vars.push_back(string("TRAX_IN=") + int_to_string(out[0]));
     }
@@ -346,10 +357,9 @@ bool Process::start() {
 
     if (directory.size() > 0) chdir(cwd.c_str());
 
-//    p_stdin = fdopen(out[1], "w");
-//    p_stdout = fdopen(in[0], "r");
     p_stdin = out[1];
     p_stdout = in[0];
+    p_stderr = err[0];
 
 #endif
 
@@ -407,13 +417,17 @@ void Process::cleanup() {
 	CloseHandle(handle_IN_Wr);
 	CloseHandle(handle_OUT_Rd);
 	CloseHandle(handle_OUT_Wr);
+	CloseHandle(handle_ERR_Rd);
+	CloseHandle(handle_ERR_Wr);
 
 #else
 	if (!pid) return;
 
     close(out[0]);
+    close(err[0]);
     close(in[1]);
     close(out[1]);
+    close(err[1]);
     close(in[0]);
 
     posix_spawn_file_actions_destroy(&action);
@@ -443,6 +457,18 @@ int Process::get_output() {
 #endif
 
     return p_stdout;
+
+}
+
+int Process::get_error() {
+
+#ifdef WIN32
+	if (!piProcInfo.hProcess) return -1;
+#else
+    if (!pid) return -1;
+#endif
+
+    return p_stderr;
 
 }
 
