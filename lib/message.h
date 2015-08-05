@@ -43,8 +43,8 @@ message_stream* create_message_stream_socket_accept(int server);
 
 void destroy_message_stream(message_stream** stream);
 
-int read_message(message_stream* stream, FILE* log, string_list* arguments, trax_properties* properties);
+int read_message(message_stream* stream, trax_logger log, string_list* arguments, trax_properties* properties);
 	
-void write_message(message_stream* stream, FILE* log, int type, const string_list arguments, trax_properties* properties);
+void write_message(message_stream* stream, trax_logger log, int type, const string_list arguments, trax_properties* properties);
 
 #endif

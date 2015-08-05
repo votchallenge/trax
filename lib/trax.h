@@ -85,6 +85,10 @@ typedef void trax_region;
 **/
 typedef struct trax_properties trax_properties;
 
+typedef void(*trax_logger)(const char *string);
+
+typedef void(*trax_enumerator)(const char *key, const char *value, const void *obj);
+
 /**
  * Some basic configuration data used to set up the server.
 **/
@@ -101,23 +105,34 @@ typedef struct trax_handle {
     int version;
     void* stream;
     trax_properties* properties;
-    FILE* log;
+    trax_logger log;
     trax_configuration config;
 } trax_handle;
 
-typedef void(*trax_enumerator)(const char *key, const char *value, const void *obj);
-
+/**
+ * Returns library version.
+**/
 __TRAX_EXPORT const char* trax_version();
 
 /**
- * Setups the protocol state object for the client and returns a handle object.
+ * Default logger that outputs to standard output stream.
 **/
-__TRAX_EXPORT trax_handle* trax_client_setup_file(int input, int output, FILE* log);
+__TRAX_EXPORT void trax_stdout_logger(const char *string);
+
+/**
+ * Default logger that outputs to standard error stream.
+**/
+__TRAX_EXPORT void trax_stderr_logger(const char *string);
 
 /**
  * Setups the protocol state object for the client and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_client_setup_socket(int server, FILE* log);
+__TRAX_EXPORT trax_handle* trax_client_setup_file(int input, int output, trax_logger log);
+
+/**
+ * Setups the protocol state object for the client and returns a handle object.
+**/
+__TRAX_EXPORT trax_handle* trax_client_setup_socket(int server, trax_logger log);
 
 /**
  * Waits for a valid protocol message from the server.
@@ -137,12 +152,12 @@ __TRAX_EXPORT void trax_client_frame(trax_handle* client, trax_image* image, tra
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_server_setup(trax_configuration config, FILE* log);
+__TRAX_EXPORT trax_handle* trax_server_setup(trax_configuration config, trax_logger log);
 
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, FILE* log);
+__TRAX_EXPORT trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, trax_logger log);
 
 /**
  * Waits for a valid protocol message from the client.

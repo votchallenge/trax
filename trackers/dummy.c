@@ -49,11 +49,19 @@ void sleep(long time) {
 #  endif
 #endif
 
+static FILE* log;
+
+void trax_file_logger(const char *string) {
+    if (string)
+        fputs(string, log);
+    else
+        fflush(log);
+}
+
 int main( int argc, char** argv)
 {
     int run;
     int wait = 0;    
-    FILE* log;
     trax_image* img = NULL;
     trax_region* reg = NULL;
     trax_region* mem = NULL;
@@ -68,7 +76,7 @@ int main( int argc, char** argv)
     config.format_image = TRAX_IMAGE_PATH;
 
     log = argc > 1 ? fopen(argv[1], "r") : NULL;
-    trax = trax_server_setup(config, log);
+    trax = trax_server_setup(config, log ? trax_file_logger : NULL);
 
     run = 1;
 

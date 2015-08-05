@@ -604,9 +604,9 @@ int main( int argc, char** argv) {
 	        } else {
 
                 if (socket_mode) {
-                    trax = trax_client_setup_socket(socket_id, silent ? NULL : stdout);
+                    trax = trax_client_setup_socket(socket_id, silent ? NULL : trax_stdout_logger);
                 } else {
-                    trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);
+                    trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : trax_stdout_logger);
                 }
 
                 if (!trax) throw std::runtime_error("Unable to establish connection.");
@@ -644,9 +644,9 @@ int main( int argc, char** argv) {
 		        }
 
                 if (socket_mode) {
-                    trax = trax_client_setup_socket(socket_id, silent ? NULL : stdout);
+                    trax = trax_client_setup_socket(socket_id, silent ? NULL : trax_stdout_logger);
                 } else {
-                    trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : stdout);
+                    trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : trax_stdout_logger);
                 }
 
                 if (!trax) throw std::runtime_error("Unable to establish connection.");

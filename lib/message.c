@@ -286,7 +286,7 @@ __INLINE int write_string(message_stream* stream, const char* buf, int len) {
 }
 
 
-int read_message(message_stream* stream, FILE* log, string_list* arguments, trax_properties* properties) {
+int read_message(message_stream* stream, trax_logger log, string_list* arguments, trax_properties* properties) {
 	
 	int message_type = -1;
     int prefix_length = strlen(TRAX_PREFIX);
@@ -312,7 +312,7 @@ int read_message(message_stream* stream, FILE* log, string_list* arguments, trax
     		complete = TRUE;
     	} else chr = (char) val;
 
-        if (log) putc(chr, log);
+        if (log) log(&chr);
 
         switch (state) {
             case PARSE_STATE_TYPE: { // Parsing message type
@@ -606,28 +606,28 @@ int read_message(message_stream* stream, FILE* log, string_list* arguments, trax
     BUFFER_DESTROY(key_buffer);
     BUFFER_DESTROY(value_buffer);
 
-    if (log) fflush(log);
+    if (log) log(NULL); // Flush the log stream
 
     return message_type;
     
 }
 
-#define OUTPUT_STRING(S) { int len = strlen(S); write_string(stream, S, len); if (log) fputs(S, log); }
+#define OUTPUT_STRING(S) { int len = strlen(S); write_string(stream, S, len); if (log) log(S); }
 #define OUTPUT_ESCAPED(S) { int i = 0; while (1) { \
     if (!S[i]) break; \
-    if (S[i] == '"' || S[i] == '\\') { write_string(stream, "\\", 1); if (log) fputc('\\', log); } \
-     write_string(stream, &(S[i]), 1); if (log) fputc(S[i], log); i++; } \
+    if (S[i] == '"' || S[i] == '\\') { write_string(stream, "\\", 1); if (log) log("\\"); } \
+     write_string(stream, &(S[i]), 1); if (log) log(&(S[i])); i++; } \
     }
 
 typedef struct file_pair {
     message_stream* stream;
-    FILE* log;
+    trax_logger log;
 } file_pair;
 
 void __output_properties(const char *key, const char *value, const void *obj) {
     
     message_stream* stream = ((file_pair *) obj)->stream;
-    FILE* log = ((file_pair *) obj)->log;
+    trax_logger log = ((file_pair *) obj)->log;
 
     OUTPUT_STRING("\"");
     OUTPUT_STRING(key);
@@ -637,7 +637,7 @@ void __output_properties(const char *key, const char *value, const void *obj) {
 
 }
 
-void write_message(message_stream* stream, FILE* log, int type, const string_list arguments, trax_properties* properties) {
+void write_message(message_stream* stream, trax_logger log, int type, const string_list arguments, trax_properties* properties) {
 
     int i;
 
@@ -688,9 +688,7 @@ void write_message(message_stream* stream, FILE* log, int type, const string_lis
 
         OUTPUT_STRING("\n");
 
-        //flush(output);
-
-        if (log) fflush(log);
+        if (log) log(NULL); // Flush the log stream
 
 	}
 }

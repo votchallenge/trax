@@ -44,6 +44,20 @@ const char* trax_version() {
     return (const char*) (TRAX_BUILD_VERSION);
 }
 
+void trax_stdout_logger(const char *string) {
+    if (string)
+        fputs(string, stdout);
+    else
+        fflush(stdout);
+}
+
+void trax_stderr_logger(const char *string) {
+    if (string)
+        fputs(string, stderr);
+    else
+        fflush(stderr);
+}
+
 struct trax_properties {
     StrMap *map;
 };
@@ -62,7 +76,7 @@ void copy_properties(trax_properties* source, trax_properties* dest) {
 
 }
 
-trax_handle* client_setup(message_stream* stream, FILE* log) {
+trax_handle* client_setup(message_stream* stream, trax_logger log) {
 
     trax_properties* tmp_properties;
     string_list arguments;
@@ -112,7 +126,7 @@ failure:
 
 }
 
-trax_handle* server_setup(trax_configuration config, message_stream* stream, FILE* log) {
+trax_handle* server_setup(trax_configuration config, message_stream* stream, trax_logger log) {
 
     trax_properties* properties;
     trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
@@ -166,7 +180,7 @@ trax_handle* server_setup(trax_configuration config, message_stream* stream, FIL
 }
 
 
-trax_handle* trax_client_setup_file(int input, int output, FILE* log) {
+trax_handle* trax_client_setup_file(int input, int output, trax_logger log) {
 
     message_stream* stream = create_message_stream_file(input, output);
     
@@ -174,7 +188,7 @@ trax_handle* trax_client_setup_file(int input, int output, FILE* log) {
 
 }
 
-trax_handle* trax_client_setup_socket(int server, FILE* log) {
+trax_handle* trax_client_setup_socket(int server, trax_logger log) {
 
     message_stream* stream = create_message_stream_socket_accept(server);
     
@@ -309,7 +323,7 @@ failure:
     LIST_DESTROY(arguments);
 }
 
-trax_handle* trax_server_setup(trax_configuration config, FILE* log) {
+trax_handle* trax_server_setup(trax_configuration config, trax_logger log) {
 
     message_stream* stream;
 
@@ -344,7 +358,7 @@ trax_handle* trax_server_setup(trax_configuration config, FILE* log) {
 
 }
 
-trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, FILE* log) {
+trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, trax_logger log) {
 
     message_stream* stream = create_message_stream_file(input, output);
     
