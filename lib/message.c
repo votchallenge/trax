@@ -68,6 +68,8 @@ static void initialize_sockets(void) {}
 
 #define VALIDATE_MESSAGE_STREAM(S) assert((S->flags & TRAX_STREAM_FILES) || (S->flags & TRAX_STREAM_SOCKET))
 
+#define LOG_CHAR(L, C) { char tmp[2]; tmp[1] = 0; tmp[0] = C; L(tmp); }
+
 int __is_valid_key(char* c, int len) {
     int i;
 
@@ -312,7 +314,7 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
     		complete = TRUE;
     	} else chr = (char) val;
 
-        if (log) log(&chr);
+        if (log) LOG_CHAR(log, chr);
 
         switch (state) {
             case PARSE_STATE_TYPE: { // Parsing message type
@@ -616,7 +618,7 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
 #define OUTPUT_ESCAPED(S) { int i = 0; while (1) { \
     if (!S[i]) break; \
     if (S[i] == '"' || S[i] == '\\') { write_string(stream, "\\", 1); if (log) log("\\"); } \
-     write_string(stream, &(S[i]), 1); if (log) log(&(S[i])); i++; } \
+     write_string(stream, &(S[i]), 1); if (log) LOG_CHAR(log, S[i]); i++; } \
     }
 
 typedef struct file_pair {
