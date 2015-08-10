@@ -429,6 +429,31 @@ THREAD_CALLBACK(watchdog_loop, param) {
 
 }
 
+int read_stream(int fd, char* buffer, int len) {
+
+	fd_set readfds,writefds,exceptfds;
+    struct timeval tv;
+
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+
+	FD_ZERO(&readfds);
+	FD_ZERO(&writefds);
+	FD_ZERO(&exceptfds);
+	FD_SET(fd,&readfds);
+	FD_SET(fd,&exceptfds);
+
+    if (select(fd+1, &readfds, &writefds, &exceptfds, &tv) < 0)
+        return -1;
+
+	if(FD_ISSET(fd,&readfds)) {
+        return read(fd, buffer, len);
+	} else if(FD_ISSET(fd,&exceptfds)) {
+        return -1;
+    } else return 0;
+
+}
+
 THREAD_CALLBACK(logger_loop, param) {
 
     bool run = true;
@@ -459,7 +484,7 @@ THREAD_CALLBACK(logger_loop, param) {
 
         char chr;
         bool flush = false;
-        if (read(err, &chr, 1) != 1) {
+        if (read_stream(err, &chr, 1) != 1) {
 
             err = -1;
             flush = true;
