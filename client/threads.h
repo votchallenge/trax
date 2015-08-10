@@ -27,7 +27,8 @@ extern "C" {
 #ifdef WIN32
 
 #define CREATE_THREAD(T, R, P) simple_threads_create_thread(&T, R, P)
-#define RELEASE_THREAD(T) CloseHandle(T)
+#define RELEASE_THREAD(T) simple_threads_release_thread(T)
+#define JOIN_THREAD(T) simple_threads_join_thread(T)
 
 #define THREAD_CALLBACK(NAME, ARGUMENT) DWORD WINAPI NAME(void* ARG)
 #define THREAD HANDLE
@@ -48,6 +49,10 @@ int simple_threads_cond_wait(HANDLE h, HANDLE m, long milisec);
 
 int WINAPI simple_threads_create_thread(HANDLE* h, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter);
 
+void* simple_threads_release_thread(THREAD t);
+
+void* simple_threads_join_thread(THREAD t);
+
 #else
 
 typedef struct pthread_wrapper {
@@ -57,6 +62,7 @@ typedef struct pthread_wrapper {
 
 #define CREATE_THREAD(T, R, P) simple_threads_create_thread(&T, R, P)
 #define RELEASE_THREAD(T) simple_threads_release_thread(T)
+#define JOIN_THREAD(T) simple_threads_join_thread(T)
 
 #define THREAD_CALLBACK(NAME, ARGUMENT) void* NAME(void* ARG)
 #define THREAD pthread_wrapper
@@ -81,7 +87,9 @@ int simple_threads_cond_wait(pthread_cond_t* h, pthread_mutex_t* m, long milisec
 
 int simple_threads_create_thread(THREAD* t, void *(*start_routine)(void*), void *arg);
 
-int simple_threads_release_thread(THREAD t);
+void* simple_threads_release_thread(THREAD t);
+
+void* simple_threads_join_thread(THREAD t);
 
 #endif
 

@@ -949,6 +949,9 @@ int main( int argc, char** argv) {
         destroy_server_socket(socket_id);
     }
 
+    RELEASE_THREAD(watchdog); 
+    RELEASE_THREAD(logger); 
+
     MUTEX_DESTROY(watchdogMutex);
     MUTEX_DESTROY(loggerMutex);
 
@@ -960,9 +963,6 @@ int main( int argc, char** argv) {
         if (output.size() > i && output[i]) region_release(&output[i]);
         if (initialization.size() > i && initialization[i]) region_release(&initialization[i]);
     }
-
-    RELEASE_THREAD(watchdog); 
-    RELEASE_THREAD(logger); 
 
     exit(result);
 }

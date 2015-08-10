@@ -21,6 +21,23 @@ int WINAPI simple_threads_create_thread(THREAD* h, LPTHREAD_START_ROUTINE lpStar
 	return 0;
 }
 
+void* simple_threads_release_thread(THREAD t) {
+	
+	void* result = simple_threads_join_thread(t);
+
+	CloseHandle(t);
+
+	return result;
+}
+
+void* simple_threads_join_thread(THREAD t) {
+
+    WaitForSingleObject(t, INFINITE);
+
+	return NULL; // TODO: also get thread exit status
+
+}
+
 #else
 
 
@@ -68,13 +85,23 @@ int simple_threads_create_thread(THREAD* t, void *(*start_routine)(void*), void 
 	return pthread_create(&(t->thread), &(t->attr), start_routine, arg);
 }
 
-int simple_threads_release_thread(THREAD t) {
+void* simple_threads_release_thread(THREAD t) {
 	
-	pthread_join(t.thread, NULL);
+	void* result = simple_threads_join_thread(t);
 
 	pthread_attr_destroy(&(t.attr));
 
-	return 1;
+	return result;
+}
+
+void* simple_threads_join_thread(THREAD t) {
+
+    void* result;	
+
+	pthread_join(t.thread, &result);
+
+	return result;
+
 }
 
 #endif
