@@ -485,7 +485,6 @@ THREAD_CALLBACK(logger_loop, param) {
         char chr;
         bool flush = false;
         if (read_stream(err, &chr, 1) != 1) {
-
             err = -1;
             flush = true;
 

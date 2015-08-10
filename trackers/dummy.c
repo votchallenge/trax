@@ -76,7 +76,7 @@ int main( int argc, char** argv)
     config.format_image = TRAX_IMAGE_PATH;
 
     log = argc > 1 ? fopen(argv[1], "r") : NULL;
-    trax = trax_server_setup(config, log ? trax_file_logger : NULL);
+    trax = trax_server_setup(config, (log ? trax_file_logger : NULL));
 
     run = 1;
 

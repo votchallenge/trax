@@ -373,15 +373,13 @@ bool Process::stop() {
 
 	if (!piProcInfo.hProcess) return NULL;
 
-	if (TerminateProcess(piProcInfo.hProcess, 0))
-        return true;
-    else 
-        return false;
+	bool result = TerminateProcess(piProcInfo.hProcess, 0);
 
 	cleanup();
 
-    piProcInfo.hProcess = 0;
+	piProcInfo.hProcess = 0;
 
+	return result;
 #else
 
     if (!pid) return false;
@@ -393,8 +391,6 @@ bool Process::stop() {
     pid = 0;
 
 #endif
-
-
 
     return true;
 }
@@ -412,6 +408,8 @@ void Process::cleanup() {
 		close(p_stdin);
 	if (p_stdout)
 		close(p_stdout);
+	if (p_stderr)
+		close(p_stderr);
 
 	CloseHandle(handle_IN_Rd);
 	CloseHandle(handle_IN_Wr);
