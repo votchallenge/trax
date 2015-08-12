@@ -188,10 +188,12 @@ trax_handle* trax_client_setup_file(int input, int output, trax_logger log) {
 
 }
 
-trax_handle* trax_client_setup_socket(int server, trax_logger log) {
+trax_handle* trax_client_setup_socket(int server, int timeout, trax_logger log) {
 
-    message_stream* stream = create_message_stream_socket_accept(server);
+    message_stream* stream = create_message_stream_socket_accept(server, timeout);
     
+	if (!stream) return NULL;
+
     return client_setup(stream, log);
 
 }

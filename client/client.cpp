@@ -773,8 +773,10 @@ int main( int argc, char** argv) {
 	        } else {
 
                 if (socket_mode) {
-                    trax = trax_client_setup_socket(socket_id, silent ? NULL : client_logger);
+					DEBUGMSG("Setting up TraX in socket mode\n");
+                    trax = trax_client_setup_socket(socket_id, timeout, silent ? NULL : client_logger);
                 } else {
+					DEBUGMSG("Setting up TraX in classical mode\n");
                     trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : client_logger);
                 }
 
@@ -814,8 +816,10 @@ int main( int argc, char** argv) {
 		        }
 
                 if (socket_mode) {
-                    trax = trax_client_setup_socket(socket_id, silent ? NULL : client_logger);
+					DEBUGMSG("Setting up TraX in socket mode\n");
+                    trax = trax_client_setup_socket(socket_id, timeout, silent ? NULL : client_logger);
                 } else {
+					DEBUGMSG("Setting up TraX in classical mode\n");
                     trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : client_logger);
                 }
 

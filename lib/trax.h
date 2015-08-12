@@ -132,7 +132,7 @@ __TRAX_EXPORT trax_handle* trax_client_setup_file(int input, int output, trax_lo
 /**
  * Setups the protocol state object for the client and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_client_setup_socket(int server, trax_logger log);
+__TRAX_EXPORT trax_handle* trax_client_setup_socket(int server, int timeout, trax_logger log);
 
 /**
  * Waits for a valid protocol message from the server.

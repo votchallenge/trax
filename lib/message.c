@@ -158,12 +158,15 @@ message_stream* create_message_stream_socket_connect(int port) {
 
 }
 
-message_stream* create_message_stream_socket_accept(int server) {
+message_stream* create_message_stream_socket_accept(int server, int timeout) {
 
 	fd_set readfds,writefds,exceptfds;
 	int asock=-1;
     int one = 1;
     message_stream* stream = NULL;
+    struct timeval tv;
+    tv.tv_sec = timeout;
+    tv.tv_usec = 0;
 
 	initialize_sockets();
  
@@ -178,7 +181,7 @@ message_stream* create_message_stream_socket_accept(int server) {
 	FD_SET(server,&readfds);
 	FD_SET(server,&exceptfds);
 
-    select(server+1,&readfds,&writefds,&exceptfds,(struct timeval *)0);
+    select(server+1,&readfds,&writefds,&exceptfds,&tv);
 	
 	if(FD_ISSET(server,&readfds)) {
 		struct sockaddr_in pin;

@@ -39,7 +39,7 @@ message_stream* create_message_stream_file(int input, int output);
 
 message_stream* create_message_stream_socket_connect(int port);
 
-message_stream* create_message_stream_socket_accept(int server);
+message_stream* create_message_stream_socket_accept(int server, int timeout);
 
 void destroy_message_stream(message_stream** stream);
 
