@@ -6,6 +6,7 @@
 
 #include "trax.h"
 #include "message.h"
+#include "region.h"
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER) 
 
@@ -58,8 +59,29 @@ int main( int argc, char** argv) {
 
         destroy_message_stream(&stream);
 
-    }
+    } else if (strcmpi(argv[1], "overlap") == 0) {
 
+        region_container* a, *b;
+
+        if (argc != 4) return 0;
+
+        region_parse(argv[2], &a);
+        region_parse(argv[3], &b);
+
+        fprintf(stdout, "Region A:");
+        region_print(stdout, a);
+        fprintf(stdout, "\n");
+        fprintf(stdout, "Region B:");
+        region_print(stdout, b);
+        fprintf(stdout, "\n");
+
+        float overlap = region_compute_overlap(a, b).overlap;
+
+        fprintf(stdout, "Overlap of A and B: %f\n", overlap);
+
+        region_release(&a);
+        region_release(&b);
+    }
 }
 
 

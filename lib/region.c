@@ -188,7 +188,8 @@ char* region_string(region_container* region) {
 			region->data.rectangle.width, region->data.rectangle.height);
 		
 	} else if (region->type == POLYGON) {
-		for (i = 0; i < region->data.polygon.count; i++)
+
+		for (i = 0; i < region->data.polygon.count; i++) 
 			BUFFER_APPEND(buffer, i == 0 ? "%.2f,%.2f" : ",%.2f,%.2f", region->data.polygon.x[i], region->data.polygon.y[i]);
 	}
 
@@ -530,6 +531,8 @@ void rasterize_polygon(region_polygon* polygon, char* mask, int width, int heigh
 float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *only1, float *only2) {
 
 	int i;
+    int vol_1 = 0;
+	int vol_2 = 0;
     int mask_1 = 0;
 	int mask_2 = 0;
 	int mask_intersect = 0;
@@ -540,8 +543,8 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
 	float x = MIN(b1.left, b2.left);
 	float y = MIN(b1.top, b2.top);
 
-	int width = (int) (MAX(b1.right, b2.right) - x);	
-	int height = (int) (MAX(b1.bottom, b2.bottom) - y);
+	int width = (int) (MAX(b1.right, b2.right) - x) + 1;	
+	int height = (int) (MAX(b1.bottom, b2.bottom) - y) + 1;
 
 	char* mask1 = (char*) malloc(sizeof(char) * width * height);
 	char* mask2 = (char*) malloc(sizeof(char) * width * height);
@@ -553,6 +556,8 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
 	rasterize_polygon(op2, mask2, width, height); 
 
 	for (i = 0; i < width * height; i++) {
+        if (mask1[i]) vol_1++;
+        if (mask2[i]) vol_2++;
 		if (mask1[i] && mask2[i]) mask_intersect++;
         else if (mask1[i]) mask_1++;
         else if (mask2[i]) mask_2++;
