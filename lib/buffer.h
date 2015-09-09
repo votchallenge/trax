@@ -47,7 +47,7 @@ typedef struct string_list {
 
 #define BUFFER_APPEND(B, ...) { \
 		int required = _scprintf(__VA_ARGS__); \
-		if (required > (B).size - (B).position) { \
+		if (required >= (B).size - (B).position) { \
 			(B).size = (B).position + required + 1; \
 			(B).buffer = (char*) realloc((B).buffer, sizeof(char) * (B).size); \
 		} \
@@ -59,7 +59,7 @@ typedef struct string_list {
 
 #define BUFFER_APPEND(B, ...) { \
 		int required = snprintf(&(B.buffer[(B).position]), (B).size - (B).position, __VA_ARGS__); \
-		if (required > (B).size - (B).position) { \
+		if (required >= (B).size - (B).position) { \
 			(B).size = (B).position + required + 1;  \
 			(B).buffer = (char*) realloc((B).buffer, sizeof(char) * (B).size); \
 			required = snprintf(&((B).buffer[(B).position]), (B).size - (B).position, __VA_ARGS__); \
