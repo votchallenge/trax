@@ -935,13 +935,24 @@ int main( int argc, char** argv) {
                 }
 
                 if (reinitialize > 0) {
-                    int j = frame;
+                    int j = frame + 1;
+                    output.push_back(region_create_special(2));
+                    timings.push_back(0);
                     for (; j < frame + reinitialize && j < images.size(); j++) {
-                        output.push_back(region_create_special(j == frame ? 2 : 0));
+                        output.push_back(region_create_special(0));
                         timings.push_back(0);
                     }
                     frame = j;
-                } else break;
+                } else {
+                    int j = frame + 1;
+                    output.push_back(region_create_special(2));
+                    timings.push_back(0);
+                    for (; j < images.size(); j++) {
+                        output.push_back(region_create_special(0));
+                        timings.push_back(0);
+                    }
+                    break;
+                }
             }
 
             if (output.size() > 0)
