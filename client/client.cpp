@@ -437,6 +437,9 @@ int read_stream(int fd, char* buffer, int len) {
     tv.tv_sec = 1;
     tv.tv_usec = 0;
 
+    if (fd < 0 || fd >= FD_SETSIZE)
+        return -1;
+
 	FD_ZERO(&readfds);
 	FD_ZERO(&writefds);
 	FD_ZERO(&exceptfds);
