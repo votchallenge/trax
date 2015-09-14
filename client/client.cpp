@@ -754,7 +754,8 @@ int main( int argc, char** argv) {
         CREATE_THREAD(logger, logger_loop, NULL);
 
         if (query_mode) {
-            // In query mode we just start the process and wait for the introduction of the tracker ...
+        // Query mode: in query mode we only check if the client successfuly connects to the tracker and receives introduction message.
+        // In the future we can also output some basic data about the tracker.
 
             trackerProcess = configure_process(trackerCommand, explicit_mode, environment);
 
@@ -795,7 +796,7 @@ int main( int argc, char** argv) {
             }
 
         } else {
-
+        // Tracking mode: the default mode where the entire sequence is processed.
             int frame = 0;
             while (frame < images.size()) {
 
@@ -834,6 +835,8 @@ int main( int argc, char** argv) {
                 trax_image* image = images[frame];
                 trax_region* initialize = NULL;
 
+                // Check if we can initialize from separate initialization source
+                // or from groundtruth.
                 if (initialization.size() > 0) {
 
                     for (; frame < images.size(); frame++) {
@@ -857,9 +860,11 @@ int main( int argc, char** argv) {
 	
                 bool tracking = false;
 
+                // Initialize the tracker ...
                 trax_client_initialize(trax, image, initialize, properties);
 
                 while (true) {
+                    // Repeat while tracking the target.
 
                     region_container* status = NULL;
 
@@ -873,6 +878,7 @@ int main( int argc, char** argv) {
                     timing_toc = clock();
 
                     if (result == TRAX_STATUS) {
+                        // Default option, the tracker returns a valid status.
 
                         region_container* gt = groundtruth[frame];
 
@@ -882,7 +888,9 @@ int main( int argc, char** argv) {
 
                         trax_properties_release(&additional);
 
+                        // Check the failure criterion.
                         if (threshold >= 0 && overlap <= threshold) {
+                            // Break the tracking loop if the tracker failed.
                             break;
                         }
 
@@ -896,6 +904,7 @@ int main( int argc, char** argv) {
                         timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
 
                     } else if (result == TRAX_QUIT) {                    
+                        // The tracker has requested termination of connection.
 
                         trax_properties_release(&additional);
 
@@ -903,6 +912,8 @@ int main( int argc, char** argv) {
 
                         break;
                     } else {
+                        // In case of an error ...
+
                         trax_properties_release(&additional);
                         throw std::runtime_error("Unable to contact tracker.");
                     }
@@ -934,24 +945,30 @@ int main( int argc, char** argv) {
                     trackerProcess = NULL;
                 }
 
-                if (reinitialize > 0) {
-                    int j = frame + 1;
-                    output.push_back(region_create_special(2));
-                    timings.push_back(0);
-                    for (; j < frame + reinitialize && j < images.size(); j++) {
-                        output.push_back(region_create_special(0));
+                if (frame < images.size()) {
+                    // If the tracker was not successful and we have to consider the remaining frames.
+
+                    if (reinitialize > 0) {
+                        // If reinitialization is specified after 1 or more frames ...
+                        int j = frame + 1;
+                        output.push_back(region_create_special(2));
                         timings.push_back(0);
-                    }
-                    frame = j;
-                } else {
-                    int j = frame + 1;
-                    output.push_back(region_create_special(2));
-                    timings.push_back(0);
-                    for (; j < images.size(); j++) {
-                        output.push_back(region_create_special(0));
+                        for (; j < frame + reinitialize && j < images.size(); j++) {
+                            output.push_back(region_create_special(0));
+                            timings.push_back(0);
+                        }
+                        frame = j;
+                    } else {
+                        // ... otherwise just fill the remaining part of sequence with empty frames.
+                        int j = frame + 1;
+                        output.push_back(region_create_special(2));
                         timings.push_back(0);
+                        for (; j < images.size(); j++) {
+                            output.push_back(region_create_special(0));
+                            timings.push_back(0);
+                        }
+                        break;
                     }
-                    break;
                 }
             }
 
