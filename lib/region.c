@@ -475,13 +475,31 @@ region_bounds compute_bounds(region_polygon* polygon) {
 
 }
 
-void rasterize_polygon(region_polygon* polygon, char* mask, int width, int height) {
+float compute_bounds_overlap(region_bounds a, region_bounds b) {
+
+    float width;
+    float height;
+    float intersection;
+    
+    width = MIN(a.right, b.right) - MAX(a.left, b.left);
+    width = MAX(0, width);
+    height = MIN(a.bottom, b.bottom) - MAX(a.top, b.top);
+    height = MAX(0, height);
+
+    intersection = width * height; 
+
+    return intersection / (((a.right - a.left) * (a.bottom - a.top)) + ((b.right - b.left) * (b.bottom - b.top)) - intersection);
+
+}
+
+int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height) {
 
 	int nodes, pixelY, i, j, swap;
+    int sum = 0;
 
 	int* nodeX = (int*) malloc(sizeof(int) * polygon->count);
 
-	memset(mask, 0, width * height * sizeof(char));
+	if (mask) memset(mask, 0, width * height * sizeof(char));
 
 	/*  Loop through the rows of the image. */
 	for (pixelY = 0; pixelY < height; pixelY++) {
@@ -518,8 +536,10 @@ void rasterize_polygon(region_polygon* polygon, char* mask, int width, int heigh
 			if (nodeX[i+1] > 0 ) {
 				if (nodeX[i] < 0 ) nodeX[i] = 0;
 				if (nodeX[i+1] > width) nodeX[i+1] = width - 1;
-				for (j = nodeX[i]; j < nodeX[i+1]; j++)
-					mask[pixelY * width + j] = 1; 
+				for (j = nodeX[i]; j < nodeX[i+1]; j++) {
+					if (mask) mask[pixelY * width + j] = 1; 
+                    sum++;
+                }
 			}
 		}
 	}
@@ -536,6 +556,8 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
     int mask_1 = 0;
 	int mask_2 = 0;
 	int mask_intersect = 0;
+    char* mask1 = NULL;
+    char* mask2 = NULL;
 
 	region_bounds b1 = compute_bounds(p1);
 	region_bounds b2 = compute_bounds(p2);
@@ -546,8 +568,25 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
 	int width = (int) (MAX(b1.right, b2.right) - x) + 1;	
 	int height = (int) (MAX(b1.bottom, b2.bottom) - y) + 1;
 
-	char* mask1 = (char*) malloc(sizeof(char) * width * height);
-	char* mask2 = (char*) malloc(sizeof(char) * width * height);
+    if (compute_bounds_overlap(b1, b2) == 0) {
+
+        if (only1 || only2) {
+	        mask_1 = rasterize_polygon(p1, NULL, b1.right - b1.left + 1, b1.bottom - b1.top + 1); 
+	        mask_2 = rasterize_polygon(p2, NULL, b2.right - b2.left + 1, b2.bottom - b2.top + 1); 
+
+	        if (only1)
+		        (*only1) = (float) mask_1 / (float) (mask_1 + mask_2);
+
+	        if (only2)
+		        (*only2) = (float) mask_2 / (float) (mask_1 + mask_2);
+        }
+
+        return 0;
+
+    }
+
+	mask1 = (char*) malloc(sizeof(char) * width * height);
+	mask2 = (char*) malloc(sizeof(char) * width * height);
 
 	region_polygon* op1 = offset_polygon(p1, -x, -y);
 	region_polygon* op2 = offset_polygon(p2, -x, -y);
