@@ -279,17 +279,3 @@ class TraxServerOptions(object):
             String with attribute to send to the client. Format: "trax.<attr name>=<attr val>"
         """
         return '"trax.{}={}"'.format(attrName, getattr(self, attrName))
-        
-        
-if __name__ == '__main__':
-    with TraxServer(options = TraxServerOptions('test', 'v1', TRAX_REGION_RECTANGLE, TRAX_IMAGE_PATH), verbose=True) as s:
-        s.trax_server_setup()
-        # tracking loop
-        while True:
-            msgType, msgArgs = s.trax_server_wait()
-            if msgType in [TRAX_QUIT,TRAX_ERROR]:
-                break
-            # TRACKER HERE
-            # send tracked region to client
-            region = ','.join(map(str,[200.5,200.5,10.1,10.1]))
-            s.trax_server_reply([region])
