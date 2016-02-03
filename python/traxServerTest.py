@@ -22,4 +22,4 @@ if __name__ == '__main__':
             # TRACKER HERE
             # send tracked region to client
             region = ','.join(map(str,[200.5,200.5,10.1,10.1]))
-            s.trax_server_reply([region])
+            s.trax_server_reply(region)

@@ -17,7 +17,7 @@
 #include <fstream>
 #include <sstream>
 
-#define TRAX_DEFAULT_PORT 9999
+#define TRAX_DEFAULT_PORT 9090
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
 #include <ctype.h>

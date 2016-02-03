@@ -13,7 +13,7 @@ import sys
 import logging as log
 
 TRAX_LOCALHOST = '127.0.0.1'
-TRAX_DEFAULT_PORT = 9999
+TRAX_DEFAULT_PORT = 9090
 
 TRAX_VERSION = 1
 
@@ -186,8 +186,9 @@ class TraxServer(SocketServer):
         """ Constructor
         
         Args: 
-            options: message type identifier
+            options: TraX server options 
             port: port
+            verbose: if True display log info
         """
         if verbose:
             log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
@@ -213,7 +214,12 @@ class TraxServer(SocketServer):
         return
         
     def trax_server_wait(self):
-        """ Wait for client msg. Recognize them and parse them when received """
+        """ Wait for client msg. Recognize them and parse them when received 
+        
+        Returns: 
+            msgType: type of the message (TRAX_ERROR, TRAX_HELLO, TRAX_INITIALIZE, TRAX_FRAME, TRAX_QUIT, TRAX_STATUS)
+            msgArgs: returned arguments in a list    
+        """
         
         msgType, msgArgs = self._read_message()
         
@@ -247,7 +253,8 @@ class TraxServer(SocketServer):
             region: tracked region. Format: "x1,y1,x2,y2,..." (rect: tl_x,tly,w,h) 
             properties: optional arguments. Format: "key:value"       
         """
-        self._write_message(TRAX_STATUS, region, properties)
+        assert(isinstance(region, str))
+        self._write_message(TRAX_STATUS, [region], properties)
 
 class TraxServerOptions(object):
     """ TraX server options """
