@@ -310,8 +310,11 @@ int main( int argc, char** argv) {
         int frame = 0;
         trax_image* image = images[frame];
         trax_region* initialize = groundtruth[frame];
+				
+		if (!trax) throw std::runtime_error("Unable to establish connection.");
 
         trax_client_initialize(trax, image, initialize, properties);
+
         frame += 1;
         if (!trax)
             throw std::runtime_error("Unable to establish connection.");
@@ -337,7 +340,7 @@ int main( int argc, char** argv) {
         result = 0;
 
     } catch (std::runtime_error e) {
-        
+        DEBUGMSG("Error: %s\n", e.what());
         fprintf(stderr, "Error: %s\n", e.what());
 
         trax_cleanup(&trax);

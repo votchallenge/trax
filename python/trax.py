@@ -43,18 +43,30 @@ class SocketServer(object):
             self.port  = port
         self.host = TRAX_LOCALHOST 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        log.info('Socket created')
-        
+        log.info('Socket created')        
         # Connect to localhost
-        try:
-            self.socket.connect((TRAX_LOCALHOST,TRAX_DEFAULT_PORT))
-            log.info('Server connected')
+        #from datetime import datetime
+        try:                
+            #with open('/home/alessio/Desktop/outOpen{}.txt'.format(datetime.utcnow().isoformat()),'w') as f:
+                #f.write('sdsdsdfsfs')
+                
+            self.socket.connect((TRAX_LOCALHOST, TRAX_DEFAULT_PORT))                 
+            log.info('Server connected')   
         except socket.error as msg:
-            log.error('Connection failed. Error Code : {}\nMessage: {}'.format(str(msg[0]), msg[1]))
+            log.error('Connection failed. Error Code : {}\nMessage: {}'.format(str(msg[0]), msg[1]))          
             sys.exit()    
 
         # to store single messages if more than one read from socket
         self.receivedMsgs = []  
+
+    def __enter__(self):
+        """ To support instantiation with 'with' statement """
+        return self
+
+    def __exit__(self,*args,**kwargs):
+        """ Destructor used by 'with' statement. Close socket connection """
+        self.socket.close()        
+        return
 
     def _write_message(self, msgType, arguments, properties):
         """ Create the message string and send it
@@ -109,16 +121,16 @@ class SocketServer(object):
          
         Returns:  
             msgArgs: list of message arguments
-        """   
-        if not len(self.receivedMsgs) or not '\n' in self.receivedMsgs[0]:
-            msg = '' if not len(self.receivedMsgs) else self.receivedMsgs[0]
-            while True:
-                msg += self.socket.recv(1024)
-                if msg is None or not isinstance(msg,str):
+        """            
+        if not len(self.receivedMsgs) or (not TRAX_QUIT_STR in self.receivedMsgs[0] and not '\n' in self.receivedMsgs[0]):
+            msg = '' if not len(self.receivedMsgs) else self.receivedMsgs[0]           
+            while True:                 
+                msg += self.socket.recv(1024)               
+                if msg is None or not isinstance(msg,str):                  
                     return None, None
                 if len(msg) == 0:
-                    log.info('Empty msg')
-                    continue
+                    log.info('Empty msg')                     
+                    return None, None
                 else:
                     if not '\n' in msg and not TRAX_QUIT_STR in msg:
                         log.info('Incomplete msg: {}'.format(msg))
@@ -189,7 +201,7 @@ class TraxServer(SocketServer):
             options: TraX server options 
             port: port
             verbose: if True display log info
-        """
+        """   
         if verbose:
             log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
         else:
@@ -198,19 +210,10 @@ class TraxServer(SocketServer):
         self.options = options
         super(TraxServer, self).__init__(port)
 
-    def __enter__(self):
-        """ To support instantiation with 'with' statement """
-        return self
-
-    def __exit__(self,*args,**kwargs):
-        """ Destructor used by 'with' statement. Close socket connection """
-        self.socket.close() 
-        return
-
     def trax_server_setup(self):
-        """ Send hello msg with options to TraX client """
-        properties = [self.options.getAttrStr(prop) for prop in self.options.__dict__.keys()]
-        self._write_message(TRAX_HELLO, [], properties)
+        """ Send hello msg with options to TraX client """  
+        properties = [self.options.getAttrStr(prop) for prop in self.options.__dict__.keys()]              
+        self._write_message(TRAX_HELLO, [], properties)     
         return
         
     def trax_server_wait(self):
@@ -221,10 +224,9 @@ class TraxServer(SocketServer):
             msgArgs: returned arguments in a list    
         """
         
-        msgType, msgArgs = self._read_message()
-        
+        msgType, msgArgs = self._read_message()    
         if msgType == None:
-            return TRAX_ERROR, []        
+            return TRAX_ERROR, []          
         # quit msg
         elif msgType == TRAX_QUIT and len(msgArgs) == 0:
             log.info('Received quit msg from client.')

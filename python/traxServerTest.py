@@ -9,11 +9,12 @@
 """
 
 import trax
+import time
 
 if __name__ == '__main__':
     with trax.TraxServer(options = trax.TraxServerOptions('test', 'v1', trax.TRAX_REGION_RECTANGLE, trax.TRAX_IMAGE_PATH), 
                          verbose=True) as s:
-        s.trax_server_setup()
+        s.trax_server_setup()        
         # tracking loop
         while True:
             msgType, msgArgs = s.trax_server_wait()

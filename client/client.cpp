@@ -1,21 +1,21 @@
 /* -*- Mode: C++; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*- */
 /*
- * This is an example of a stationary tracker. It only reports the initial 
+ * This is an example of a stationary tracker. It only reports the initial
  * position for all frames and is used for testing purposes.
  * The main function of this example is to show the developers how to modify
  * their trackers to work with the evaluation environment.
  *
  * Copyright (c) 2015, Luka Cehovin
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met: 
+ * modification, are permitted provided that the following conditions are met:
 
  * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer. 
+ *    list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution. 
+ *    and/or other materials provided with the distribution.
 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -27,9 +27,9 @@
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * The views and conclusions contained in the software and documentation are those
- * of the authors and should not be interpreted as representing official policies, 
+ * of the authors and should not be interpreted as representing official policies,
  * either expressed or implied, of the FreeBSD Project.
  *
  */
@@ -50,7 +50,7 @@
 
 #define TRAX_DEFAULT_PORT 9090
 
-#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <ctype.h>
 #include <winsock2.h>
 #include <windows.h>
@@ -62,7 +62,7 @@ static int initialized = 0;
 static void initialize_sockets(void) {
     WSADATA data;
     WORD version = 0x101;
-	if (initialized) return;
+    if (initialized) return;
 
     WSAStartup(version,&data);
     initialized = 1;
@@ -70,7 +70,7 @@ static void initialize_sockets(void) {
 }
 
 __inline void sleep(long time) {
-	Sleep(time * 1000);
+    Sleep(time * 1000);
 }
 
 #define __INLINE __inline
@@ -191,7 +191,7 @@ void print_help() {
 
 void configure_signals() {
 
-    #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+    #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 
     // TODO: anything to do here?
 
@@ -212,23 +212,23 @@ void configure_signals() {
 
 int create_server_socket(int port) {
 
-	int sid;
-	int one = 1;
-	struct sockaddr_in sin;
+    int sid;
+    int one = 1;
+    struct sockaddr_in sin;
 
-	const char* hostname = TRAX_LOCALHOST;
+    const char* hostname = TRAX_LOCALHOST;
 
-	initialize_sockets();
- 
-	if((sid = (int) socket(AF_INET,SOCK_STREAM,0)) == -1) {
-		return -1;
-	}
-	setsockopt(sid,SOL_SOCKET,SO_REUSEADDR,
-						 (const char *)&one,sizeof(int));
+    initialize_sockets();
+
+    if((sid = (int) socket(AF_INET,SOCK_STREAM,0)) == -1) {
+        return -1;
+    }
+    setsockopt(sid,SOL_SOCKET,SO_REUSEADDR,
+                         (const char *)&one,sizeof(int));
 
     memset(&sin,0,sizeof(sin));
     sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = inet_addr(hostname);
+    sin.sin_addr.s_addr = inet_addr(hostname);
 
     sin.sin_port = htons(port);
 
@@ -238,11 +238,11 @@ int create_server_socket(int port) {
         return -1;
     }
 
-	if(listen(sid, 1)== -1) {
-		perror("listen");
-		closesocket(sid);
-		return -1;
-	}
+    if(listen(sid, 1)== -1) {
+        perror("listen");
+        closesocket(sid);
+        return -1;
+    }
 
     return sid;
 
@@ -252,7 +252,7 @@ void destroy_server_socket(int server) {
 
     if (server < 0) return;
 
-#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
     shutdown(server, SD_BOTH);
 #else
     shutdown(server, SHUT_RDWR);
@@ -263,13 +263,13 @@ void destroy_server_socket(int server) {
 
 void load_data(vector<trax_image*>& images, vector<region_container*>& groundtruth, vector<region_container*>& initialization) {
 
-	std::ifstream if_images, if_groundtruth, if_initialization;
+    std::ifstream if_images, if_groundtruth, if_initialization;
 
-	if_images.open(imagesFile.c_str(), std::ifstream::in);
-	if_groundtruth.open(groundtruthFile.c_str(), std::ifstream::in);
+    if_images.open(imagesFile.c_str(), std::ifstream::in);
+    if_groundtruth.open(groundtruthFile.c_str(), std::ifstream::in);
 
     if (!initializationFile.empty())
-	    if_initialization.open(initializationFile.c_str(), std::ifstream::in);
+        if_initialization.open(initializationFile.c_str(), std::ifstream::in);
 
     if (!if_groundtruth.is_open()) {
         throw std::runtime_error("Groundtruth file not available.");
@@ -288,13 +288,13 @@ void load_data(vector<trax_image*>& images, vector<region_container*>& groundtru
 
     while (1) {
 
-		if_groundtruth.getline(gt_line_buffer, line_size);
+        if_groundtruth.getline(gt_line_buffer, line_size);
 
-		if (!if_groundtruth.good()) break;
+        if (!if_groundtruth.good()) break;
 
-		if_images.getline(im_line_buffer, line_size);
+        if_images.getline(im_line_buffer, line_size);
 
-		if (!if_images.good()) break;
+        if (!if_images.good()) break;
 
         line++;
 
@@ -305,14 +305,14 @@ void load_data(vector<trax_image*>& images, vector<region_container*>& groundtru
             groundtruth.push_back(region);
             images.push_back(trax_image_create_path(im_line_buffer));
 
-        } else 
+        } else
             DEBUGMSG("Unable to parse region data at line %d!\n", line); // TODO: do not know how to handle this ... probably a warning
-        
+
         if (if_initialization.is_open()) {
 
-		    if_initialization.getline(it_line_buffer, line_size);
+            if_initialization.getline(it_line_buffer, line_size);
 
-		    if (!if_initialization.good()) break;
+            if (!if_initialization.good()) break;
 
             if (!if_initialization.good()) {
 
@@ -332,8 +332,8 @@ void load_data(vector<trax_image*>& images, vector<region_container*>& groundtru
 
         }
 
-    }    
-    
+    }
+
     if_groundtruth.close();
     if_images.close();
     if (if_initialization.is_open()) if_initialization.close();
@@ -352,7 +352,7 @@ void save_data(vector<region_container*>& output) {
         throw std::runtime_error("Unable to open output file for writing.");
     }
 
-    for (int i = 0; i < output.size(); i++) {    
+    for (int i = 0; i < output.size(); i++) {
 
         region_container* r = output[i];
 
@@ -378,8 +378,8 @@ void save_timings(vector<long>& timings) {
         throw std::runtime_error("Unable to open timings file for writing.");
     }
 
-    for (int i = 0; i < timings.size(); i++) {  
-  
+    for (int i = 0; i < timings.size(); i++) {
+
        fprintf(outFp, "%ld\n", timings[i]);
 
     }
@@ -395,7 +395,7 @@ THREAD_CALLBACK(watchdog_loop, param) {
     while (run) {
 
         sleep(1);
-        
+
         MUTEX_LOCK(watchdogMutex);
 
         run = watchdogState.active;
@@ -431,7 +431,7 @@ THREAD_CALLBACK(watchdog_loop, param) {
 
 int read_stream(int fd, char* buffer, int len) {
 
-	fd_set readfds,writefds,exceptfds;
+    fd_set readfds,writefds,exceptfds;
     struct timeval tv;
 
     tv.tv_sec = 1;
@@ -440,18 +440,18 @@ int read_stream(int fd, char* buffer, int len) {
     if (fd < 0 || fd >= FD_SETSIZE)
         return -1;
 
-	FD_ZERO(&readfds);
-	FD_ZERO(&writefds);
-	FD_ZERO(&exceptfds);
-	FD_SET(fd,&readfds);
-	FD_SET(fd,&exceptfds);
+    FD_ZERO(&readfds);
+    FD_ZERO(&writefds);
+    FD_ZERO(&exceptfds);
+    FD_SET(fd,&readfds);
+    FD_SET(fd,&exceptfds);
 
     if (select(fd+1, &readfds, &writefds, &exceptfds, &tv) < 0)
         return -1;
 
-	if(FD_ISSET(fd,&readfds)) {
+    if(FD_ISSET(fd,&readfds)) {
         return read(fd, buffer, len);
-	} else if(FD_ISSET(fd,&exceptfds)) {
+    } else if(FD_ISSET(fd,&exceptfds)) {
         return -1;
     } else return 0;
 
@@ -471,7 +471,7 @@ THREAD_CALLBACK(logger_loop, param) {
             MUTEX_LOCK(loggerMutex);
 
             if (loggerState.process && loggerState.process->is_alive()) {
-                
+
                 err = loggerState.process->get_error();
 
             }
@@ -492,7 +492,7 @@ THREAD_CALLBACK(logger_loop, param) {
             flush = true;
 
         } else {
-        
+
             loggerState.stderr_buffer[loggerState.stderr_position++] = chr;
 
             flush = loggerState.stderr_position == (LOGGER_BUFFER_SIZE-1) || chr == '\n';
@@ -566,7 +566,7 @@ void client_logger(const char *string) {
     } else {
 
         while (*string) {
-            
+
             loggerState.stdout_buffer[loggerState.stdout_position++] = *string;
 
             if (loggerState.stdout_position == (LOGGER_BUFFER_SIZE-1) || *string == '\n') {
@@ -596,7 +596,7 @@ Process* configure_process(const string& command, bool explicitMode, const map<s
     Process* process = new Process(trackerCommand, explicitMode);
 
     process->copy_environment();
-    
+
     std::map<std::string, std::string>::const_iterator iter;
     for (iter = environment.begin(); iter != environment.end(); ++iter) {
        process->set_environment(iter->first, iter->second);
@@ -606,7 +606,7 @@ Process* configure_process(const string& command, bool explicitMode, const map<s
 }
 
 int main( int argc, char** argv) {
-    
+
     int result = 0;
     int c;
     bool query_mode = false;
@@ -673,13 +673,13 @@ int main( int argc, char** argv) {
                 break;
             case 'r':
                 reinitialize = MAX(1, atoi(optarg));
-                break; 
+                break;
             case 't':
                 timeout = MAX(0, atoi(optarg));
-                break; 
+                break;
             case 'T':
                 timingFile = string(optarg);
-                break; 
+                break;
             case 'e': {
                 char* var = optarg;
                 char* ptr = strchr(var, '=');
@@ -695,10 +695,10 @@ int main( int argc, char** argv) {
                 trax_properties_set(properties, key.c_str(), ptr+1);
                 break;
             }
-            default: 
+            default:
                 print_help();
                 throw std::runtime_error(string("Unknown switch -") + string(1, (char) optopt));
-            } 
+            }
 
         if (optind < argc) {
 
@@ -733,7 +733,7 @@ int main( int argc, char** argv) {
                     if (socket_port > 65535) throw std::runtime_error("Unable to configure TCP server socket.");
                 } else break;
             }
-            
+
             DEBUGMSG("Socket opened successfully on port %d.\n", socket_port);
 
         }
@@ -769,18 +769,18 @@ int main( int argc, char** argv) {
                 char port_buffer[24];
                 sprintf(port_buffer, "%d", socket_port);
                 trackerProcess->set_environment("TRAX_SOCKET", port_buffer);
-            } 
+            }
 
             if (!trackerProcess->start()) {
-		        DEBUGMSG("Unable to start the tracker process\n");
-		        result = -2;
-	        } else {
+                DEBUGMSG("Unable to start the tracker process\n");
+                result = -2;
+            } else {
 
                 if (socket_mode) {
-					DEBUGMSG("Setting up TraX in socket mode\n");
+                    DEBUGMSG("Setting up TraX in socket mode\n");
                     trax = trax_client_setup_socket(socket_id, timeout, silent ? NULL : client_logger);
                 } else {
-					DEBUGMSG("Setting up TraX in classical mode\n");
+                    DEBUGMSG("Setting up TraX in classical mode\n");
                     trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : client_logger);
                 }
 
@@ -812,18 +812,18 @@ int main( int argc, char** argv) {
                     char port_buffer[24];
                     sprintf(port_buffer, "%d", socket_port);
                     trackerProcess->set_environment("TRAX_SOCKET", port_buffer);
-                } 
+                }
 
                 if (!trackerProcess->start()) {
-			        DEBUGMSG("Unable to start the tracker process\n");
-			        break;
-		        }
+                    DEBUGMSG("Unable to start the tracker process\n");
+                    break;
+                }
 
                 if (socket_mode) {
-					DEBUGMSG("Setting up TraX in socket mode\n");
+                    DEBUGMSG("Setting up TraX in socket mode\n");
                     trax = trax_client_setup_socket(socket_id, timeout, silent ? NULL : client_logger);
                 } else {
-					DEBUGMSG("Setting up TraX in classical mode\n");
+                    DEBUGMSG("Setting up TraX in classical mode\n");
                     trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : client_logger);
                 }
 
@@ -860,7 +860,7 @@ int main( int argc, char** argv) {
                 // Start timing a frame
                 clock_t timing_toc;
                 clock_t timing_tic = clock();
-	
+
                 bool tracking = false;
 
                 // Initialize the tracker ...
@@ -906,7 +906,7 @@ int main( int argc, char** argv) {
 
                         timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
 
-                    } else if (result == TRAX_QUIT) {                    
+                    } else if (result == TRAX_QUIT) {
                         // The tracker has requested termination of connection.
 
                         trax_properties_release(&additional);
@@ -984,7 +984,7 @@ int main( int argc, char** argv) {
         }
 
     } catch (std::runtime_error e) {
-        
+
         fprintf(stderr, "Error: %s\n", e.what());
 
         trax_cleanup(&trax);
@@ -1008,8 +1008,8 @@ int main( int argc, char** argv) {
         destroy_server_socket(socket_id);
     }
 
-    RELEASE_THREAD(watchdog); 
-    RELEASE_THREAD(logger); 
+    RELEASE_THREAD(watchdog);
+    RELEASE_THREAD(logger);
 
     MUTEX_DESTROY(watchdogMutex);
     MUTEX_DESTROY(loggerMutex);
