@@ -30,21 +30,32 @@
 #define TRAX_VERSION 1
 
 #define TRAX_ERROR -1
-#define TRAX_HELLO 0
-#define TRAX_INITIALIZE 1
-#define TRAX_FRAME 2
-#define TRAX_QUIT 3
-#define TRAX_STATUS 4
-#define TRAX_STATE 4
+#define TRAX_OK 0
+#define TRAX_HELLO 1
+#define TRAX_INITIALIZE 2
+#define TRAX_FRAME 3
+#define TRAX_QUIT 4
+#define TRAX_STATE 5
 
-#define TRAX_IMAGE_PATH 0
-#define TRAX_IMAGE_URL 1 // Not implemented yet!
-#define TRAX_IMAGE_DATA 2 // Not implemented yet!
+#define TRAX_IMAGE_EMPTY 0
+#define TRAX_IMAGE_PATH 1
+#define TRAX_IMAGE_URL 2 
+#define TRAX_IMAGE_MEMORY 4 
+#define TRAX_IMAGE_BUFFER 8
 
+#define TRAX_IMAGE_BUFFER_ILLEGAL 0
+#define TRAX_IMAGE_BUFFER_PNG 1
+#define TRAX_IMAGE_BUFFER_JPEG 2
+
+#define TRAX_IMAGE_MEMORY_ILLEGAL 0
+#define TRAX_IMAGE_MEMORY_GRAY8 1
+#define TRAX_IMAGE_MEMORY_GRAY16 2
+#define TRAX_IMAGE_MEMORY_RGB 3
+
+#define TRAX_REGION_SPECIAL 0
 #define TRAX_REGION_RECTANGLE 1
 #define TRAX_REGION_POLYGON 2
-#define TRAX_REGION_MASK 3 // Not implemented yet!
-#define TRAX_REGION_SPECIAL 0
+#define TRAX_REGION_MASK 4 // Not implemented yet!
 
 #define TRAX_FLAG_VALID 1
 #define TRAX_FLAG_SERVER 2
@@ -54,8 +65,11 @@
 #define TRAX_PARAMETER_CLIENT 1
 #define TRAX_PARAMETER_SOCKET 2
 #define TRAX_PARAMETER_REGION 3
+#define TRAX_PARAMETER_IMAGE 4
 
 #define TRAX_LOCALHOST "127.0.0.1"
+
+#define TRAX_SUPPORTS(F, M) ((F & M) != 0)
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,6 +84,7 @@ typedef struct trax_image {
     short type;
     int width;
     int height;
+    int format;
     char* data;
 } trax_image;
 
@@ -142,12 +157,12 @@ __TRAX_EXPORT int trax_client_wait(trax_handle* client, trax_region** region, tr
 /**
  * Sends an initialize message.
 **/
-__TRAX_EXPORT void trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties);
+__TRAX_EXPORT int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties);
 
 /**
  * Sends a frame message.
 **/
-__TRAX_EXPORT void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties);
+__TRAX_EXPORT int trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties);
 
 /**
  * Setups the protocol for the server side and returns a handle object.
@@ -167,7 +182,7 @@ __TRAX_EXPORT int trax_server_wait(trax_handle* server, trax_image** image, trax
 /**
  * Sends a status reply to the client.
 **/
-__TRAX_EXPORT void trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties);
+__TRAX_EXPORT int trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties);
 
 /**
  * Used in client and server. Closes communication, sends quit message if needed.
@@ -196,10 +211,52 @@ __TRAX_EXPORT void trax_image_release(trax_image** image);
 __TRAX_EXPORT trax_image* trax_image_create_path(const char* path);
 
 /**
+ * Creates a URL path image description.
+**/
+__TRAX_EXPORT trax_image* trax_image_create_url(const char* url);
+
+/**
+ * Creates a raw buffer image description.
+**/
+__TRAX_EXPORT trax_image* trax_image_create_memory(int width, int height, int format);
+
+/**
+ * Creates a file buffer image description.
+**/
+__TRAX_EXPORT trax_image* trax_image_create_buffer(int length, const char* data);
+
+/**
+ * Returns a type of the image handle.
+**/
+__TRAX_EXPORT int trax_image_get_type(trax_image* image);
+
+/**
  * Returns a file path from a file-system path image description. This function
  * returns a pointer to the internal data which should not be modified.
 **/
 __TRAX_EXPORT const char* trax_image_get_path(trax_image* image);
+
+/**
+ * Returns a file path from a URL path image description. This function
+ * returns a pointer to the internal data which should not be modified.
+**/
+__TRAX_EXPORT const char* trax_image_get_url(trax_image* image);
+
+/**
+ * Returns the header data of a memory image.
+**/
+__TRAX_EXPORT void trax_image_get_memory_header(trax_image* image, int* width, int* height, int* format);
+
+/**
+ * Returns a pointer for a row in a data array of an image.
+**/
+__TRAX_EXPORT char* trax_image_get_memory_row(trax_image* image, int row);
+
+/**
+ * Returns a file buffer and its length. This function
+ * returns a pointer to the internal data which should not be modified.
+**/
+__TRAX_EXPORT const char* trax_image_get_buffer(trax_image* image, int* length, int* format);
 
 /**
  * Releases region structure, frees allocated memory.

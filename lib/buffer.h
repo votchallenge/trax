@@ -98,5 +98,17 @@ typedef struct string_list {
 		(B).position += required; \
   }
 
+// This version of the append does not copy the string but simply takes the control of its allocation
+#define LIST_APPEND_DIRECT(B, S) { \
+		int required = 1; \
+        int length = strlen(S); \
+		if (required > (B).size - (B).position) { \
+			(B).size = (B).position + 16; \
+			(B).buffer = (char**) realloc((B).buffer, sizeof(char*) * (B).size); \
+		} \
+        (B).buffer[(B).position] = S; \
+		(B).position += required; \
+  }
+
 
 #endif

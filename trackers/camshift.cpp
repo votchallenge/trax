@@ -1,54 +1,59 @@
 /* -*- Mode: C++; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*- */
 /*
- * This example is based on the camshiftdemo.c code from the OpenCV repository
- * It compiles with OpenCV 2.1
- * The main function of this example is to show the developers how to integrate libtrax
- * into their own programs.
+ * This example is based on the camshiftdemo code from the OpenCV repository
+ * The main function of this example is to show the developers how to integrate trax
+ * support into their own programs.
  */
 
-#ifdef _CH_
-#pragma package <opencv>
-#endif
+//#include <opencv2/tracking.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/video/tracking.hpp>
 
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-#ifndef _EiC
-#include "cv.h"
-#include "highgui.h"
-#include <stdio.h>
-#include <ctype.h>
-#endif
+#include <iostream>
 
 #include "trax.h"
 
-IplImage *image = 0, *hsv = 0, *hue = 0, *mask = 0, *backproject = 0, *histimg = 0;
-CvHistogram *hist = 0;
+using namespace std;
+using namespace cv;
 
-int track_object = 0;
-CvRect selection;
-CvRect track_window;
-CvBox2D track_box;
-CvConnectedComp track_comp;
-int hdims = 16;
-float hranges_arr[] = {0,180};
-float* hranges = hranges_arr;
-int vmin = 10, vmax = 256, smin = 30;
+Rect trackWindow;
+int hsize = 16;
+float hranges[] = {0,180};
+const float* phranges = hranges;
 
-CvScalar hsv2rgb( float hue )
-{
-    int rgb[3], p, sector;
-    static const int sector_data[][3]=
-        {{0,2,1}, {1,2,0}, {1,0,2}, {2,0,1}, {2,1,0}, {0,1,2}};
-    hue *= 0.033333333333333333333333333333333f;
-    sector = cvFloor(hue);
-    p = cvRound(255*(hue - sector));
-    p ^= sector & 1 ? 255 : 0;
+Mat read_image(trax_image* input) {
 
-    rgb[sector_data[sector][0]] = 255;
-    rgb[sector_data[sector][1]] = 0;
-    rgb[sector_data[sector][2]] = p;
+    switch (trax_image_get_type(input)) {
+    case TRAX_IMAGE_PATH:
+        return imread(string(trax_image_get_path(input)), CV_LOAD_IMAGE_COLOR);
+    case TRAX_IMAGE_MEMORY: {
+        int width, height, format;
+        trax_image_get_memory_header(input, &width, &height, &format);
+        char* data = trax_image_get_memory_row(input, 0);
 
-    return cvScalar(rgb[2], rgb[1], rgb[0],0);
+        Mat tmp(height, width, format == TRAX_IMAGE_MEMORY_RGB ? CV_8UC3 : 
+            (format == TRAX_IMAGE_MEMORY_GRAY8 ? CV_8UC1 : CV_16U), data);
+
+        Mat result;
+
+        cv::cvtColor(tmp, result, CV_BGR2RGB);
+        
+        return result;
+    }
+    case TRAX_IMAGE_BUFFER: {
+        int length, format;
+        const char* buffer = trax_image_get_buffer(input, &length, &format);
+
+        // This is problematic but we will just read from the buffer anyway ...
+        const Mat mem(1, length, CV_8UC1, const_cast<char *>(buffer)); 
+
+        return imdecode(mem, CV_LOAD_IMAGE_COLOR);
+
+    }
+    }
+    return cv::Mat();
 }
 
 CvRect box2rect(CvBox2D box) {
@@ -78,6 +83,10 @@ CvRect box2rect(CvBox2D box) {
     return result; 
 }
 
+int track_object = 0;
+Point origin;
+Rect selection;
+int vmin = 10, vmax = 256, smin = 30;
 
 int main( int argc, char** argv )
 {
@@ -85,13 +94,15 @@ int main( int argc, char** argv )
     trax_handle* trax;
     trax_configuration config;
     config.format_region = TRAX_REGION_RECTANGLE;
-    config.format_image = TRAX_IMAGE_PATH;
+    config.format_image = TRAX_IMAGE_MEMORY;
 
     // Call trax_server_setup to initialize trax protocol
     trax = trax_server_setup(config, NULL);
 
     trax_image* img = NULL;
     trax_region* rect = NULL;
+
+    Mat frame, hsv, hue, mask, hist, backproj;
 
     for(;;)
     {
@@ -127,8 +138,6 @@ int main( int argc, char** argv )
 
             track_object = -1;
 
-            // properties
-
             trax_server_reply(trax, rect, NULL);
         } else
         // The second one is TRAX_FRAME that tells the tracker what to process next.
@@ -150,80 +159,63 @@ int main( int argc, char** argv )
 
         // In trax mode images are read from the disk. The master program tells the
         // tracker where to get them.
-        IplImage* frame = cvLoadImage(img->data, CV_LOAD_IMAGE_COLOR);
+        Mat frame = read_image(img);
+
+        imshow("Text", frame);
+        waitKey(1);
 
         int i, bin_w, c;
 
-        if( !frame )
+        if( frame.empty() )
             break;
 
-        if( !image )
-        {
-            /* allocate all the buffers */
-            image = cvCreateImage( cvGetSize(frame), 8, 3 );
-            image->origin = frame->origin;
-            hsv = cvCreateImage( cvGetSize(frame), 8, 3 );
-            hue = cvCreateImage( cvGetSize(frame), 8, 1 );
-            mask = cvCreateImage( cvGetSize(frame), 8, 1 );
-            backproject = cvCreateImage( cvGetSize(frame), 8, 1 );
-            hist = cvCreateHist( 1, &hdims, CV_HIST_ARRAY, &hranges, 1 );
-            histimg = cvCreateImage( cvSize(320,200), 8, 3 );
-            cvZero( histimg );
-        }
-
-        cvCopy( frame, image, 0 );
-        cvCvtColor( image, hsv, CV_BGR2HSV );
+        cvtColor(frame, hsv, COLOR_BGR2HSV);
 
         if( track_object )
         {
+
             int _vmin = vmin, _vmax = vmax;
 
-            cvInRangeS( hsv, cvScalar(0,smin,MIN(_vmin,_vmax),0),
-                        cvScalar(180,256,MAX(_vmin,_vmax),0), mask );
-            cvSplit( hsv, hue, 0, 0, 0 );
+            inRange(hsv, Scalar(0, smin, MIN(_vmin,_vmax)),
+                    Scalar(180, 256, MAX(_vmin, _vmax)), mask);
+            int ch[] = {0, 0};
+            hue.create(hsv.size(), hsv.depth());
+            mixChannels(&hsv, 1, &hue, 1, ch, 1);
 
             if( track_object < 0 )
             {
-                float max_val = 0.f;
-                cvSetImageROI( hue, selection );
-                cvSetImageROI( mask, selection );
-                cvCalcHist( &hue, hist, 0, mask );
-                cvGetMinMaxHistValue( hist, 0, &max_val, 0, 0 );
-                cvConvertScale( hist->bins, hist->bins, max_val ? 255. / max_val : 0., 0 );
-                cvResetImageROI( hue );
-                cvResetImageROI( mask );
-                track_window = selection;
+                Mat roi(hue, selection), maskroi(mask, selection);
+                calcHist(&roi, 1, 0, maskroi, hist, 1, &hsize, &phranges);
+                normalize(hist, hist, 0, 255, NORM_MINMAX);
+
+                trackWindow = selection;
                 track_object = 1;
 
-                cvZero( histimg );
-                bin_w = histimg->width / hdims;
-                for( i = 0; i < hdims; i++ )
-                {
-                    int val = cvRound( cvGetReal1D(hist->bins,i)*histimg->height/255 );
-                    CvScalar color = hsv2rgb(i*180.f/hdims);
-                    cvRectangle( histimg, cvPoint(i*bin_w,histimg->height),
-                                 cvPoint((i+1)*bin_w,histimg->height - val),
-                                 color, -1, 8, 0 );
-                }
+                Mat buf(1, hsize, CV_8UC3);
+                for( int i = 0; i < hsize; i++ )
+                    buf.at<Vec3b>(i) = Vec3b(saturate_cast<uchar>(i*180./hsize), 255, 255);
+                cvtColor(buf, buf, COLOR_HSV2BGR);
+
             }
 
-            cvCalcBackProject( &hue, backproject, hist );
-            cvAnd( backproject, mask, backproject, 0 );
-            cvCamShift( backproject, track_window,
-                        cvTermCriteria( CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 10, 1 ),
-                        &track_comp, &track_box );
-            track_window = track_comp.rect;
+            calcBackProject(&hue, 1, 0, hist, backproj, &phranges);
+            backproj &= mask;
+            RotatedRect trackBox = CamShift(backproj, trackWindow,
+                                TermCriteria( TermCriteria::EPS | TermCriteria::COUNT, 10, 1 ));
 
-            if( !image->origin )
-                track_box.angle = -track_box.angle;
-            cvEllipseBox( image, track_box, CV_RGB(255,0,0), 3, CV_AA, 0 );
+            if( trackWindow.area() <= 1 )
+            {
+                int cols = backproj.cols, rows = backproj.rows, r = (MIN(cols, rows) + 5)/6;
+                trackWindow = Rect(trackWindow.x - r, trackWindow.y - r,
+                                   trackWindow.x + r, trackWindow.y + r) &
+                              Rect(0, 0, cols, rows);
+            }
+
         }
 
         // At the end of single frame processing we send back the estimated
         // bounding box and wait for further instructions.
-
-        CvRect result = box2rect(track_box);
-        trax_region* region = trax_region_create_rectangle(result.x, result.y, result.width, result.height);
+        trax_region* region = trax_region_create_rectangle(trackWindow.x, trackWindow.y, trackWindow.width, trackWindow.height);
 
         // Note that the tracker also has an option of sending additional data
         // back to the main program in a form of key-value pairs. We do not use
@@ -246,6 +238,3 @@ int main( int argc, char** argv )
     return 0;
 }
 
-#ifdef _EiC
-main(1,"camshiftdemo.c");
-#endif

@@ -1,5 +1,4 @@
-
-
+/* -*- Mode: C++; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*- */
 #include "message.h"
 
 #define PARSE_STATE_TYPE 0
@@ -70,8 +69,12 @@ static void initialize_sockets(void) {}
 
 #define LOG_CHAR(L, C) { char tmp[2]; tmp[1] = 0; tmp[0] = C; L(tmp); }
 
+#define MAX_KEY_LENGTH 64
+
 int __is_valid_key(char* c, int len) {
     int i;
+
+    if (len > MAX_KEY_LENGTH) return 0;
 
     for (i = 0; i < len; i++) {
         if (!(isalnum(c[i]) || c[i] == '.' || c[i] == '_')) return 0;
@@ -84,8 +87,8 @@ int __parse_message_type(const char *str) {
     
     if (strcmpi(str, "hello") == 0) return TRAX_HELLO;
     if (strcmpi(str, "initialize") == 0) return TRAX_INITIALIZE;
-    if (strcmpi(str, "state") == 0) return TRAX_STATUS;
-    if (strcmpi(str, "status") == 0) return TRAX_STATUS;
+    if (strcmpi(str, "state") == 0) return TRAX_STATE; // Compatibility reasons
+    if (strcmpi(str, "status") == 0) return TRAX_STATE;
     if (strcmpi(str, "frame") == 0) return TRAX_FRAME;
     if (strcmpi(str, "quit") == 0) return TRAX_QUIT;
 
@@ -269,6 +272,8 @@ __INLINE int read_character(message_stream* stream) {
 __INLINE int write_string(message_stream* stream, const char* buf, int len) {
     char chr;
 
+    if (len < 1) return 1;
+
     if (stream->flags & TRAX_STREAM_SOCKET) {
 
 	    int cnt = 0;
@@ -290,7 +295,6 @@ __INLINE int write_string(message_stream* stream, const char* buf, int len) {
 	return 1;
 }
 
-
 int read_message(message_stream* stream, trax_logger log, string_list* arguments, trax_properties* properties) {
 	
 	int message_type = -1;
@@ -310,7 +314,6 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
     	char chr; 
     	int val = read_character(stream);
 
-    	//printf("%d\n", val);
     	if (val < 0) {
     		if (message_type == -1) break;
     		chr = '\n';
@@ -421,12 +424,12 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
 
                     state = PARSE_STATE_SPACE;
                     BUFFER_RESET(key_buffer);
+
                 } else if (chr == '=') { // we have a kwarg
                 	if (__is_valid_key(key_buffer.buffer, key_buffer.position))
                     	state = PARSE_STATE_UNQUOTED_VALUE;
-                	else {
-                		state = PARSE_STATE_PASS;
-                		message_type = -1;
+                	else { // If the key is not valid then we probably have a Base64 encoding
+                		BUFFER_PUSH(key_buffer, chr);
                 	}
                 } else {                    
                 	BUFFER_PUSH(key_buffer, chr);
@@ -448,7 +451,8 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
 
                     state = PARSE_STATE_SPACE;
                     BUFFER_RESET(key_buffer);
-                    BUFFER_RESET(value_buffer);         
+                    BUFFER_RESET(value_buffer);  
+       
                 } else if (chr == '\n') {
                     char *key_tmp, *value_tmp;
                     BUFFER_EXTRACT(key_buffer, key_tmp);
@@ -459,6 +463,7 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
                     complete = TRUE;
                     BUFFER_RESET(key_buffer);
                     BUFFER_RESET(value_buffer);
+
                 } else
                     BUFFER_PUSH(value_buffer, chr);
 
@@ -478,6 +483,7 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
                     message_type = -1;
                     BUFFER_RESET(key_buffer);
                     BUFFER_RESET(value_buffer);
+
                 }
                 
                 break;
@@ -516,9 +522,8 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
                 } else if (chr == '=') { // we have a kwarg
                 	if (__is_valid_key(key_buffer.buffer, key_buffer.position))
                     	state = PARSE_STATE_QUOTED_VALUE;
-                	else {
-                		message_type = -1;
-                		state = PARSE_STATE_PASS;	                		
+                	else { // If the key is not valid then we probably have a Base64 encoding
+                		BUFFER_PUSH(key_buffer, chr);
                 	}
                 } else {                    
                 	BUFFER_PUSH(key_buffer, chr);
@@ -541,6 +546,7 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
                     state = PARSE_STATE_SPACE_EXPECT;
                     BUFFER_RESET(key_buffer);
                     BUFFER_RESET(value_buffer);
+
                 } else
                     BUFFER_PUSH(value_buffer, chr);
 
@@ -560,6 +566,7 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
                     message_type = -1;
                     BUFFER_RESET(key_buffer);
                     BUFFER_RESET(value_buffer);
+
                 }
                 
                 break;
@@ -578,6 +585,8 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
                     message_type = -1;
                     BUFFER_RESET(key_buffer);
                     BUFFER_RESET(value_buffer);
+
+
                 }
                 
                 break;
@@ -617,17 +626,19 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
     
 }
 
+typedef struct file_pair {
+    message_stream* stream;
+    trax_logger log;
+} file_pair;
+
+
+
 #define OUTPUT_STRING(S) { int len = strlen(S); write_string(stream, S, len); if (log) log(S); }
 #define OUTPUT_ESCAPED(S) { int i = 0; while (1) { \
     if (!S[i]) break; \
     if (S[i] == '"' || S[i] == '\\') { write_string(stream, "\\", 1); if (log) log("\\"); } \
      write_string(stream, &(S[i]), 1); if (log) LOG_CHAR(log, S[i]); i++; } \
     }
-
-typedef struct file_pair {
-    message_stream* stream;
-    trax_logger log;
-} file_pair;
 
 void __output_properties(const char *key, const char *value, const void *obj) {
     
@@ -645,6 +656,8 @@ void __output_properties(const char *key, const char *value, const void *obj) {
 void write_message(message_stream* stream, trax_logger log, int type, const string_list arguments, trax_properties* properties) {
 
     int i;
+
+    assert(type >= TRAX_HELLO && type <= TRAX_STATE);
 
     VALIDATE_MESSAGE_STREAM(stream);
 
@@ -669,8 +682,9 @@ void write_message(message_stream* stream, trax_logger log, int type, const stri
             OUTPUT_STRING(TRAX_PREFIX);
             OUTPUT_STRING("quit");
             break;
-        default:
+        default: {
             return;
+        }
     }
 
     OUTPUT_STRING(" ");
@@ -683,7 +697,7 @@ void write_message(message_stream* stream, trax_logger log, int type, const stri
 
     }
 
-	{
+    {
 
         file_pair pair;
         pair.stream = stream;
@@ -695,6 +709,8 @@ void write_message(message_stream* stream, trax_logger log, int type, const stri
 
         if (log) log(NULL); // Flush the log stream
 
-	}
+    }
+
+
 }
 

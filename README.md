@@ -6,7 +6,7 @@ What is TraX protocol?
 
 [Visual Tracking eXchange protocol](http://prints.vicos.si/publications/311/) is a simple protocol that enables easier evaluation of computer vision tracking algorithms. The basic idea is that a tracker communicates with the evaluation software using a set of text commands over the (standard) input/output streams.
 
-Reference C server and client implementation
+Reference server and client C implementation
 ---------------------------------
 
 libtrax is a reference C implementation for the Tracking eXchange protocol that enables researchers to quickly add support for the protocol in their C or C++ tracker (servers) as well as client tools. 

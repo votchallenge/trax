@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-typedef enum region_type {SPECIAL, RECTANGLE, POLYGON} region_type;
+typedef enum region_type {SPECIAL, RECTANGLE, POLYGON, MASK} region_type;
 
 typedef struct region_polygon {
 

@@ -72,10 +72,10 @@ int main( int argc, char** argv)
 
     trax_handle* trax;
     trax_configuration config;
-    config.format_region = TRAX_REGION_POLYGON;
-    config.format_image = TRAX_IMAGE_PATH;
+    config.format_region = TRAX_REGION_RECTANGLE;
+    config.format_image = TRAX_IMAGE_MEMORY;
 
-    log = argc > 1 ? fopen(argv[1], "r") : NULL;
+    log = argc > 1 ? fopen(argv[1], "w") : NULL;
     trax = trax_server_setup(config, (log ? trax_file_logger : NULL));
 
     run = 1;

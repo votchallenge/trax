@@ -11,6 +11,7 @@
 #include "strmap.h"
 #include "buffer.h"
 #include "message.h"
+#include "base64.h"
 
 #define VALIDATE_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID))
 #define VALIDATE_ALIVE_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && !(H->flags & TRAX_FLAG_TERMINATED))
@@ -18,12 +19,21 @@
 #define VALIDATE_CLIENT_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && !(H->flags & TRAX_FLAG_SERVER))
 
 #define BUFFER_LENGTH 64
+#define MAX_URI_SCHEME 16
 
 #define REGION(VP) ((region_container*) (VP))
 
-#define REGION_TYPE(VP) ((((region_container*) (VP))->type == RECTANGLE) ? TRAX_REGION_RECTANGLE : (((region_container*) (VP))->type == POLYGON ? TRAX_REGION_POLYGON : TRAX_REGION_SPECIAL))
+#define REGION_TYPE(VP) ( \
+        (((region_container*) (VP))->type == RECTANGLE) ? TRAX_REGION_RECTANGLE : \
+        (((region_container*) (VP))->type == POLYGON) ? TRAX_REGION_POLYGON : \
+        (((region_container*) (VP))->type == MASK) ? TRAX_REGION_MASK : \
+        SPECIAL)
 
-#define REGION_TYPE_BACK(T) (( T == TRAX_REGION_RECTANGLE ) ? RECTANGLE : ( T == TRAX_REGION_POLYGON ? POLYGON : SPECIAL))
+#define REGION_TYPE_BACK(T) (\
+    ( T == TRAX_REGION_RECTANGLE ) ? RECTANGLE :\
+    ( T == TRAX_REGION_POLYGON ) ? POLYGON :\
+    ( T == TRAX_REGION_MASK ) ? MASK :\
+     SPECIAL)
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <io.h>
@@ -31,6 +41,7 @@ int get_shared_fd(int h, int read) {
 	return _open_osfhandle((intptr_t)h, read ? _O_RDONLY : 0);
 }
 #else
+#define strcmpi strcasecmp
 int get_shared_fd(int h, int read) {
 	return h;
 }
@@ -62,11 +73,338 @@ struct trax_properties {
     StrMap *map;
 };
 
+char* parse_uri(char* buffer) {
+    int i = 0;
+
+    for (; i < MAX_URI_SCHEME; i++) {
+        if ((buffer[i] >= 'a' && buffer[i] <= 'z') || buffer[i] == '+' || buffer[i] == '.' || buffer[i] == '-') continue;
+
+        if (buffer[i] == ':') {
+            buffer[i] = 0; // Insert a stop char so that we can compare the prefix
+            return buffer + i + 1;
+        }
+
+        return NULL;
+    }
+
+    return NULL;
+
+}
+
+int verify_image_format(const char* buffer) {
+
+    int i;
+    char jpeg_prefix[] = { 255, 216, 255, 224 }; 
+    char png_prefix[] = { 137, 80, 78, 71 }; 
+
+    for (i = 0; i < 4; i++) {
+        if (buffer[i] != jpeg_prefix[i])
+            goto png;
+    }
+
+    return TRAX_IMAGE_BUFFER_JPEG;
+
+png:
+    for (i = 0; i < 4; i++) {
+        if (buffer[i] != png_prefix[i])
+            goto end;
+    }
+
+    return TRAX_IMAGE_BUFFER_PNG;
+
+end:
+
+    return TRAX_IMAGE_BUFFER_ILLEGAL;
+
+}
+
+int decode_buffer_format(char* name) {
+
+    if (strcmpi(name, "image/jpeg") == 0)
+        return TRAX_IMAGE_BUFFER_JPEG;
+
+    if (strcmpi(name, "image/png") == 0)
+        return TRAX_IMAGE_BUFFER_PNG;
+
+    return TRAX_IMAGE_BUFFER_ILLEGAL;
+
+}
+
+
+int decode_memory_format(char* name) {
+
+    if (strcmpi(name, "rgb") == 0)
+        return TRAX_IMAGE_MEMORY_RGB;
+
+    if (strcmpi(name, "gray8") == 0)
+        return TRAX_IMAGE_MEMORY_GRAY8;
+
+    if (strcmpi(name, "gray16") == 0)
+        return TRAX_IMAGE_MEMORY_GRAY16;
+
+    return TRAX_IMAGE_MEMORY_ILLEGAL;
+
+}
+
+
+int compare_prefix(char* str, char* prefix) {
+    int i = 0;
+
+    while (1) {
+
+        if (str[i] == prefix[i]) {
+            if (!prefix[i]) return 1;
+            i++;
+        } else return prefix[i] == 0;
+
+    }
+
+}
+
+char* strntok(char* str, char query, int limit) {
+    int i = 0;
+
+    for (i = 0; i < limit; i++) {
+
+        if (str[i] == query) {
+            str[i] = 0;
+            return str + i + 1;
+        }
+
+        if (!str[i]) return NULL;
+
+    }
+
+    return NULL;
+
+}
+
 void copy_property(const char *key, const char *value, const void *obj) {
 
     trax_properties* dest = (trax_properties*) obj;
-
     trax_properties_set(dest, key, value);
+
+}
+
+char* image_encode(trax_image* image) {
+
+    char* result = NULL;
+
+    switch(image->type) {
+    case TRAX_IMAGE_PATH: {
+        int length = strlen(image->data);
+        result = (char*) malloc(sizeof(char) * (length + 1 + 7));
+        sprintf(result, "file://");
+        memcpy(result + 7, image->data, length+1);
+        break;
+    }
+    case TRAX_IMAGE_URL: {
+        int length = strlen(image->data);
+        result = (char*) malloc(sizeof(char) * (length + 1));
+        memcpy(result, image->data, length+1);
+        break;
+    }
+    case TRAX_IMAGE_MEMORY: {
+        int offset = 0;
+        char* format = image->format == TRAX_IMAGE_MEMORY_RGB ? "rgb" : 
+            image->format == TRAX_IMAGE_MEMORY_GRAY8 ? "gray8" : 
+            image->format == TRAX_IMAGE_MEMORY_GRAY16 ? "gray16" : NULL;
+        int depth = image->format == TRAX_IMAGE_MEMORY_RGB ? 1 : 
+            (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : 
+            (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+        int channels = image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
+        int length = (image->width * image->height * depth * channels);
+        int encoded = base64encodelen(length);
+        int header = snprintf(NULL, 0, "image:%d;%d;%s;", image->width, image->height, format);
+        assert(format);
+
+        result = (char*) malloc(sizeof(char) * (encoded + header + 1));
+        offset += sprintf(result, "image:%d;%d;%s;", image->width, image->height, format);
+        base64encode(result + offset, image->data, length);
+        break;
+    }
+    case TRAX_IMAGE_BUFFER: {
+        int offset = 0;
+        int length = image->width;
+        char* format = (image->format == TRAX_IMAGE_BUFFER_JPEG) ? "image/jpeg" : 
+            ((image->format == TRAX_IMAGE_BUFFER_PNG) ? "image/png" : NULL);
+        int body = base64encodelen(length);
+        int header = snprintf(NULL, 0, "data:%s;", format);
+        assert(format);
+        result = (char*) malloc(sizeof(char) * (body + header + 1));
+        offset += sprintf(result, "data:%s;", format);
+        offset += base64encode(result + offset, image->data, length);
+        //result[offset] = 0;
+        break;
+    }
+
+    }
+
+    return result;
+}
+
+trax_image* image_decode(char* buffer) {
+
+    trax_image* result = NULL;
+
+    char* resource = parse_uri(buffer);
+
+    if (!resource) {
+        // Support for legacy format
+        result = trax_image_create_path(buffer);
+        return result;
+    }
+
+    if (strcmp(buffer, "file") == 0) {
+        assert(compare_prefix(resource, "//"));
+        result = trax_image_create_path(buffer + 7);
+    } else if (strcmp(buffer, "image") == 0) {
+        int outlen;
+        int width, height, depth, format, channels, allocated, verify;
+        char* token;
+
+        width = strtol(resource, &resource, 10);
+        if (resource[0] != ';') return result;
+        height = strtol(resource+1, &resource, 10);
+        if (resource[0] != ';') return result;
+
+        token = resource + 1;
+        resource = strntok(token, ';', 32);
+
+        if (!resource) return NULL;
+        format = decode_memory_format(token);
+
+        outlen = base64decodelen(resource) - 1;
+
+        depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 : 
+            (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : 
+            (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+        channels = format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
+        allocated =  (width * height * depth * channels);
+
+        if (width < 1 || height < 1 || outlen != allocated) return result;
+
+        result = (trax_image*) malloc(sizeof(trax_image));
+        result->type = TRAX_IMAGE_MEMORY;
+        result->width = width;
+        result->height = height;
+        result->format = format;
+        result->data = (char*) malloc(sizeof(char) * allocated);
+        verify = base64decode(result->data, resource);
+
+//printf("AA: %d %d %d %d %d %d %d\n", allocated, outlen, verify, channels, depth, width, height);fflush(stdout);
+
+        assert(verify == allocated);
+
+    } else if (strcmp(buffer, "data") == 0) {
+        int format, outlen = base64decodelen(resource);
+        char* token;
+
+        token = resource + 1;
+        resource = strntok(token, ';', 32);
+        if (!resource) return NULL;
+        format = decode_buffer_format(token);
+
+        result = (trax_image*) malloc(sizeof(trax_image));
+        result->type = TRAX_IMAGE_BUFFER;
+        result->width = outlen;
+        result->height = 1;
+
+        result->data = (char*) malloc(sizeof(char) * (result->format + 1));
+        base64decode(result->data, resource);
+    } else {
+        *(resource--) = ':'; // Restore the semicolon and use the buffer as URL
+        result = trax_image_create_url(buffer);
+    }
+    return result;
+
+}
+
+int image_formats_decode(char *str) {
+
+    int formats = 0;
+
+    char *pch;
+    pch = strtok (str," ;");
+    while (pch != NULL) {
+        if (strcmp(pch, "path") == 0)
+            formats |= TRAX_IMAGE_PATH;
+        else if (strcmp(pch, "url") == 0)
+            formats |= TRAX_IMAGE_URL;
+        else if (strcmp(pch, "memory") == 0)
+            formats |= TRAX_IMAGE_MEMORY;
+        else if (strcmp(pch, "buffer") == 0)
+            formats |= TRAX_IMAGE_BUFFER;
+        else if (strlen(pch) == 0)
+            continue; // Skip empty 
+        else return -1;
+
+        pch = strtok (NULL, ";");
+    }
+
+    return formats;
+}
+
+void image_formats_encode(int formats, char *key) {
+
+    char* pch = key;
+
+    pch[0] = 0;
+
+    if (TRAX_SUPPORTS(formats, TRAX_IMAGE_PATH)) {
+        pch += sprintf(pch, "path;");
+    }
+    if (TRAX_SUPPORTS(formats, TRAX_IMAGE_URL)) {
+        pch += sprintf(pch, "url;");
+    }
+    if (TRAX_SUPPORTS(formats, TRAX_IMAGE_MEMORY)) {
+        pch += sprintf(pch, "memory;");
+    }
+    if (TRAX_SUPPORTS(formats, TRAX_IMAGE_BUFFER)) {
+        pch += sprintf(pch, "buffer;");
+    }
+
+}
+
+int region_formats_decode(char *str) {
+
+    int formats = 0;
+
+    char *pch;
+    pch = strtok (str," ;");
+    while (pch != NULL) {
+
+        if (strcmp(pch, "rectangle") == 0)
+            formats |= TRAX_REGION_RECTANGLE;
+        else if (strcmp(pch, "polygon") == 0)
+            formats |= TRAX_REGION_POLYGON;
+        else if (strcmp(pch, "mask") == 0)
+            formats |= TRAX_REGION_MASK;
+        else if (strlen(pch) == 0)
+            continue; // Skip empty 
+        else return -1;
+
+        pch = strtok (NULL, ";");
+    }
+
+    return formats;
+}
+
+void region_formats_encode(int formats, char *key) {
+
+    char* pch = key;
+
+    pch[0] = 0;
+
+    if (TRAX_SUPPORTS(formats, TRAX_REGION_RECTANGLE)) {
+        pch += sprintf(pch, "rectangle;");
+    }
+    if (TRAX_SUPPORTS(formats, TRAX_REGION_POLYGON)) {
+        pch += sprintf(pch, "polygon;");
+    }
+    if (TRAX_SUPPORTS(formats, TRAX_REGION_MASK)) {
+        pch += sprintf(pch, "mask;");
+    }
 
 }
 
@@ -101,16 +439,17 @@ trax_handle* client_setup(message_stream* stream, trax_logger log) {
     if (LIST_SIZE(arguments) > 0)
         goto failure;
 
+    client->version = trax_properties_get_int(tmp_properties, "trax.version", 1);
+
     tmp = trax_properties_get(tmp_properties, "trax.region");
-    client->config.format_region = TRAX_REGION_RECTANGLE;
-    if (tmp && strcmp(tmp, "polygon") == 0)
-        client->config.format_region = TRAX_REGION_POLYGON;
+    client->config.format_region = region_formats_decode(tmp);
     free(tmp);
 
-    // TODO: parse format info, tracker name, identifier
-        
-    client->config.format_image = TRAX_IMAGE_PATH;
-    client->version = trax_properties_get_int(tmp_properties, "trax.version", 1);
+    tmp = trax_properties_get(tmp_properties, "trax.image");
+    client->config.format_image = image_formats_decode(tmp);
+    free(tmp);
+
+    // TODO: tracker name, identifier
 
     trax_properties_release(&tmp_properties);
     LIST_DESTROY(arguments);
@@ -131,6 +470,7 @@ trax_handle* server_setup(trax_configuration config, message_stream* stream, tra
     trax_properties* properties;
     trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
     string_list arguments;
+    char tmp[BUFFER_LENGTH];
 
     server->flags = (TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
 
@@ -142,28 +482,11 @@ trax_handle* server_setup(trax_configuration config, message_stream* stream, tra
 
     trax_properties_set_int(properties, "trax.version", TRAX_VERSION);
 
-    switch (config.format_region) {
-        case TRAX_REGION_RECTANGLE:
-            trax_properties_set(properties, "trax.region", "rectangle");
-            break;
-        case TRAX_REGION_POLYGON:
-            trax_properties_set(properties, "trax.region", "polygon");
-            break;
-        default:
-            config.format_region = TRAX_REGION_RECTANGLE;
-            trax_properties_set(properties, "trax.region", "rectangle");
-            break;
-    }
+    region_formats_encode(config.format_region, tmp);
+    trax_properties_set(properties, "trax.region", tmp);
 
-    switch (config.format_image) {
-        case TRAX_IMAGE_PATH:
-            trax_properties_set(properties, "trax.image", "path");
-            break;
-        default:
-            config.format_image = TRAX_IMAGE_PATH;
-            trax_properties_set(properties, "trax.image", "path");
-            break;
-    }
+    image_formats_encode(config.format_image, tmp);
+    trax_properties_set(properties, "trax.image", tmp);
 
     server->config = config;
    
@@ -214,14 +537,14 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
     result = read_message((message_stream*)client->stream, client->log, &arguments, tmp_properties);
 
-    if (result == TRAX_STATUS) {
+    if (result == TRAX_STATE) {
 
 		region_container *_region = NULL;
 
         if (LIST_SIZE(arguments) != 1)
             goto failure;
 
-        result = TRAX_STATUS;
+        result = TRAX_STATE;
 
         if (!region_parse(arguments.buffer[0], &_region)) {
             goto failure;
@@ -258,7 +581,7 @@ end:
 
 }
 
-void trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties) {
+int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties) {
 
 	char* data = NULL;
 	region_container* _region;
@@ -275,13 +598,21 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 
     LIST_CREATE(arguments, 2);
 
-    if (image->type == TRAX_IMAGE_PATH) {
-        LIST_APPEND(arguments, image->data);
+    if (TRAX_SUPPORTS(client->config.format_image, image->type)) {
+        char* buffer = image_encode(image);
+        LIST_APPEND_DIRECT(arguments, buffer);
     } else goto failure;
 
-    if (client->config.format_region != REGION_TYPE(region)) {
+    if (!TRAX_SUPPORTS(client->config.format_region, REGION_TYPE(region))) {
 
-        trax_region* converted = region_convert((region_container *)region, (region_type)client->config.format_region);
+        trax_region* converted = NULL;
+
+        if TRAX_SUPPORTS(client->config.format_region, TRAX_REGION_MASK)
+            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_MASK));
+        else if TRAX_SUPPORTS(client->config.format_region, TRAX_REGION_POLYGON)
+            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_POLYGON));
+        else if TRAX_SUPPORTS(client->config.format_region, TRAX_REGION_RECTANGLE)
+            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_RECTANGLE));
 
         assert(converted);
 
@@ -298,31 +629,41 @@ void trax_client_initialize(trax_handle* client, trax_image* image, trax_region*
 
     write_message((message_stream*)client->stream, client->log, TRAX_INITIALIZE, arguments, properties);
 
+    return TRAX_OK;
+
 failure:
 
     LIST_DESTROY(arguments);
 
+    return TRAX_ERROR;
+
 }
 
-void trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties) {
+int trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties) {
 
     string_list arguments;
     VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
 
-    assert(client->config.format_image == image->type);
+    assert(TRAX_SUPPORTS(client->config.format_image, image->type));
 
     LIST_CREATE(arguments, 2);
 
-    if (image->type == TRAX_IMAGE_PATH) {
-        LIST_APPEND(arguments, image->data);
+    if (TRAX_SUPPORTS(client->config.format_image, image->type)) {
+        char* buffer = image_encode(image);
+        LIST_APPEND_DIRECT(arguments, buffer);
     } else goto failure;
 
     write_message((message_stream*)client->stream, client->log, TRAX_FRAME, arguments, properties);
 
+    return TRAX_OK;
+
 failure:
 
     LIST_DESTROY(arguments);
+
+    return TRAX_ERROR;
+
 }
 
 trax_handle* trax_server_setup(trax_configuration config, trax_logger log) {
@@ -380,6 +721,8 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
     tmp_properties = trax_properties_create();
     LIST_CREATE(arguments, 8);
 
+    *image = NULL;
+
     result = read_message((message_stream*)server->stream, server->log, &arguments, tmp_properties);
 
     if (result == TRAX_FRAME) {
@@ -387,14 +730,9 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
         if (LIST_SIZE(arguments) != 1)
             goto failure;
 
-        switch (server->config.format_image) {
-        case TRAX_IMAGE_PATH: {
-            *image = trax_image_create_path(arguments.buffer[0]);
-            break;
-        }
-        default:
+        *image = image_decode(arguments.buffer[0]);
+        if (!*image || !TRAX_SUPPORTS(server->config.format_image, (*image)->type)) 
             goto failure;
-        }
 
         if (properties) 
             copy_properties(tmp_properties, properties);  
@@ -416,14 +754,10 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
         if (LIST_SIZE(arguments) != 2)
             goto failure;
 
-        switch (server->config.format_image) {
-        case TRAX_IMAGE_PATH: {
-            *image = trax_image_create_path(arguments.buffer[0]);
-            break;
-        }
-        default:
+        *image = image_decode(arguments.buffer[0]);
+
+        if (!*image || !TRAX_SUPPORTS(server->config.format_image, (*image)->type)) 
             goto failure;
-        }
 
         if (!region_parse(arguments.buffer[1], (region_container**)region)) {
             goto failure;
@@ -439,6 +773,12 @@ failure:
 
     result = TRAX_ERROR;
 
+    if (*image)
+        trax_image_release(image);
+
+    if (*region)
+        trax_region_release(region);
+
 end:
 
     LIST_DESTROY(arguments);
@@ -447,7 +787,7 @@ end:
     return result;
 }
 
-void trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties) {
+int trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties) {
 
 	char* data;
     string_list arguments;
@@ -457,18 +797,17 @@ void trax_server_reply(trax_handle* server, trax_region* region, trax_properties
 
     data = region_string(REGION(region));
 
-    if (!data) return;
+    if (!data) return TRAX_ERROR;
 
     LIST_CREATE(arguments, 1);
 
-    if (data) {
-        LIST_APPEND(arguments, data);
-        free(data);
-    }
+    LIST_APPEND_DIRECT(arguments, data);
 
-    write_message((message_stream*)server->stream, server->log, TRAX_STATUS, arguments, properties);
+    write_message((message_stream*)server->stream, server->log, TRAX_STATE, arguments, properties);
 
     LIST_DESTROY(arguments);
+
+    return TRAX_OK;
 
 }
 
@@ -540,9 +879,9 @@ int trax_get_parameter(trax_handle* handle, int id, int* value) {
 
 void trax_image_release(trax_image** image) {
 
-    switch ((*image)->type) {
-        case TRAX_IMAGE_PATH:
-            free((*image)->data);
+    if ((*image)->data) {
+        free((*image)->data);
+        (*image)->data = 0;
     }
 
     free(*image);
@@ -563,9 +902,119 @@ trax_image* trax_image_create_path(const char* path) {
     return img;
 }
 
+trax_image* trax_image_create_url(const char* url) {
+
+    trax_image* img = (trax_image*) malloc(sizeof(trax_image));
+
+    img->type = TRAX_IMAGE_URL;
+    img->width = 0;
+    img->height = 0;
+    img->data = (char*) malloc(sizeof(char) * (strlen(url) + 1));
+    strcpy(img->data, url);
+
+    return img;
+
+}
+
+trax_image* trax_image_create_memory(int width, int height, int format) {
+
+    int channels, depth;
+    trax_image* img;
+
+    assert(format == TRAX_IMAGE_MEMORY_GRAY8 || 
+        format == TRAX_IMAGE_MEMORY_GRAY16 || format == TRAX_IMAGE_MEMORY_RGB);
+
+    depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 : 
+        (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : 
+        (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+    channels = format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
+
+    img = (trax_image*) malloc(sizeof(trax_image));
+
+    img->type = TRAX_IMAGE_MEMORY;
+    img->width = width;
+    img->height = height;
+    img->format = format;
+    img->data = (char*) malloc(sizeof(char) * (width * height * depth * channels));
+
+    return img;
+
+}
+
+trax_image* trax_image_create_buffer(int length, const char* data) {
+
+    int format;
+    trax_image* img = NULL;
+
+    assert(length > 4);
+    format = verify_image_format(data);
+    assert(format != TRAX_IMAGE_BUFFER_ILLEGAL);
+
+    img = (trax_image*) malloc(sizeof(trax_image));
+
+    img->type = TRAX_IMAGE_BUFFER;
+    img->width = length;
+    img->height = 1;
+    img->format = format;
+    img->data = (char*) malloc(sizeof(char) * length);
+    memcpy(img->data, data, length);
+
+    return img;
+
+}
+
+ int trax_image_get_type(trax_image* image) {
+
+    return image->type;
+
+}
+
 const char* trax_image_get_path(trax_image* image) {
 
     assert(image->type == TRAX_IMAGE_PATH);
+
+    return image->data;
+
+}
+
+const char* trax_image_get_url(trax_image* image) {
+
+    assert(image->type == TRAX_IMAGE_URL);
+
+    return image->data;
+}
+
+void trax_image_get_memory_header(trax_image* image, int* width, int* height, int* format) {
+
+    assert(image->type == TRAX_IMAGE_MEMORY);
+
+    *width = image->width;
+    *height = image->height;
+    *format = image->format;
+
+}
+
+char* trax_image_get_memory_row(trax_image* image, int row) {
+
+    int depth, channels;
+
+    assert(image->type == TRAX_IMAGE_MEMORY);
+    assert(row >= 0 && row < image->height);
+
+    depth = image->format == TRAX_IMAGE_MEMORY_RGB ? 1 : 
+        (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : 
+        (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+    channels = image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
+
+    return &(image->data[depth * channels * row]);
+}
+
+const char* trax_image_get_buffer(trax_image* image, int* length, int* format) {
+
+    assert(image->type == TRAX_IMAGE_BUFFER);
+
+    *length = image->width;
+    *format = image->format;
 
     return image->data;
 

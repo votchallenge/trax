@@ -47,6 +47,12 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <streambuf>
+
+#ifdef TRAX_BUILD_OPENCV
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#endif
 
 #define TRAX_DEFAULT_PORT 9090
 
@@ -131,6 +137,9 @@ typedef struct logger_state {
     int stdout_position;
     char stderr_buffer[LOGGER_BUFFER_SIZE];
     int stderr_position;
+    int line_truncate;
+    int stderr_length;
+    int stdout_length;
     Process* process;
     FILE* stream;
 } logger_state;
@@ -170,8 +179,7 @@ void print_help() {
     cout << "\n\nProgram arguments: \n";
     cout << "\t-h\tPrint this help and exit\n";
     cout << "\t-d\tEnable debug\n";
-    cout << "\t-T\tGather time data\n";
-    cout << "\t-t\tSpecify wait timeout\n";
+    cout << "\t-t\tSet timeout period\n";
     cout << "\t-G\tGroundtruth annotations file\n";
     cout << "\t-I\tFile that lists the image sequence files\n";
     cout << "\t-O\tOutput region file\n";
@@ -261,7 +269,7 @@ void destroy_server_socket(int server) {
 
 }
 
-void load_data(vector<trax_image*>& images, vector<region_container*>& groundtruth, vector<region_container*>& initialization) {
+void load_data(vector<string>& images, vector<region_container*>& groundtruth, vector<region_container*>& initialization) {
 
 	std::ifstream if_images, if_groundtruth, if_initialization;
 
@@ -303,7 +311,7 @@ void load_data(vector<trax_image*>& images, vector<region_container*>& groundtru
         if (region_parse(gt_line_buffer, &region)) {
 
             groundtruth.push_back(region);
-            images.push_back(trax_image_create_path(im_line_buffer));
+            images.push_back(string(im_line_buffer));
 
         } else 
             DEBUGMSG("Unable to parse region data at line %d!\n", line); // TODO: do not know how to handle this ... probably a warning
@@ -385,6 +393,69 @@ void save_timings(vector<long>& timings) {
     }
 
     fclose(outFp);
+
+}
+
+trax_image* load_image(trax_handle* trax, string& path) {
+
+    int image_format = 0;                
+
+    if TRAX_SUPPORTS(trax->config.format_image, TRAX_IMAGE_PATH)
+        image_format = TRAX_IMAGE_PATH;
+    else if TRAX_SUPPORTS(trax->config.format_image, TRAX_IMAGE_BUFFER)
+        image_format = TRAX_IMAGE_BUFFER;
+#ifdef TRAX_BUILD_OPENCV
+    else if TRAX_SUPPORTS(trax->config.format_image, TRAX_IMAGE_MEMORY)
+        image_format = TRAX_IMAGE_MEMORY;
+#endif
+    else
+        throw std::runtime_error("No supported image format allowed");
+
+    trax_image* image = NULL;
+
+    switch (image_format) {
+    case TRAX_IMAGE_PATH: {
+        image = trax_image_create_path(path.c_str());
+        break; 
+    }
+    case TRAX_IMAGE_BUFFER: {
+        // Read the file to memory
+        std::ifstream t(path.c_str());
+        t.seekg(0, std::ios::end);
+        size_t size = t.tellg();
+        std::string buffer(size, ' ');
+        t.seekg(0);
+        t.read(&buffer[0], size); 
+        image = trax_image_create_buffer(buffer.size(), buffer.c_str());
+        break;
+    }
+#ifdef TRAX_BUILD_OPENCV
+    case TRAX_IMAGE_MEMORY: {
+        cv::Mat cvmat = cv::imread(path);
+        int format = 0;
+        switch(cvmat.type()) {
+        case CV_8UC1:
+            format = TRAX_IMAGE_MEMORY_GRAY8;
+            break;
+        case CV_16UC1:
+            format = TRAX_IMAGE_MEMORY_GRAY16;
+            break;
+        case CV_8UC3:
+            format = TRAX_IMAGE_MEMORY_RGB;
+            break;
+        default:
+            throw std::runtime_error("Unsupported image depth");
+        }
+        image = trax_image_create_memory(cvmat.cols, cvmat.rows, format);
+        char* dst = trax_image_get_memory_row(image, 0);
+        cv::Mat tmp(cvmat.size(), cvmat.type(), dst);
+        cv::cvtColor(cvmat, tmp, CV_BGR2RGB);
+        break;
+    }
+#endif
+    }
+
+    return image;
 
 }
 
@@ -493,9 +564,18 @@ THREAD_CALLBACK(logger_loop, param) {
 
         } else {
         
-            loggerState.stderr_buffer[loggerState.stderr_position++] = chr;
+            loggerState.stderr_length++;
+
+            if (loggerState.stderr_length >= loggerState.line_truncate && loggerState.line_truncate > 0) {
+                
+                if (loggerState.stderr_length == loggerState.line_truncate)
+                    loggerState.stderr_buffer[loggerState.stderr_position++] = '\n';
+
+            } else loggerState.stderr_buffer[loggerState.stderr_position++] = chr;
 
             flush = loggerState.stderr_position == (LOGGER_BUFFER_SIZE-1) || chr == '\n';
+
+            if (chr == '\n') loggerState.stderr_length = 0;
 
         }
 
@@ -543,7 +623,10 @@ void logger_reset(Process* process) {
     loggerState.process = process;
     loggerState.stderr_position = 0;
     loggerState.stdout_position = 0;
+    loggerState.stderr_length = 0;
+    loggerState.stdout_length = 0;
     loggerState.stream = stdout;
+    loggerState.line_truncate = 256;
 
     MUTEX_UNLOCK(loggerMutex);
 
@@ -567,7 +650,14 @@ void client_logger(const char *string) {
 
         while (*string) {
             
-            loggerState.stdout_buffer[loggerState.stdout_position++] = *string;
+            loggerState.stdout_length++;
+
+            if (loggerState.stdout_length >= loggerState.line_truncate && loggerState.line_truncate > 0) {
+                
+                if (loggerState.stdout_length == loggerState.line_truncate)
+                    loggerState.stdout_buffer[loggerState.stdout_position++] = '\n';
+
+            } else loggerState.stdout_buffer[loggerState.stdout_position++] = *string;
 
             if (loggerState.stdout_position == (LOGGER_BUFFER_SIZE-1) || *string == '\n') {
 
@@ -580,6 +670,8 @@ void client_logger(const char *string) {
                 fflush(loggerState.stream);
 
                 MUTEX_UNLOCK(loggerMutex);
+
+                if (*string == '\n') loggerState.stdout_length = 0;
 
             }
 
@@ -624,7 +716,7 @@ int main( int argc, char** argv) {
     trax_handle* trax = NULL;
     Process* trackerProcess = NULL;
 
-    vector<trax_image*> images;
+    vector<string> images;
     vector<region_container*> groundtruth;
     vector<region_container*> initialization;
     vector<region_container*> output;
@@ -786,6 +878,8 @@ int main( int argc, char** argv) {
 
                 if (!trax) throw std::runtime_error("Unable to establish connection.");
 
+                cout << "Connection successfuly established." << endl;
+
                 trax_cleanup(&trax);
 
                 if (trackerProcess) {
@@ -833,9 +927,8 @@ int main( int argc, char** argv) {
 
                 if (trax->version > TRAX_VERSION) throw std::runtime_error("Unsupported protocol version");
 
-                if (trax->config.format_image != TRAX_IMAGE_PATH)  throw std::runtime_error("Unsupported image format");
-
-                trax_image* image = images[frame];
+                trax_image* image = load_image(trax, images[frame]);
+                
                 trax_region* initialize = NULL;
 
                 // Check if we can initialize from separate initialization source
@@ -864,7 +957,11 @@ int main( int argc, char** argv) {
                 bool tracking = false;
 
                 // Initialize the tracker ...
-                trax_client_initialize(trax, image, initialize, properties);
+                if (trax_client_initialize(trax, image, initialize, properties) < 0) 
+                    throw std::runtime_error("Tracker initialization failed");
+                
+
+                trax_image_release(&image);
 
                 while (true) {
                     // Repeat while tracking the target.
@@ -880,7 +977,7 @@ int main( int argc, char** argv) {
                     // Stop timing a frame
                     timing_toc = clock();
 
-                    if (result == TRAX_STATUS) {
+                    if (result == TRAX_STATE) {
                         // Default option, the tracker returns a valid status.
 
                         region_container* gt = groundtruth[frame];
@@ -925,12 +1022,15 @@ int main( int argc, char** argv) {
 
                     if (frame >= images.size()) break;
 
-                    trax_image* image = images[frame];
+                    trax_image* image = load_image(trax, images[frame]);
 
                     // Start timing a frame
                     timing_tic = clock();
 
-                    trax_client_frame(trax, image, NULL);
+                    if (trax_client_frame(trax, image, NULL) < 0)
+                        throw std::runtime_error("Unable to send new frame.");
+
+                    trax_image_release(&image);
 
                     tracking = true;
 
@@ -1017,7 +1117,7 @@ int main( int argc, char** argv) {
     trax_properties_release(&properties);
 
     for (int i = 0; i < images.size(); i++) {
-        trax_image_release(&images[i]);
+        //trax_image_release(&images[i]);
         region_release(&groundtruth[i]);
         if (output.size() > i && output[i]) region_release(&output[i]);
         if (initialization.size() > i && initialization[i]) region_release(&initialization[i]);
