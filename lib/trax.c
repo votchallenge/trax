@@ -256,8 +256,7 @@ trax_image* image_decode(char* buffer) {
     }
 
     if (strcmp(buffer, "file") == 0) {
-        assert(compare_prefix(resource, "//"));
-        result = trax_image_create_path(buffer + 7);
+        result = trax_image_create_path(buffer + (compare_prefix(resource, "//") ? 7 : 5));
     } else if (strcmp(buffer, "image") == 0) {
         int outlen;
         int width, height, depth, format, channels, allocated, verify;
