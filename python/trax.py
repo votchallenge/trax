@@ -57,11 +57,11 @@ class Server(object):
                 sys.stdout.flush()
             self._send_msg = write_to_stdout
             self._recv_msg = sys.stdin.readline
-            self.n = None
+            self.nRec = None # not to specify for readlines
         elif comm_type == TRAX_STREAM_SOCKET:
             self._send_msg = self.socket.send
             self._recv_msg = self.socket.recv
-            self.n = 1024
+            self.nRec = 1024 # bytes 
         else:
             log.error('Unknow communication type. Exit!')
             sys.exit(-1)
@@ -132,7 +132,7 @@ class Server(object):
         if not len(self.receivedMsgs) or (not TRAX_QUIT_STR in self.receivedMsgs[0] and not '\n' in self.receivedMsgs[0]):
             msg = '' if not len(self.receivedMsgs) else self.receivedMsgs[0]           
             while True:    
-                args = [self.n] if self.comm_type==TRAX_STREAM_SOCKET else []
+                args = [self.nRec] if self.comm_type==TRAX_STREAM_SOCKET else []
                 msg += self._recv_msg(*args)               
                 if msg is None or not isinstance(msg,str):                  
                     return None, None
