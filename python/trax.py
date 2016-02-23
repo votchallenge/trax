@@ -368,8 +368,8 @@ class trax_region_rect(trax_region):
             w: width of the rectangle region
             h: height of the rectangle region
         """
-        super(trax_region_rect)
-        self.regionType = trax.TRAX_REGION_RECTANGLE
+        super(trax_region_rect, self).__init__()
+        self.regionType = TRAX_REGION_RECTANGLE
         self.x, self.y, self.w, self.h = x, y, w, h
 
     def __str__(self):
@@ -383,7 +383,7 @@ class trax_region_rect(trax_region):
 class trax_region_poly(trax_region):
     """ Polygon region """
     def __init__(self):
-        super(trax_region_poly).__init__(trax.TRAX_REGION_POLYGON)
+        super(trax_region_poly, self).__init__()
         self.count = 0
         self.points = list()
 
