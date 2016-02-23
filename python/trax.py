@@ -358,7 +358,8 @@ class trax_region(object):
         return
             
 class trax_region_rect(trax_region):
-    """ Rectangle region """
+    """ Rectangle region 
+    """
     def __init__(self, x=0, y=0, w=0, h=0):
         """ Constructor
         
@@ -381,11 +382,20 @@ class trax_region_rect(trax_region):
         self.x, self.y, self.w, self.h = map(float, regionStr.strip('"').split(','))   
             
 class trax_region_poly(trax_region):
-    """ Polygon region """
-    def __init__(self):
+    """ Polygon region 
+    """
+    def __init__(self, points):
+        """
+        Constructor
+    
+        Args: points list of points coordinates as tuples [(x1,y1), (x2,y2),...,(xN,yN)]  
+        """
         super(trax_region_poly, self).__init__()
-        self.count = 0
-        self.points = list()
+        assert(isinstance(points, list))
+        # do not allow empty list
+        assert(reduce(lambda x,y: x and y, [isinstance(p,tuple) for p in points], False))
+        self.count = len(points) 
+        self.points = points
 
     def __str__(self):
         """ Create string from class to send to client """
@@ -396,6 +406,5 @@ class trax_region_poly(trax_region):
         pointsFlat = map(float, regionStr.strip('"').split(','))
         assert(len(pointsFlat)%2==0)
         self.count = pointsFlat/2
-        for i in xrange(0,len(pointsFlat),2):
-            self.points.append((pointsFlat[i],pointsFlat[i+1]))
+        self.points = [(pointsFlat[i],pointsFlat[i+1]) for i in xrange(0,len(pointsFlat),2)]
             
