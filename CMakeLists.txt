@@ -75,17 +75,3 @@ IF (BUILD_CLIENT)
 	INSTALL(TARGETS traxclient traxdummy RUNTIME DESTINATION bin)
 ENDIF (BUILD_CLIENT)
 
-SET (BUILD_PYTHON_EXAMPLE FALSE CACHE BOOL "Build a simple client executable to test Python server")
-
-IF (BUILD_PYTHON_EXAMPLE)
-    INCLUDE_DIRECTORIES(client)
-    IF (WIN32 OR WIN64)
-        ADD_EXECUTABLE(simpletraxclient python/simpleClientTest.cpp client/process.cpp client/threads.c client/getopt_win.c)
-    ELSE ()
-        ADD_EXECUTABLE(simpletraxclient python/simpleClientTest.cpp client/process.cpp client/threads.c)
-    ENDIF ()
-    TARGET_LINK_LIBRARIES(simpletraxclient traxstatic)
-ENDIF (BUILD_PYTHON_EXAMPLE)
-
-
-

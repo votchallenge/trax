@@ -12,8 +12,10 @@ import trax
 import time
 
 if __name__ == '__main__':
-    with trax.TraxServer(options = trax.TraxServerOptions('test', 'v1', trax.TRAX_REGION_RECTANGLE, trax.TRAX_IMAGE_PATH), 
-                         verbose=True) as s:
+    # default files server
+    options = vot.trax.TraxServerOptions('test', 'v1', vot.trax.TRAX_REGION_RECTANGLE, vot.trax.TRAX_IMAGE_PATH) 
+                                        # ,vot.trax.TRAX_STREAM_SOCKET ) # to test socket       
+    with trax.TraxServer(options, verbose=True) as s:
         s.trax_server_setup()        
         # tracking loop
         while True:
