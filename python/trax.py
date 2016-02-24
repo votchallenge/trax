@@ -255,16 +255,11 @@ class TraxServer(FilesServer, SocketServer):
         """      
         self.options = options
         
-        # files stream server
-        if options.comm_type == TRAX_STREAM_FILES:
-            super(TraxServer, self).__init__(options.comm_type, None, verbose)       
-        # socket server
-        elif options.comm_type == TRAX_STREAM_SOCKET:
-            port = port if port else TRAX_DEFAULT_PORT
-            super(TraxServer, self).__init__(options.comm_type, port, verbose)
-        else:
-            log.error('Unknown communication type. Exit!')
-            sys.exit()
+        if options.comm_type == TRAX_STREAM_SOCKET:
+            port = port if port else TRAX_DEFAULT_PORT        
+            
+        super(TraxServer, self).__init__(options.comm_type, port, verbose)       
+
 
     def trax_server_setup(self):
         """ Send hello msg with options to TraX client """  
