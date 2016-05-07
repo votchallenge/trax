@@ -102,6 +102,7 @@ static void initialize_sockets(void) {}
 #include "process.h"
 #include "region.h"
 #include "threads.h"
+#include "utilities.h"
 
 using namespace std;
 
@@ -607,8 +608,9 @@ Process* configure_process(const string& command, bool explicitMode, const map<s
 
 int main( int argc, char** argv) {
     
-    int result = 0;
     int c;
+    int result = 0;
+    bool overlap_bounded = true;
     bool query_mode = false;
     bool explicit_mode = false;
     bool socket_mode = false;
@@ -714,6 +716,11 @@ int main( int argc, char** argv) {
         } else {
             print_help();
             exit(-1);
+        }
+
+        if(getenv("TRAX_BOUNDED_OVERLAP")) {
+            overlap_bounded = strcmpi(getenv("TRAX_BOUNDED_OVERLAP"), "true") == 0;
+            DEBUGMSG("Using bounded region overlap calculation\n");
         }
 
         DEBUGMSG("Tracker command: '%s'\n", trackerCommand.c_str());
@@ -884,8 +891,15 @@ int main( int argc, char** argv) {
                         // Default option, the tracker returns a valid status.
 
                         region_container* gt = groundtruth[frame];
+                        region_bounds bounds = region_no_bounds;
 
-                        float overlap = region_compute_overlap(gt, status).overlap;
+                        if (overlap_bounded) {
+                            image_size is = image_get_size(image);
+                            DEBUGMSG("Bounds for overlap calculation %dx%d\n", is.width, is.height); 
+                            bounds = region_create_bounds(0, 0, is.width, is.height);
+                        }
+
+                        float overlap = region_compute_overlap(gt, status, bounds).overlap;
 
                         DEBUGMSG("Region overlap: %.2f\n", overlap);
 

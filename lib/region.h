@@ -33,6 +33,15 @@ extern "C" {
 
 typedef enum region_type {SPECIAL, RECTANGLE, POLYGON} region_type;
 
+typedef struct region_bounds {
+
+	float top;
+	float bottom;
+	float left;
+	float right;
+
+} region_bounds;
+
 typedef struct region_polygon {
 
 	int count;
@@ -68,7 +77,11 @@ typedef struct region_overlap {
 
 } region_overlap;
 
-__TRAX_EXPORT region_overlap region_compute_overlap(region_container* ra, region_container* rb);
+extern const region_bounds region_no_bounds; 
+
+__TRAX_EXPORT region_overlap region_compute_overlap(region_container* ra, region_container* rb, region_bounds bounds);
+
+__TRAX_EXPORT region_bounds region_create_bounds(float left, float top, float right, float bottom);
 
 __TRAX_EXPORT int region_parse(char* buffer, region_container** region);
 

@@ -75,7 +75,7 @@ int main( int argc, char** argv) {
         region_print(stdout, b);
         fprintf(stdout, "\n");
 
-        float overlap = region_compute_overlap(a, b).overlap;
+        float overlap = region_compute_overlap(a, b, region_no_bounds).overlap;
 
         fprintf(stdout, "Overlap of A and B: %f\n", overlap);
 
