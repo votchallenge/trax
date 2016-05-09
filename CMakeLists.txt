@@ -39,9 +39,9 @@ ADD_LIBRARY(trax SHARED lib/trax.c lib/region.c lib/strmap.c lib/message.c)
 ADD_LIBRARY(traxstatic STATIC lib/trax.c lib/region.c lib/strmap.c lib/message.c)
 SET_TARGET_PROPERTIES(traxstatic PROPERTIES POSITION_INDEPENDENT_CODE 1)
 
-ADD_EXECUTABLE(traxdummy trackers/dummy.c)
+ADD_EXECUTABLE(native_static trackers/native_static.c)
 
-TARGET_LINK_LIBRARIES(traxdummy traxstatic)
+TARGET_LINK_LIBRARIES(native_static traxstatic)
 
 SET (BUILD_CAMSHIFT FALSE CACHE BOOL "Build an example using OpenCV CamShift tracker")
 
@@ -72,6 +72,6 @@ ENDIF()
 
 INSTALL(FILES lib/trax.h DESTINATION include)
 IF (BUILD_CLIENT)
-	INSTALL(TARGETS traxclient traxdummy RUNTIME DESTINATION bin)
+	INSTALL(TARGETS traxclient RUNTIME DESTINATION bin)
 ENDIF (BUILD_CLIENT)
 
