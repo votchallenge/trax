@@ -93,7 +93,7 @@ trax_handle* client_setup(message_stream* stream, trax_logger log) {
 
     tmp_properties = trax_properties_create();
     LIST_CREATE(arguments, 8);
-    
+  
     if (read_message((message_stream*)client->stream, client->log, &arguments, tmp_properties) != TRAX_HELLO) {
         goto failure;
     }
