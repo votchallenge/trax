@@ -201,7 +201,7 @@ void configure_signals() {
     struct sigaction sa;
     sa.sa_handler = SIG_DFL;
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_NOCLDWAIT;
+    sa.sa_flags =  SA_RESTART | SA_NOCLDSTOP; //SA_NOCLDWAIT;
     if (sigaction(SIGCHLD, &sa, 0) == -1) {
       perror(0);
       exit(1);
@@ -402,7 +402,7 @@ THREAD_CALLBACK(watchdog_loop, param) {
         run = watchdogState.active;
 
         if (watchdogState.process && !watchdogState.process->is_alive()) {
-
+            
             DEBUGMSG("Remote process has terminated ...\n");
             watchdogState.process->stop();
             watchdogState.process = NULL;
@@ -789,7 +789,7 @@ int main( int argc, char** argv) {
                     DEBUGMSG("Setting up TraX in classical mode\n");
                     trax = trax_client_setup_file(trackerProcess->get_output(), trackerProcess->get_input(), silent ? NULL : client_logger);
                 }
-
+                // TODO: check tracker exit state
                 if (!trax) throw std::runtime_error("Unable to establish connection.");
 
                 trax_cleanup(&trax);
@@ -1003,9 +1003,20 @@ int main( int argc, char** argv) {
         trax_cleanup(&trax);
 
         if (trackerProcess) {
+            int exit_status;
+
             trackerProcess->stop();
+            trackerProcess->is_alive(&exit_status);
+
             delete trackerProcess;
             trackerProcess = NULL;
+
+            if (exit_status == 0) {
+                DEBUGMSG("Tracker exited normally.\n");
+            } else {
+                fprintf(stderr, "Tracker exited (exit code %d)\n", exit_status);
+            }
+
         }
 
         result = -1;
