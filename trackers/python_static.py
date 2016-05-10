@@ -14,7 +14,7 @@ import trax.image
 import time
 
 if __name__ == '__main__':
-    options = trax.server.ServerOptions('static', 'static', trax.region.RECTANGLE, trax.image.PATH)
+    options = trax.server.ServerOptions(trax.region.RECTANGLE, trax.image.PATH)
     region = None
     delay = 0
     with trax.server.Server(options, verbose=True) as server:

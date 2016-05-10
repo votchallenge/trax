@@ -16,15 +16,14 @@ URL = "url"
 DATA = "data"
 MEMORY = "memory"
 
+def parse(string):
+    """ In derived classes implement method to parse image string """
+    return FilePath(string)
+
 class Image(object):
     """ Base class for image """
     def __init__(self):
         pass
-
-    @staticmethod
-    def parse(string):
-        """ In derived classes implement method to parse image string """
-        return FilePath(string)
 
 class FilePath(Image):
     """ Image saved in a local file """

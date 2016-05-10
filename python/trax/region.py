@@ -16,24 +16,87 @@ RECTANGLE = "rectangle"
 POLYGON = "polygon"
 MASK = "mask"
 
+def convert(region, to):
+
+    if to == RECTANGLE:
+
+        if isinstance(region, Rectangle):
+            return region.copy()
+        elif isinstance(region, Polygon):
+            top = sys.float_info.min
+            bottom = sys.float_info.max
+            left = sys.float_info.min
+            right = sys.float_info.max
+
+            for point in region.points: 
+                top = min(top, point[1])
+                bottom = max(bottom, point[1])
+                left = min(left, point[0])
+                right = max(right, point[0])
+
+            return Rectangle(left, top, right - left, bottom - top)
+
+        else:
+            return None  
+    if to == POLYGON:
+
+        if isinstance(region, Rectangle):
+            points = []
+            points.append((region.x, region.y))
+            points.append((region.x + region.width, region.y))
+            points.append((region.x + region.width, region.y + region.height))
+            points.append((region.x, region.y + region.height))
+            return Polygon(points)
+
+        elif isinstance(region, Polygon):
+            return region.copy()
+        else:
+            return None  
+
+    elif to == SPECIAL:
+        if isinstance(region, Special):
+            return region.copy()
+        else:
+            return Special()
+
+    return None
+
+def parse(string):
+    tokens = map(float, string.split(','))
+    if len(tokens) == 1:
+        return Special(tokens[0])
+    if len(tokens) == 4:
+        return Rectangle(tokens[0], tokens[1], tokens[2], tokens[3])
+    elif len(tokens) % 2 == 0 and len(tokens) > 4:
+        return Polygon([(tokens[i],tokens[i+1]) for i in xrange(0,len(tokens),2)])
+    return None
+
 class Region(object):
     """ Base class for region """
     def __init__(self):
         pass
+
+class Special(Region):
+    """ Special region 
+    """
+    def __init__(self, code):
+        """ Constructor
         
-    @staticmethod
-    def parse(string):
-        tokens = map(float, string.strip('"').split(','))
-        if len(tokens) == 4:
-            return Rectangle(tokens[0], tokens[1], tokens[2], tokens[3])
-        elif len(tokens) % 2 == 0 and len(tokens) > 4:
-            return Polygon([(tokens[i],tokens[i+1]) for i in xrange(0,len(tokens),2)])
-        return
-            
+        Args:
+            code: special code
+        """
+        super(Special, self).__init__()
+        self.type = SPECIAL
+        self.code = int(code)
+
+    def __str__(self):
+        """ Create string from class to send to client """
+        return '{}'.format(self.code)
+ 
 class Rectangle(Region):
     """ Rectangle region 
     """
-    def __init__(self, x=0, y=0, w=0, h=0):
+    def __init__(self, x=0, y=0, width=0, height=0):
         """ Constructor
         
         Args:
@@ -44,11 +107,11 @@ class Rectangle(Region):
         """
         super(Rectangle, self).__init__()
         self.type = RECTANGLE
-        self.x, self.y, self.w, self.h = x, y, w, h
+        self.x, self.y, self.width, self.height = x, y, width, height
 
     def __str__(self):
         """ Create string from class to send to client """
-        return '{},{},{},{}'.format(self.x, self.y, self.w, self.h)
+        return '{},{},{},{}'.format(self.x, self.y, self.width, self.height)
         
 class Polygon(Region):
     """ Polygon region 

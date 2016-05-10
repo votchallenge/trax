@@ -96,14 +96,14 @@ class Server(MessageParser):
         elif message.type == MessageType.INITIALIZE and len(message.arguments) == 2:
             log.info('Received initialize message.')
 
-            image = trax.image.Image.parse(message.arguments[0])
-            region = trax.region.Region.parse(message.arguments[1])        
+            image = trax.image.parse(message.arguments[0])
+            region = trax.region.parse(message.arguments[1])        
             return Request(message.type, image, region, message.parameters)
 
         elif message.type == MessageType.FRAME and len(message.arguments) == 1:
             log.info('Received frame message.')
 
-            image = trax.image.Image.parse(message.arguments[0])
+            image = trax.image.parse(message.arguments[0])
             return Request(message.type, image, None, message.parameters)               
 
         else:
@@ -128,13 +128,16 @@ class Server(MessageParser):
         self.quit()
 
     def quit(self):
-        self._close()
-        if hasattr(self, 'socket'):
-            self.socket.close()
+        try:
+            self._close()
+            if hasattr(self, 'socket'):
+                self.socket.close()
+        except IOError:
+            pass
 
 class ServerOptions(object):
     """ TraX server options """
-    def __init__(self, name, identifier, region, image, version=TRAX_VERSION):
+    def __init__(self, region, image, name=None, identifier=None, version=TRAX_VERSION):
         """ Constructor
         
         Args:
@@ -149,8 +152,10 @@ class ServerOptions(object):
         assert(region in [trax.region.RECTANGLE, trax.region.POLYGON])
         assert(image == trax.image.PATH)
 
-        self.name = name
-        self.identifier = identifier
+        if name:
+            self.name = name
+        if identifier:
+            self.identifier = identifier
         self.region = region
         self.image = image
         self.version = version
