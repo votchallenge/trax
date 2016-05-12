@@ -587,6 +587,7 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
     int mask_intersect = 0;
     char* mask1 = NULL;
     char* mask2 = NULL;
+	region_polygon *op1, *op2;
 
 	region_bounds b1 = bounds_intersection(compute_bounds(p1), bounds);
 	region_bounds b2 = bounds_intersection(compute_bounds(p2), bounds);
@@ -617,8 +618,8 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
 	mask1 = (char*) malloc(sizeof(char) * width * height);
 	mask2 = (char*) malloc(sizeof(char) * width * height);
 
-	region_polygon* op1 = offset_polygon(p1, -x, -y);
-	region_polygon* op2 = offset_polygon(p2, -x, -y);
+	op1 = offset_polygon(p1, -x, -y);
+	op2 = offset_polygon(p2, -x, -y);
 
 	rasterize_polygon(op1, mask1, width, height); 
 	rasterize_polygon(op2, mask2, width, height); 
