@@ -536,9 +536,10 @@ int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height
 		for (i = 0; i < polygon->count; i++) {
 			if (((polygon->y[i] <= (double) pixelY) && (polygon->y[j] > (double) pixelY)) ||
 					 ((polygon->y[j] <= (double) pixelY) && (polygon->y[i] > (double) pixelY))) {
-                double r = (polygon->y[j] - polygon->y[i]) * (polygon->x[j] - polygon->x[i]);
-                if (r)
-				    nodeX[nodes++] = (int) (polygon->x[i] + (pixelY - polygon->y[i]) / r); 
+                double r = (polygon->y[j] - polygon->y[i]);
+                double k = (polygon->x[j] - polygon->x[i]);
+                if (r != 0)
+				    nodeX[nodes++] = (int) ((double) polygon->x[i] + (double) (pixelY - polygon->y[i]) / r * k); 
                 else
                     nodeX[nodes++] = (int) (polygon->x[i]); 
 			}
