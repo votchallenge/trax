@@ -269,14 +269,14 @@ region_container* region_convert(const region_container* region, region_type typ
 					reg->data.polygon.y = (float *) malloc(sizeof(float) * reg->data.polygon.count);
 
 					reg->data.polygon.x[0] = region->data.rectangle.x;
-					reg->data.polygon.x[1] = region->data.rectangle.x + region->data.rectangle.width;
-					reg->data.polygon.x[2] = region->data.rectangle.x + region->data.rectangle.width;
+					reg->data.polygon.x[1] = region->data.rectangle.x + region->data.rectangle.width - 1;
+					reg->data.polygon.x[2] = region->data.rectangle.x + region->data.rectangle.width - 1;
 					reg->data.polygon.x[3] = region->data.rectangle.x;
 
 					reg->data.polygon.y[0] = region->data.rectangle.y;
 					reg->data.polygon.y[1] = region->data.rectangle.y;
-					reg->data.polygon.y[2] = region->data.rectangle.y + region->data.rectangle.height;
-					reg->data.polygon.y[3] = region->data.rectangle.y + region->data.rectangle.height;
+					reg->data.polygon.y[2] = region->data.rectangle.y + region->data.rectangle.height - 1;
+					reg->data.polygon.y[3] = region->data.rectangle.y + region->data.rectangle.height - 1;
 
 				    break;
 				}
@@ -437,6 +437,19 @@ region_polygon* offset_polygon(region_polygon* polygon, float x, float y) {
 	return clone;
 }
 
+region_polygon* round_polygon(region_polygon* polygon) {
+
+	int i;
+	region_polygon* clone = clone_polygon(polygon);
+
+	for (i = 0; i < clone->count; i++) {
+		clone->x[i] = round(clone->x[i]);
+		clone->y[i] = round(clone->y[i]);
+	}
+
+	return clone;
+}
+
 void print_polygon(region_polygon* polygon) {
 
 	int i;
@@ -467,6 +480,17 @@ region_bounds compute_bounds(region_polygon* polygon) {
 	}
 
 	return bounds;
+
+}
+
+region_bounds bounds_round(region_bounds bounds) {
+
+	bounds.top = floor(bounds.top);
+	bounds.bottom = ceil(bounds.bottom);
+	bounds.left = floor(bounds.left);
+	bounds.right = ceil(bounds.right);
+
+    return bounds;
 
 }
 
@@ -517,6 +541,30 @@ region_bounds region_create_bounds(float left, float top, float right, float bot
     return result;
 }
 
+region_bounds region_compute_bounds(region_container* region) {
+
+    region_bounds bounds;
+	switch (region->type) {
+		case RECTANGLE:
+		    bounds = region_create_bounds(region->data.rectangle.x,
+                region->data.rectangle.y,
+                region->data.rectangle.x + region->data.rectangle.width - 1,
+                region->data.rectangle.y + region->data.rectangle.height - 1);
+		    break;
+		case POLYGON: {
+            bounds = compute_bounds(&(region->data.polygon));
+		    break;
+		}
+		default: {
+            bounds = region_no_bounds;
+			break;
+		}
+	}
+
+    return bounds;
+
+}
+
 int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height) {
 
 	int nodes, pixelY, i, j, swap;
@@ -534,18 +582,18 @@ int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height
 		j = polygon->count - 1;
 
 		for (i = 0; i < polygon->count; i++) {
-			if (((polygon->y[i] <= (double) pixelY) && (polygon->y[j] > (double) pixelY)) ||
-					 ((polygon->y[j] <= (double) pixelY) && (polygon->y[i] > (double) pixelY))) {
+        if ((((int)polygon->y[i] <= pixelY) && ((int)polygon->y[j] > pixelY)) ||
+			(((int)polygon->y[j] <= pixelY) && ((int)polygon->y[i] > pixelY)) ||
+            (((int)polygon->y[i] < pixelY) && ((int)polygon->y[j] >= pixelY)) ||
+		    (((int)polygon->y[j] < pixelY) && ((int)polygon->y[i] >= pixelY)) ||
+            ((int)polygon->y[i] == (int)polygon->y[j]) && (int)polygon->y[i] == pixelY) {
                 double r = (polygon->y[j] - polygon->y[i]);
                 double k = (polygon->x[j] - polygon->x[i]);
                 if (r != 0)
 				    nodeX[nodes++] = (int) ((double) polygon->x[i] + (double) (pixelY - polygon->y[i]) / r * k); 
-                else
-                    nodeX[nodes++] = (int) (polygon->x[i]); 
 			}
 			j = i; 
 		}
-
 		/* Sort the nodes, via a simple “Bubble” sort. */
 		i = 0;
 		while (i < nodes-1) {
@@ -560,16 +608,26 @@ int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height
 		}
 
 		/*  Fill the pixels between node pairs. */
-		for (i=0; i<nodes; i+=2) {
+        i = 0;
+        while (i<nodes-1) {
+            // If a point is in the line then we get two identical values
+            // Ignore the first
+            if (nodeX[i] == nodeX[i+1]) {
+                i++;
+                continue;
+            }
+
 			if (nodeX[i] >= width) break;
-			if (nodeX[i+1] >= 0 ) {
-				if (nodeX[i] < 0 ) nodeX[i] = 0;
-				if (nodeX[i+1] > width) nodeX[i+1] = width - 1;
-				for (j = nodeX[i]; j < nodeX[i+1]; j++) {
+			if (nodeX[i+1] >= 0) {
+				if (nodeX[i] < 0) nodeX[i] = 0;
+				if (nodeX[i+1] >= width) nodeX[i+1] = width - 1;
+				for (j = nodeX[i]; j <= nodeX[i+1]; j++) {
 					if (mask) mask[pixelY * width + j] = 1; 
                     sum++;
                 }
 			}
+            i+=2;
+
 		}
 	}
 
@@ -590,14 +648,14 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
     char* mask2 = NULL;
 	region_polygon *op1, *op2;
 
-	region_bounds b1 = bounds_intersection(compute_bounds(p1), bounds);
-	region_bounds b2 = bounds_intersection(compute_bounds(p2), bounds);
+	region_bounds b1 = bounds_intersection(bounds_round(compute_bounds(p1)), bounds);
+	region_bounds b2 = bounds_intersection(bounds_round(compute_bounds(p2)), bounds);
 
 	float x = MIN(b1.left, b2.left);
 	float y = MIN(b1.top, b2.top);
 
-	int width = (int) (MAX(b1.right, b2.right) - x);	
-	int height = (int) (MAX(b1.bottom, b2.bottom) - y);
+	int width = (int) (MAX(b1.right, b2.right) - x) + 1;	
+	int height = (int) (MAX(b1.bottom, b2.bottom) - y) + 1;
 
     if (bounds_overlap(b1, b2) == 0) {
 
@@ -690,13 +748,40 @@ region_overlap region_compute_overlap(region_container* ra, region_container* rb
 void region_mask(region_container* r, char* mask, int width, int height) {
 
     region_container* t = r;
+	region_polygon *p;
 
     if (r->type == RECTANGLE)
         t = region_convert(r, POLYGON);
     
-	rasterize_polygon(&(t->data.polygon), mask, width, height); 
+	p = round_polygon(&(t->data.polygon));
+
+	rasterize_polygon(p, mask, width, height); 
+
+    free_polygon(p);
 
     if (t != r)
         region_release(&t);
 
 }
+
+void region_mask_offset(region_container* r, char* mask, int x, int y, int width, int height) {
+
+    region_container* t = r;
+	region_polygon *p, *p2;
+
+    if (r->type == RECTANGLE)
+        t = region_convert(r, POLYGON);
+    
+	p = offset_polygon(&(t->data.polygon), -x, -y);
+	p2 = round_polygon(p);
+
+	rasterize_polygon(p2, mask, width, height); 
+
+    free_polygon(p);
+    free_polygon(p2);
+
+    if (t != r)
+        region_release(&t);
+
+}
+

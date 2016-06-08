@@ -83,6 +83,8 @@ __TRAX_EXPORT region_overlap region_compute_overlap(region_container* ra, region
 
 __TRAX_EXPORT region_bounds region_create_bounds(float left, float top, float right, float bottom);
 
+__TRAX_EXPORT region_bounds region_compute_bounds(region_container* region);
+
 __TRAX_EXPORT int region_parse(char* buffer, region_container** region);
 
 __TRAX_EXPORT char* region_string(region_container* region);
@@ -100,6 +102,8 @@ __TRAX_EXPORT region_container* region_create_rectangle(float x, float y, float 
 __TRAX_EXPORT region_container* region_create_polygon(int count);
 
 __TRAX_EXPORT void region_mask(region_container* r, char* mask, int width, int height);
+
+__TRAX_EXPORT void region_mask_offset(region_container* r, char* mask, int x, int y, int width, int height);
 
 #ifdef __cplusplus
 }
