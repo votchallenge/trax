@@ -30,15 +30,19 @@ const region_bounds region_no_bounds = { -FLT_MAX, FLT_MAX, -FLT_MAX, FLT_MAX };
 
 int __flags = 0;
 
-void region_set_flags(int mask) {
+int region_set_flags(int mask) {
 
     __flags |= mask;
 
+    return __flags;
+
 }
 
-void region_clear_flags(int mask) {
+int region_clear_flags(int mask) {
 
     __flags &= ~mask;
+
+    return __flags;
 
 }
 
@@ -590,7 +594,7 @@ int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height
 	if (mask) memset(mask, 0, width * height * sizeof(char));
 
     if (__flags & REGION_LEGACY_RASTERIZATION) {
-        printf("Legacy\n");
+
         /*  Loop through the rows of the image. */
 	    for (pixelY = 0; pixelY < height; pixelY++) {
 
