@@ -584,10 +584,11 @@ region_bounds region_compute_bounds(region_container* region) {
 
 }
 
-int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height) {
+int rasterize_polygon(region_polygon* polygon_input, char* mask, int width, int height) {
 
 	int nodes, pixelY, i, j, swap;
     int sum = 0;
+    region_polygon* polygon = polygon_input;
 
 	int* nodeX = (int*) malloc(sizeof(int) * polygon->count);
 
@@ -639,6 +640,8 @@ int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height
 	    }
 
     } else {
+
+    	polygon = round_polygon(polygon_input);
 
 	    /*  Loop through the rows of the image. */
 	    for (pixelY = 0; pixelY < height; pixelY++) {
@@ -696,6 +699,8 @@ int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height
 
 		    }
 	    }
+
+        free_polygon(polygon);
 
     }
 
@@ -816,16 +821,11 @@ region_overlap region_compute_overlap(region_container* ra, region_container* rb
 void region_mask(region_container* r, char* mask, int width, int height) {
 
     region_container* t = r;
-	region_polygon *p;
 
     if (r->type == RECTANGLE)
         t = region_convert(r, POLYGON);
     
-	p = round_polygon(&(t->data.polygon));
-
-	rasterize_polygon(p, mask, width, height); 
-
-    free_polygon(p);
+	rasterize_polygon(&(t->data.polygon), mask, width, height); 
 
     if (t != r)
         region_release(&t);
@@ -835,18 +835,16 @@ void region_mask(region_container* r, char* mask, int width, int height) {
 void region_mask_offset(region_container* r, char* mask, int x, int y, int width, int height) {
 
     region_container* t = r;
-	region_polygon *p, *p2;
+	region_polygon *p;
 
     if (r->type == RECTANGLE)
         t = region_convert(r, POLYGON);
     
 	p = offset_polygon(&(t->data.polygon), -x, -y);
-	p2 = round_polygon(p);
 
-	rasterize_polygon(p2, mask, width, height); 
+	rasterize_polygon(p, mask, width, height); 
 
     free_polygon(p);
-    free_polygon(p2);
 
     if (t != r)
         region_release(&t);
