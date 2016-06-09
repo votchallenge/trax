@@ -723,7 +723,7 @@ int main( int argc, char** argv) {
         }
 
         if(getenv("TRAX_REGION_LEGACY")) {
-            if (strcmpi(getenv("TRAX_BOUNDED_OVERLAP"), "true") == 0)
+            if (strcmpi(getenv("TRAX_REGION_LEGACY"), "true") == 0)
                 region_set_flags(REGION_LEGACY_RASTERIZATION);
         }
 
