@@ -722,6 +722,11 @@ int main( int argc, char** argv) {
             DEBUGMSG("Using bounded region overlap calculation\n");
         }
 
+        if(getenv("TRAX_REGION_LEGACY")) {
+            if (strcmpi(getenv("TRAX_BOUNDED_OVERLAP"), "true") == 0)
+                region_set_flags(REGION_LEGACY_RASTERIZATION);
+        }
+
         DEBUGMSG("Tracker command: '%s'\n", trackerCommand.c_str());
 
         if (threshold >= 0)

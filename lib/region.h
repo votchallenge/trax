@@ -27,6 +27,8 @@
 
 #define TRAX_DEFAULT_CODE 0
 
+#define REGION_LEGACY_RASTERIZATION 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -78,6 +80,10 @@ typedef struct region_overlap {
 } region_overlap;
 
 extern const region_bounds region_no_bounds; 
+
+__TRAX_EXPORT void region_set_flags(int mask);
+
+__TRAX_EXPORT void region_clear_flags(int mask);
 
 __TRAX_EXPORT region_overlap region_compute_overlap(region_container* ra, region_container* rb, region_bounds bounds);
 

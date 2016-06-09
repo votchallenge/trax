@@ -23,9 +23,24 @@
 #define NAN (INFINITY-INFINITY)
 #endif
 
+
 #define PRINT_BOUNDS(B) printf("[left: %.2f, top: %.2f, right: %.2f, bottom: %.2f]\n", B.left, B.top, B.right, B.bottom)
 
 const region_bounds region_no_bounds = { -FLT_MAX, FLT_MAX, -FLT_MAX, FLT_MAX };
+
+int __flags = 0;
+
+void region_set_flags(int mask) {
+
+    __flags |= mask;
+
+}
+
+void region_clear_flags(int mask) {
+
+    __flags &= ~mask;
+
+}
 
 int __is_valid_sequence(float* sequence, int len) {
     int i;
@@ -574,62 +589,111 @@ int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height
 
 	if (mask) memset(mask, 0, width * height * sizeof(char));
 
-	/*  Loop through the rows of the image. */
-	for (pixelY = 0; pixelY < height; pixelY++) {
+    if (__flags & REGION_LEGACY_RASTERIZATION) {
+        printf("Legacy\n");
+        /*  Loop through the rows of the image. */
+	    for (pixelY = 0; pixelY < height; pixelY++) {
 
-		/*  Build a list of nodes. */
-		nodes = 0;
-		j = polygon->count - 1;
+		    /*  Build a list of nodes. */
+		    nodes = 0;
+		    j = polygon->count - 1;
 
-		for (i = 0; i < polygon->count; i++) {
-        if ((((int)polygon->y[i] <= pixelY) && ((int)polygon->y[j] > pixelY)) ||
-			(((int)polygon->y[j] <= pixelY) && ((int)polygon->y[i] > pixelY)) ||
-            (((int)polygon->y[i] < pixelY) && ((int)polygon->y[j] >= pixelY)) ||
-		    (((int)polygon->y[j] < pixelY) && ((int)polygon->y[i] >= pixelY)) ||
-            ((int)polygon->y[i] == (int)polygon->y[j]) && (int)polygon->y[i] == pixelY) {
-                double r = (polygon->y[j] - polygon->y[i]);
-                double k = (polygon->x[j] - polygon->x[i]);
-                if (r != 0)
-				    nodeX[nodes++] = (int) ((double) polygon->x[i] + (double) (pixelY - polygon->y[i]) / r * k); 
-			}
-			j = i; 
-		}
-		/* Sort the nodes, via a simple “Bubble” sort. */
-		i = 0;
-		while (i < nodes-1) {
-			if (nodeX[i] > nodeX[i+1]) {
-				swap = nodeX[i];
-				nodeX[i] = nodeX[i+1];
-				nodeX[i+1] = swap; 
-				if (i) i--; 
-			} else {
-				i++; 
-			}
-		}
+		    for (i = 0; i < polygon->count; i++) {
+			    if (((polygon->y[i] < (double) pixelY) && (polygon->y[j] >= (double) pixelY)) ||
+					     ((polygon->y[j] < (double) pixelY) && (polygon->y[i] >= (double) pixelY))) {
+				    nodeX[nodes++] = (int) (polygon->x[i] + (pixelY - polygon->y[i]) /
+					     (polygon->y[j] - polygon->y[i]) * (polygon->x[j] - polygon->x[i])); 
+			    }
+			    j = i; 
+		    }
 
-		/*  Fill the pixels between node pairs. */
-        i = 0;
-        while (i<nodes-1) {
-            // If a point is in the line then we get two identical values
-            // Ignore the first
-            if (nodeX[i] == nodeX[i+1]) {
-                i++;
-                continue;
-            }
+		    /* Sort the nodes, via a simple “Bubble” sort. */
+		    i = 0;
+		    while (i < nodes-1) {
+			    if (nodeX[i]>nodeX[i+1]) {
+				    swap = nodeX[i];
+				    nodeX[i] = nodeX[i+1];
+				    nodeX[i+1] = swap; 
+				    if (i) i--; 
+			    } else {
+				    i++; 
+			    }
+		    }
 
-			if (nodeX[i] >= width) break;
-			if (nodeX[i+1] >= 0) {
-				if (nodeX[i] < 0) nodeX[i] = 0;
-				if (nodeX[i+1] >= width) nodeX[i+1] = width - 1;
-				for (j = nodeX[i]; j <= nodeX[i+1]; j++) {
-					if (mask) mask[pixelY * width + j] = 1; 
-                    sum++;
+		    /*  Fill the pixels between node pairs. */
+		    for (i=0; i<nodes; i+=2) {
+			    if (nodeX[i] >= width) break;
+			    if (nodeX[i+1] > 0 ) {
+				    if (nodeX[i] < 0 ) nodeX[i] = 0;
+				    if (nodeX[i+1] > width) nodeX[i+1] = width - 1;
+				    for (j = nodeX[i]; j < nodeX[i+1]; j++) {
+					    if (mask) mask[pixelY * width + j] = 1; 
+                        sum++;
+                    }
+			    }
+		    }
+	    }
+
+    } else {
+
+	    /*  Loop through the rows of the image. */
+	    for (pixelY = 0; pixelY < height; pixelY++) {
+
+		    /*  Build a list of nodes. */
+		    nodes = 0;
+		    j = polygon->count - 1;
+
+		    for (i = 0; i < polygon->count; i++) {
+            if ((((int)polygon->y[i] <= pixelY) && ((int)polygon->y[j] > pixelY)) ||
+			    (((int)polygon->y[j] <= pixelY) && ((int)polygon->y[i] > pixelY)) ||
+                (((int)polygon->y[i] < pixelY) && ((int)polygon->y[j] >= pixelY)) ||
+		        (((int)polygon->y[j] < pixelY) && ((int)polygon->y[i] >= pixelY)) ||
+                (((int)polygon->y[i] == (int)polygon->y[j])) && ((int)polygon->y[i] == pixelY)) {
+                    double r = (polygon->y[j] - polygon->y[i]);
+                    double k = (polygon->x[j] - polygon->x[i]);
+                    if (r != 0)
+				        nodeX[nodes++] = (int) ((double) polygon->x[i] + (double) (pixelY - polygon->y[i]) / r * k); 
+			    }
+			    j = i; 
+		    }
+		    /* Sort the nodes, via a simple “Bubble” sort. */
+		    i = 0;
+		    while (i < nodes-1) {
+			    if (nodeX[i] > nodeX[i+1]) {
+				    swap = nodeX[i];
+				    nodeX[i] = nodeX[i+1];
+				    nodeX[i+1] = swap; 
+				    if (i) i--; 
+			    } else {
+				    i++; 
+			    }
+		    }
+
+		    /*  Fill the pixels between node pairs. */
+            i = 0;
+            while (i<nodes-1) {
+                // If a point is in the line then we get two identical values
+                // Ignore the first
+                if (nodeX[i] == nodeX[i+1]) {
+                    i++;
+                    continue;
                 }
-			}
-            i+=2;
 
-		}
-	}
+			    if (nodeX[i] >= width) break;
+			    if (nodeX[i+1] >= 0) {
+				    if (nodeX[i] < 0) nodeX[i] = 0;
+				    if (nodeX[i+1] >= width) nodeX[i+1] = width - 1;
+				    for (j = nodeX[i]; j <= nodeX[i+1]; j++) {
+					    if (mask) mask[pixelY * width + j] = 1; 
+                        sum++;
+                    }
+			    }
+                i+=2;
+
+		    }
+	    }
+
+    }
 
 	free(nodeX);
 
