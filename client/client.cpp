@@ -609,7 +609,7 @@ Process* configure_process(const string& command, bool explicitMode, const map<s
 int main( int argc, char** argv) {
     int c;
     int result = 0;
-    bool overlap_bounded = true;
+    bool overlap_bounded = false;
     bool query_mode = false;
     bool explicit_mode = false;
     bool socket_mode = false;
@@ -718,11 +718,14 @@ int main( int argc, char** argv) {
         }
 
         if(getenv("TRAX_BOUNDED_OVERLAP")) {
+            printf("TRAX_BOUNDED_OVERLAP: %s \n", getenv("TRAX_BOUNDED_OVERLAP"));
             overlap_bounded = strcmpi(getenv("TRAX_BOUNDED_OVERLAP"), "true") == 0;
-            DEBUGMSG("Using bounded region overlap calculation\n");
+            if (overlap_bounded)      
+                DEBUGMSG("Using bounded region overlap calculation\n");
         }
 
         if(getenv("TRAX_REGION_LEGACY")) {
+            printf("TRAX_REGION_LEGACY: %s \n", getenv("TRAX_REGION_LEGACY"));
             if (strcmpi(getenv("TRAX_REGION_LEGACY"), "true") == 0)
                 region_set_flags(REGION_LEGACY_RASTERIZATION);
         }

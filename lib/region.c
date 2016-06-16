@@ -287,15 +287,31 @@ region_container* region_convert(const region_container* region, region_type typ
 					reg->data.polygon.x = (float *) malloc(sizeof(float) * reg->data.polygon.count);
 					reg->data.polygon.y = (float *) malloc(sizeof(float) * reg->data.polygon.count);
 
-					reg->data.polygon.x[0] = region->data.rectangle.x;
-					reg->data.polygon.x[1] = region->data.rectangle.x + region->data.rectangle.width - 1;
-					reg->data.polygon.x[2] = region->data.rectangle.x + region->data.rectangle.width - 1;
-					reg->data.polygon.x[3] = region->data.rectangle.x;
+                    if (__flags & REGION_LEGACY_RASTERIZATION) {
 
-					reg->data.polygon.y[0] = region->data.rectangle.y;
-					reg->data.polygon.y[1] = region->data.rectangle.y;
-					reg->data.polygon.y[2] = region->data.rectangle.y + region->data.rectangle.height - 1;
-					reg->data.polygon.y[3] = region->data.rectangle.y + region->data.rectangle.height - 1;
+					    reg->data.polygon.x[0] = region->data.rectangle.x;
+					    reg->data.polygon.x[1] = region->data.rectangle.x + region->data.rectangle.width;
+					    reg->data.polygon.x[2] = region->data.rectangle.x + region->data.rectangle.width;
+					    reg->data.polygon.x[3] = region->data.rectangle.x;
+
+					    reg->data.polygon.y[0] = region->data.rectangle.y;
+					    reg->data.polygon.y[1] = region->data.rectangle.y;
+					    reg->data.polygon.y[2] = region->data.rectangle.y + region->data.rectangle.height;
+					    reg->data.polygon.y[3] = region->data.rectangle.y + region->data.rectangle.height;
+
+                    } else {
+
+					    reg->data.polygon.x[0] = region->data.rectangle.x;
+					    reg->data.polygon.x[1] = region->data.rectangle.x + region->data.rectangle.width - 1;
+					    reg->data.polygon.x[2] = region->data.rectangle.x + region->data.rectangle.width - 1;
+					    reg->data.polygon.x[3] = region->data.rectangle.x;
+
+					    reg->data.polygon.y[0] = region->data.rectangle.y;
+					    reg->data.polygon.y[1] = region->data.rectangle.y;
+					    reg->data.polygon.y[2] = region->data.rectangle.y + region->data.rectangle.height - 1;
+					    reg->data.polygon.y[3] = region->data.rectangle.y + region->data.rectangle.height - 1;
+
+                    }
 
 				    break;
 				}
@@ -565,10 +581,17 @@ region_bounds region_compute_bounds(region_container* region) {
     region_bounds bounds;
 	switch (region->type) {
 		case RECTANGLE:
-		    bounds = region_create_bounds(region->data.rectangle.x,
-                region->data.rectangle.y,
-                region->data.rectangle.x + region->data.rectangle.width - 1,
-                region->data.rectangle.y + region->data.rectangle.height - 1);
+            if (__flags & REGION_LEGACY_RASTERIZATION) {
+		        bounds = region_create_bounds(region->data.rectangle.x,
+                    region->data.rectangle.y,
+                    region->data.rectangle.x + region->data.rectangle.width,
+                    region->data.rectangle.y + region->data.rectangle.height);
+            } else {
+		        bounds = region_create_bounds(region->data.rectangle.x,
+                    region->data.rectangle.y,
+                    region->data.rectangle.x + region->data.rectangle.width - 1,
+                    region->data.rectangle.y + region->data.rectangle.height - 1);
+            }
 		    break;
 		case POLYGON: {
             bounds = compute_bounds(&(region->data.polygon));
@@ -720,9 +743,15 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
     char* mask1 = NULL;
     char* mask2 = NULL;
 	region_polygon *op1, *op2;
+    region_bounds b1, b2;
 
-	region_bounds b1 = bounds_intersection(bounds_round(compute_bounds(p1)), bounds);
-	region_bounds b2 = bounds_intersection(bounds_round(compute_bounds(p2)), bounds);
+    if (__flags & REGION_LEGACY_RASTERIZATION) {
+	    b1 = bounds_intersection(compute_bounds(p1), bounds);
+	    b2 = bounds_intersection(compute_bounds(p2), bounds);
+    } else {
+	    b1 = bounds_intersection(bounds_round(compute_bounds(p1)), bounds);
+	    b2 = bounds_intersection(bounds_round(compute_bounds(p2)), bounds);
+    }
 
 	float x = MIN(b1.left, b2.left);
 	float y = MIN(b1.top, b2.top);
