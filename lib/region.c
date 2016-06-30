@@ -742,6 +742,7 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
     int mask_intersect = 0;
     char* mask1 = NULL;
     char* mask2 = NULL;
+	double a1, a2;
 	region_polygon *op1, *op2;
     region_bounds b1, b2;
 
@@ -758,6 +759,25 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
 
 	int width = (int) (MAX(b1.right, b2.right) - x) + 1;	
 	int height = (int) (MAX(b1.bottom, b2.bottom) - y) + 1;
+
+	// Fixing crashes due to overflowed regions, a simple check if the ratio
+	// between the two bounding boxes is simply too big and the overlap would
+	// be 0 anyway.
+
+	a1 = (b1.right - b1.left) * (b1.bottom - b1.top);
+	a2 = (b2.right - b2.left) * (b2.bottom - b2.top);
+
+	if (a1 / a2 < 1e-10 || a2 / a1 < 1e-10 || width < 1 || height < 1) {
+
+        if (only1)
+	        (*only1) = 0;
+
+        if (only2)
+	        (*only2) = 0;
+
+        return 0;
+
+	}
 
     if (bounds_overlap(b1, b2) == 0) {
 
