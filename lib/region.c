@@ -420,7 +420,7 @@ region_container* region_create_polygon(int count) {
 	}
 }
 
-#define MAX_MASK 4000
+#define MAX_MASK 10000
 
 void free_polygon(region_polygon* polygon) {
 
@@ -502,10 +502,10 @@ region_bounds compute_bounds(region_polygon* polygon) {
 
 	int i;
 	region_bounds bounds;
-	bounds.top = MAX_MASK;
-	bounds.bottom = -MAX_MASK;
-	bounds.left = MAX_MASK;
-	bounds.right = -MAX_MASK;
+	bounds.top = FLT_MAX;
+	bounds.bottom = -FLT_MAX;
+	bounds.left = FLT_MAX;
+	bounds.right = -FLT_MAX;
 
 	for (i = 0; i < polygon->count; i++) {
 		bounds.top = MIN(bounds.top, polygon->y[i]);
