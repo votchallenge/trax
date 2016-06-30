@@ -560,7 +560,7 @@ float bounds_overlap(region_bounds a, region_bounds b) {
     region_bounds rintersection = bounds_intersection(a, b);
     float intersection = (rintersection.right - rintersection.left) * (rintersection.bottom - rintersection.top);
 
-    return intersection / (((a.right - a.left) * (a.bottom - a.top)) + ((b.right - b.left) * (b.bottom - b.top)) - intersection);
+    return MAX(0, intersection / (((a.right - a.left) * (a.bottom - a.top)) + ((b.right - b.left) * (b.bottom - b.top)) - intersection));
 
 }
 
