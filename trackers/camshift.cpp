@@ -13,7 +13,8 @@
 
 #include <iostream>
 
-#include "trax.h"
+#include <trax.h>
+#include <trax/opencv.hpp>
 
 using namespace std;
 using namespace cv;
@@ -22,39 +23,6 @@ Rect trackWindow;
 int hsize = 16;
 float hranges[] = {0,180};
 const float* phranges = hranges;
-
-Mat read_image(trax_image* input) {
-
-    switch (trax_image_get_type(input)) {
-    case TRAX_IMAGE_PATH:
-        return imread(string(trax_image_get_path(input)), CV_LOAD_IMAGE_COLOR);
-    case TRAX_IMAGE_MEMORY: {
-        int width, height, format;
-        trax_image_get_memory_header(input, &width, &height, &format);
-        char* data = trax_image_get_memory_row(input, 0);
-
-        Mat tmp(height, width, format == TRAX_IMAGE_MEMORY_RGB ? CV_8UC3 : 
-            (format == TRAX_IMAGE_MEMORY_GRAY8 ? CV_8UC1 : CV_16U), data);
-
-        Mat result;
-
-        cv::cvtColor(tmp, result, CV_BGR2RGB);
-        
-        return result;
-    }
-    case TRAX_IMAGE_BUFFER: {
-        int length, format;
-        const char* buffer = trax_image_get_buffer(input, &length, &format);
-
-        // This is problematic but we will just read from the buffer anyway ...
-        const Mat mem(1, length, CV_8UC1, const_cast<char *>(buffer)); 
-
-        return imdecode(mem, CV_LOAD_IMAGE_COLOR);
-
-    }
-    }
-    return cv::Mat();
-}
 
 CvRect box2rect(CvBox2D box) {
 
@@ -94,7 +62,7 @@ int main( int argc, char** argv )
     trax_handle* trax;
     trax_configuration config;
     config.format_region = TRAX_REGION_RECTANGLE;
-    config.format_image = TRAX_IMAGE_MEMORY;
+    config.format_image = TRAX_IMAGE_MEMORY | TRAX_IMAGE_BUFFER | TRAX_IMAGE_PATH;
 
     // Call trax_server_setup to initialize trax protocol
     trax = trax_server_setup(config, NULL);
@@ -159,7 +127,7 @@ int main( int argc, char** argv )
 
         // In trax mode images are read from the disk. The master program tells the
         // tracker where to get them.
-        Mat frame = read_image(img);
+        Mat frame = trax::image_to_mat(img);
 
         imshow("Text", frame);
         waitKey(1);

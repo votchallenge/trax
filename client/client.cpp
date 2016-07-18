@@ -52,6 +52,7 @@
 #ifdef TRAX_BUILD_OPENCV
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <trax/opencv.hpp>
 #endif
 
 #define TRAX_DEFAULT_PORT 9090
@@ -433,24 +434,7 @@ trax_image* load_image(trax_handle* trax, string& path) {
 #ifdef TRAX_BUILD_OPENCV
     case TRAX_IMAGE_MEMORY: {
         cv::Mat cvmat = cv::imread(path);
-        int format = 0;
-        switch(cvmat.type()) {
-        case CV_8UC1:
-            format = TRAX_IMAGE_MEMORY_GRAY8;
-            break;
-        case CV_16UC1:
-            format = TRAX_IMAGE_MEMORY_GRAY16;
-            break;
-        case CV_8UC3:
-            format = TRAX_IMAGE_MEMORY_RGB;
-            break;
-        default:
-            throw std::runtime_error("Unsupported image depth");
-        }
-        image = trax_image_create_memory(cvmat.cols, cvmat.rows, format);
-        char* dst = trax_image_get_memory_row(image, 0);
-        cv::Mat tmp(cvmat.size(), cvmat.type(), dst);
-        cv::cvtColor(cvmat, tmp, CV_BGR2RGB);
+        image = trax::mat_to_image(cvmat);
         break;
     }
 #endif

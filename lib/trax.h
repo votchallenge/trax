@@ -228,35 +228,40 @@ __TRAX_EXPORT trax_image* trax_image_create_buffer(int length, const char* data)
 /**
  * Returns a type of the image handle.
 **/
-__TRAX_EXPORT int trax_image_get_type(trax_image* image);
+__TRAX_EXPORT int trax_image_get_type(const trax_image* image);
 
 /**
  * Returns a file path from a file-system path image description. This function
  * returns a pointer to the internal data which should not be modified.
 **/
-__TRAX_EXPORT const char* trax_image_get_path(trax_image* image);
+__TRAX_EXPORT const char* trax_image_get_path(const trax_image* image);
 
 /**
  * Returns a file path from a URL path image description. This function
  * returns a pointer to the internal data which should not be modified.
 **/
-__TRAX_EXPORT const char* trax_image_get_url(trax_image* image);
+__TRAX_EXPORT const char* trax_image_get_url(const trax_image* image);
 
 /**
  * Returns the header data of a memory image.
 **/
-__TRAX_EXPORT void trax_image_get_memory_header(trax_image* image, int* width, int* height, int* format);
+__TRAX_EXPORT void trax_image_get_memory_header(const trax_image* image, int* width, int* height, int* format);
 
 /**
- * Returns a pointer for a row in a data array of an image.
+ * Returns a pointer for a writeable row in a data array of an image.
 **/
-__TRAX_EXPORT char* trax_image_get_memory_row(trax_image* image, int row);
+__TRAX_EXPORT char* trax_image_write_memory_row(trax_image* image, int row);
+
+/**
+ * Returns a read-only pointer for a row in a data array of an image.
+**/
+__TRAX_EXPORT const char* trax_image_get_memory_row(const trax_image* image, int row);
 
 /**
  * Returns a file buffer and its length. This function
  * returns a pointer to the internal data which should not be modified.
 **/
-__TRAX_EXPORT const char* trax_image_get_buffer(trax_image* image, int* length, int* format);
+__TRAX_EXPORT const char* trax_image_get_buffer(const trax_image* image, int* length, int* format);
 
 /**
  * Releases region structure, frees allocated memory.

@@ -258,8 +258,7 @@ trax_image* image_decode(char* buffer) {
     if (strcmp(buffer, "file") == 0) {
         result = trax_image_create_path(buffer + (compare_prefix(resource, "//") ? 7 : 5));
     } else if (strcmp(buffer, "image") == 0) {
-        int outlen;
-        int width, height, depth, format, channels, allocated, verify;
+        int outlen, width, height, depth, format, channels, allocated, verify;
         char* token;
 
         width = strtol(resource, &resource, 10);
@@ -291,25 +290,25 @@ trax_image* image_decode(char* buffer) {
         result->data = (char*) malloc(sizeof(char) * allocated);
         verify = base64decode(result->data, resource);
 
-//printf("AA: %d %d %d %d %d %d %d\n", allocated, outlen, verify, channels, depth, width, height);fflush(stdout);
-
         assert(verify == allocated);
 
     } else if (strcmp(buffer, "data") == 0) {
-        int format, outlen = base64decodelen(resource);
+        int format, outlen;
         char* token;
 
         token = resource + 1;
         resource = strntok(token, ';', 32);
         if (!resource) return NULL;
         format = decode_buffer_format(token);
+        outlen = base64decodelen(resource);
 
         result = (trax_image*) malloc(sizeof(trax_image));
         result->type = TRAX_IMAGE_BUFFER;
         result->width = outlen;
         result->height = 1;
+        result->format = format;
 
-        result->data = (char*) malloc(sizeof(char) * (result->format + 1));
+        result->data = (char*) malloc(sizeof(char) * (outlen));
         base64decode(result->data, resource);
     } else {
         *(resource--) = ':'; // Restore the semicolon and use the buffer as URL
@@ -962,13 +961,13 @@ trax_image* trax_image_create_buffer(int length, const char* data) {
 
 }
 
- int trax_image_get_type(trax_image* image) {
+ int trax_image_get_type(const trax_image* image) {
 
     return image->type;
 
 }
 
-const char* trax_image_get_path(trax_image* image) {
+const char* trax_image_get_path(const trax_image* image) {
 
     assert(image->type == TRAX_IMAGE_PATH);
 
@@ -976,14 +975,14 @@ const char* trax_image_get_path(trax_image* image) {
 
 }
 
-const char* trax_image_get_url(trax_image* image) {
+const char* trax_image_get_url(const trax_image* image) {
 
     assert(image->type == TRAX_IMAGE_URL);
 
     return image->data;
 }
 
-void trax_image_get_memory_header(trax_image* image, int* width, int* height, int* format) {
+void trax_image_get_memory_header(const trax_image* image, int* width, int* height, int* format) {
 
     assert(image->type == TRAX_IMAGE_MEMORY);
 
@@ -993,22 +992,39 @@ void trax_image_get_memory_header(trax_image* image, int* width, int* height, in
 
 }
 
-char* trax_image_get_memory_row(trax_image* image, int row) {
+#define MEMORY_DEPTH(image) (image->format == TRAX_IMAGE_MEMORY_RGB ? 1 : \
+        (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : \
+        (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0))) \
+
+#define MEMORY_CHANNELS(image) (channels = image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1)
+
+char* trax_image_write_memory_row(trax_image* image, int row) {
 
     int depth, channels;
 
     assert(image->type == TRAX_IMAGE_MEMORY);
     assert(row >= 0 && row < image->height);
 
-    depth = image->format == TRAX_IMAGE_MEMORY_RGB ? 1 : 
-        (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : 
-        (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
-    channels = image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
+    depth = MEMORY_DEPTH(image);
+    channels = MEMORY_CHANNELS(image);
 
     return &(image->data[depth * channels * row]);
 }
 
-const char* trax_image_get_buffer(trax_image* image, int* length, int* format) {
+const char* trax_image_get_memory_row(const trax_image* image, int row) {
+
+    int depth, channels;
+
+    assert(image->type == TRAX_IMAGE_MEMORY);
+    assert(row >= 0 && row < image->height);
+
+    depth = MEMORY_DEPTH(image);
+    channels = MEMORY_CHANNELS(image);
+
+    return &(image->data[depth * channels * row]);
+}
+
+const char* trax_image_get_buffer(const trax_image* image, int* length, int* format) {
 
     assert(image->type == TRAX_IMAGE_BUFFER);
 
