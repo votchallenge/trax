@@ -23,14 +23,28 @@
 #define NAN (INFINITY-INFINITY)
 #endif
 
-typedef struct region_bounds {
 
-	float top;
-	float bottom;
-	float left;
-	float right;
+#define PRINT_BOUNDS(B) printf("[left: %.2f, top: %.2f, right: %.2f, bottom: %.2f]\n", B.left, B.top, B.right, B.bottom)
 
-} region_bounds;
+const region_bounds region_no_bounds = { -FLT_MAX, FLT_MAX, -FLT_MAX, FLT_MAX };
+
+int __flags = 0;
+
+int region_set_flags(int mask) {
+
+    __flags |= mask;
+
+    return __flags;
+
+}
+
+int region_clear_flags(int mask) {
+
+    __flags &= ~mask;
+
+    return __flags;
+
+}
 
 int __is_valid_sequence(float* sequence, int len) {
     int i;
@@ -273,15 +287,31 @@ region_container* region_convert(const region_container* region, region_type typ
 					reg->data.polygon.x = (float *) malloc(sizeof(float) * reg->data.polygon.count);
 					reg->data.polygon.y = (float *) malloc(sizeof(float) * reg->data.polygon.count);
 
-					reg->data.polygon.x[0] = region->data.rectangle.x;
-					reg->data.polygon.x[1] = region->data.rectangle.x + region->data.rectangle.width;
-					reg->data.polygon.x[2] = region->data.rectangle.x + region->data.rectangle.width;
-					reg->data.polygon.x[3] = region->data.rectangle.x;
+                    if (__flags & REGION_LEGACY_RASTERIZATION) {
 
-					reg->data.polygon.y[0] = region->data.rectangle.y;
-					reg->data.polygon.y[1] = region->data.rectangle.y;
-					reg->data.polygon.y[2] = region->data.rectangle.y + region->data.rectangle.height;
-					reg->data.polygon.y[3] = region->data.rectangle.y + region->data.rectangle.height;
+					    reg->data.polygon.x[0] = region->data.rectangle.x;
+					    reg->data.polygon.x[1] = region->data.rectangle.x + region->data.rectangle.width;
+					    reg->data.polygon.x[2] = region->data.rectangle.x + region->data.rectangle.width;
+					    reg->data.polygon.x[3] = region->data.rectangle.x;
+
+					    reg->data.polygon.y[0] = region->data.rectangle.y;
+					    reg->data.polygon.y[1] = region->data.rectangle.y;
+					    reg->data.polygon.y[2] = region->data.rectangle.y + region->data.rectangle.height;
+					    reg->data.polygon.y[3] = region->data.rectangle.y + region->data.rectangle.height;
+
+                    } else {
+
+					    reg->data.polygon.x[0] = region->data.rectangle.x;
+					    reg->data.polygon.x[1] = region->data.rectangle.x + region->data.rectangle.width - 1;
+					    reg->data.polygon.x[2] = region->data.rectangle.x + region->data.rectangle.width - 1;
+					    reg->data.polygon.x[3] = region->data.rectangle.x;
+
+					    reg->data.polygon.y[0] = region->data.rectangle.y;
+					    reg->data.polygon.y[1] = region->data.rectangle.y;
+					    reg->data.polygon.y[2] = region->data.rectangle.y + region->data.rectangle.height - 1;
+					    reg->data.polygon.y[3] = region->data.rectangle.y + region->data.rectangle.height - 1;
+
+                    }
 
 				    break;
 				}
@@ -390,7 +420,7 @@ region_container* region_create_polygon(int count) {
 	}
 }
 
-#define MAX_MASK 4000
+#define MAX_MASK 10000
 
 void free_polygon(region_polygon* polygon) {
 
@@ -442,6 +472,19 @@ region_polygon* offset_polygon(region_polygon* polygon, float x, float y) {
 	return clone;
 }
 
+region_polygon* round_polygon(region_polygon* polygon) {
+
+	int i;
+	region_polygon* clone = clone_polygon(polygon);
+
+	for (i = 0; i < clone->count; i++) {
+		clone->x[i] = round(clone->x[i]);
+		clone->y[i] = round(clone->y[i]);
+	}
+
+	return clone;
+}
+
 void print_polygon(region_polygon* polygon) {
 
 	int i;
@@ -459,10 +502,10 @@ region_bounds compute_bounds(region_polygon* polygon) {
 
 	int i;
 	region_bounds bounds;
-	bounds.top = MAX_MASK;
-	bounds.bottom = -MAX_MASK;
-	bounds.left = MAX_MASK;
-	bounds.right = -MAX_MASK;
+	bounds.top = FLT_MAX;
+	bounds.bottom = -FLT_MAX;
+	bounds.left = FLT_MAX;
+	bounds.right = -FLT_MAX;
 
 	for (i = 0; i < polygon->count; i++) {
 		bounds.top = MIN(bounds.top, polygon->y[i]);
@@ -475,92 +518,241 @@ region_bounds compute_bounds(region_polygon* polygon) {
 
 }
 
-float compute_bounds_overlap(region_bounds a, region_bounds b) {
+region_bounds bounds_round(region_bounds bounds) {
 
-    float width;
-    float height;
-    float intersection;
-    
-    width = MIN(a.right, b.right) - MAX(a.left, b.left);
-    width = MAX(0, width);
-    height = MIN(a.bottom, b.bottom) - MAX(a.top, b.top);
-    height = MAX(0, height);
+	bounds.top = floor(bounds.top);
+	bounds.bottom = ceil(bounds.bottom);
+	bounds.left = floor(bounds.left);
+	bounds.right = ceil(bounds.right);
 
-    intersection = width * height; 
-
-    return intersection / (((a.right - a.left) * (a.bottom - a.top)) + ((b.right - b.left) * (b.bottom - b.top)) - intersection);
+    return bounds;
 
 }
 
-int rasterize_polygon(region_polygon* polygon, char* mask, int width, int height) {
+region_bounds bounds_intersection(region_bounds a, region_bounds b) {
+
+    region_bounds result;
+
+    result.top = MAX(a.top, b.top);
+    result.bottom = MIN(a.bottom, b.bottom);
+    result.left = MAX(a.left, b.left);
+    result.right = MIN(a.right, b.right);
+
+    return result;
+
+}
+
+region_bounds bounds_union(region_bounds a, region_bounds b) {
+
+    region_bounds result;
+
+    result.top = MIN(a.top, b.top);
+    result.bottom = MAX(a.bottom, b.bottom);
+    result.left = MIN(a.left, b.left);
+    result.right = MAX(a.right, b.right);
+
+    return result;
+
+}
+
+float bounds_overlap(region_bounds a, region_bounds b) {
+
+    region_bounds rintersection = bounds_intersection(a, b);
+    float intersection = (rintersection.right - rintersection.left) * (rintersection.bottom - rintersection.top);
+
+    return MAX(0, intersection / (((a.right - a.left) * (a.bottom - a.top)) + ((b.right - b.left) * (b.bottom - b.top)) - intersection));
+
+}
+
+region_bounds region_create_bounds(float left, float top, float right, float bottom) {
+    
+    region_bounds result;
+
+    result.top = top;
+    result.bottom = bottom;
+    result.left = left;
+    result.right = right;
+
+    return result;
+}
+
+region_bounds region_compute_bounds(region_container* region) {
+
+    region_bounds bounds;
+	switch (region->type) {
+		case RECTANGLE:
+            if (__flags & REGION_LEGACY_RASTERIZATION) {
+		        bounds = region_create_bounds(region->data.rectangle.x,
+                    region->data.rectangle.y,
+                    region->data.rectangle.x + region->data.rectangle.width,
+                    region->data.rectangle.y + region->data.rectangle.height);
+            } else {
+		        bounds = region_create_bounds(region->data.rectangle.x,
+                    region->data.rectangle.y,
+                    region->data.rectangle.x + region->data.rectangle.width - 1,
+                    region->data.rectangle.y + region->data.rectangle.height - 1);
+            }
+		    break;
+		case POLYGON: {
+            bounds = compute_bounds(&(region->data.polygon));
+		    break;
+		}
+		default: {
+            bounds = region_no_bounds;
+			break;
+		}
+	}
+
+    return bounds;
+
+}
+
+int rasterize_polygon(region_polygon* polygon_input, char* mask, int width, int height) {
 
 	int nodes, pixelY, i, j, swap;
     int sum = 0;
+    region_polygon* polygon = polygon_input;
 
 	int* nodeX = (int*) malloc(sizeof(int) * polygon->count);
 
 	if (mask) memset(mask, 0, width * height * sizeof(char));
 
-	/*  Loop through the rows of the image. */
-	for (pixelY = 0; pixelY < height; pixelY++) {
+    if (__flags & REGION_LEGACY_RASTERIZATION) {
 
-		/*  Build a list of nodes. */
-		nodes = 0;
-		j = polygon->count - 1;
+        /*  Loop through the rows of the image. */
+	    for (pixelY = 0; pixelY < height; pixelY++) {
 
-		for (i = 0; i < polygon->count; i++) {
-			if (((polygon->y[i] < (double) pixelY) && (polygon->y[j] >= (double) pixelY)) ||
-					 ((polygon->y[j] < (double) pixelY) && (polygon->y[i] >= (double) pixelY))) {
-				nodeX[nodes++] = (int) (polygon->x[i] + (pixelY - polygon->y[i]) /
-					 (polygon->y[j] - polygon->y[i]) * (polygon->x[j] - polygon->x[i])); 
-			}
-			j = i; 
-		}
+		    /*  Build a list of nodes. */
+		    nodes = 0;
+		    j = polygon->count - 1;
 
-		/* Sort the nodes, via a simple “Bubble” sort. */
-		i = 0;
-		while (i < nodes-1) {
-			if (nodeX[i]>nodeX[i+1]) {
-				swap = nodeX[i];
-				nodeX[i] = nodeX[i+1];
-				nodeX[i+1] = swap; 
-				if (i) i--; 
-			} else {
-				i++; 
-			}
-		}
+		    for (i = 0; i < polygon->count; i++) {
+			    if (((polygon->y[i] < (double) pixelY) && (polygon->y[j] >= (double) pixelY)) ||
+					     ((polygon->y[j] < (double) pixelY) && (polygon->y[i] >= (double) pixelY))) {
+				    nodeX[nodes++] = (int) (polygon->x[i] + (pixelY - polygon->y[i]) /
+					     (polygon->y[j] - polygon->y[i]) * (polygon->x[j] - polygon->x[i])); 
+			    }
+			    j = i; 
+		    }
 
-		/*  Fill the pixels between node pairs. */
-		for (i=0; i<nodes; i+=2) {
-			if (nodeX[i] >= width) break;
-			if (nodeX[i+1] > 0 ) {
-				if (nodeX[i] < 0 ) nodeX[i] = 0;
-				if (nodeX[i+1] > width) nodeX[i+1] = width - 1;
-				for (j = nodeX[i]; j < nodeX[i+1]; j++) {
-					if (mask) mask[pixelY * width + j] = 1; 
-                    sum++;
+		    /* Sort the nodes, via a simple “Bubble” sort. */
+		    i = 0;
+		    while (i < nodes-1) {
+			    if (nodeX[i]>nodeX[i+1]) {
+				    swap = nodeX[i];
+				    nodeX[i] = nodeX[i+1];
+				    nodeX[i+1] = swap; 
+				    if (i) i--; 
+			    } else {
+				    i++; 
+			    }
+		    }
+
+		    /*  Fill the pixels between node pairs. */
+		    for (i=0; i<nodes; i+=2) {
+			    if (nodeX[i] >= width) break;
+			    if (nodeX[i+1] > 0 ) {
+				    if (nodeX[i] < 0 ) nodeX[i] = 0;
+				    if (nodeX[i+1] > width) nodeX[i+1] = width - 1;
+				    for (j = nodeX[i]; j < nodeX[i+1]; j++) {
+					    if (mask) mask[pixelY * width + j] = 1; 
+                        sum++;
+                    }
+			    }
+		    }
+	    }
+
+    } else {
+
+    	polygon = round_polygon(polygon_input);
+
+	    /*  Loop through the rows of the image. */
+	    for (pixelY = 0; pixelY < height; pixelY++) {
+
+		    /*  Build a list of nodes. */
+		    nodes = 0;
+		    j = polygon->count - 1;
+
+		    for (i = 0; i < polygon->count; i++) {
+            if ((((int)polygon->y[i] <= pixelY) && ((int)polygon->y[j] > pixelY)) ||
+			    (((int)polygon->y[j] <= pixelY) && ((int)polygon->y[i] > pixelY)) ||
+                (((int)polygon->y[i] < pixelY) && ((int)polygon->y[j] >= pixelY)) ||
+		        (((int)polygon->y[j] < pixelY) && ((int)polygon->y[i] >= pixelY)) ||
+                (((int)polygon->y[i] == (int)polygon->y[j])) && ((int)polygon->y[i] == pixelY)) {
+                    double r = (polygon->y[j] - polygon->y[i]);
+                    double k = (polygon->x[j] - polygon->x[i]);
+                    if (r != 0)
+				        nodeX[nodes++] = (int) ((double) polygon->x[i] + (double) (pixelY - polygon->y[i]) / r * k); 
+			    }
+			    j = i; 
+		    }
+		    /* Sort the nodes, via a simple “Bubble” sort. */
+		    i = 0;
+		    while (i < nodes-1) {
+			    if (nodeX[i] > nodeX[i+1]) {
+				    swap = nodeX[i];
+				    nodeX[i] = nodeX[i+1];
+				    nodeX[i+1] = swap; 
+				    if (i) i--; 
+			    } else {
+				    i++; 
+			    }
+		    }
+
+		    /*  Fill the pixels between node pairs. */
+            i = 0;
+            while (i<nodes-1) {
+                // If a point is in the line then we get two identical values
+                // Ignore the first
+                if (nodeX[i] == nodeX[i+1]) {
+                    i++;
+                    continue;
                 }
-			}
-		}
-	}
+
+			    if (nodeX[i] >= width) break;
+			    if (nodeX[i+1] >= 0) {
+				    if (nodeX[i] < 0) nodeX[i] = 0;
+				    if (nodeX[i+1] >= width) nodeX[i+1] = width - 1;
+				    for (j = nodeX[i]; j <= nodeX[i+1]; j++) {
+					    if (mask) mask[pixelY * width + j] = 1; 
+                        sum++;
+                    }
+			    }
+                i+=2;
+
+		    }
+	    }
+
+        free_polygon(polygon);
+
+    }
 
 	free(nodeX);
 
+    return sum;
 }
 
-float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *only1, float *only2) {
+float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *only1, float *only2, region_bounds bounds) {
 
-	int i;
+    int i;
     int vol_1 = 0;
-	int vol_2 = 0;
+    int vol_2 = 0;
     int mask_1 = 0;
-	int mask_2 = 0;
-	int mask_intersect = 0;
+    int mask_2 = 0;
+    int mask_intersect = 0;
     char* mask1 = NULL;
     char* mask2 = NULL;
+	double a1, a2;
+	region_polygon *op1, *op2;
+    region_bounds b1, b2;
 
-	region_bounds b1 = compute_bounds(p1);
-	region_bounds b2 = compute_bounds(p2);
+    if (__flags & REGION_LEGACY_RASTERIZATION) {
+	    b1 = bounds_intersection(compute_bounds(p1), bounds);
+	    b2 = bounds_intersection(compute_bounds(p2), bounds);
+    } else {
+	    b1 = bounds_intersection(bounds_round(compute_bounds(p1)), bounds);
+	    b2 = bounds_intersection(bounds_round(compute_bounds(p2)), bounds);
+    }
 
 	float x = MIN(b1.left, b2.left);
 	float y = MIN(b1.top, b2.top);
@@ -568,17 +760,36 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
 	int width = (int) (MAX(b1.right, b2.right) - x) + 1;	
 	int height = (int) (MAX(b1.bottom, b2.bottom) - y) + 1;
 
-    if (compute_bounds_overlap(b1, b2) == 0) {
+	// Fixing crashes due to overflowed regions, a simple check if the ratio
+	// between the two bounding boxes is simply too big and the overlap would
+	// be 0 anyway.
+
+	a1 = (b1.right - b1.left) * (b1.bottom - b1.top);
+	a2 = (b2.right - b2.left) * (b2.bottom - b2.top);
+
+	if (a1 / a2 < 1e-10 || a2 / a1 < 1e-10 || width < 1 || height < 1) {
+
+        if (only1)
+	        (*only1) = 0;
+
+        if (only2)
+	        (*only2) = 0;
+
+        return 0;
+
+	}
+
+    if (bounds_overlap(b1, b2) == 0) {
 
         if (only1 || only2) {
-	        mask_1 = rasterize_polygon(p1, NULL, b1.right - b1.left + 1, b1.bottom - b1.top + 1); 
-	        mask_2 = rasterize_polygon(p2, NULL, b2.right - b2.left + 1, b2.bottom - b2.top + 1); 
+	        vol_1 = rasterize_polygon(p1, NULL, b1.right - b1.left + 1, b1.bottom - b1.top + 1); 
+	        vol_2 = rasterize_polygon(p2, NULL, b2.right - b2.left + 1, b2.bottom - b2.top + 1); 
 
 	        if (only1)
-		        (*only1) = (float) mask_1 / (float) (mask_1 + mask_2);
+		        (*only1) = (float) vol_1 / (float) (vol_1 + vol_2);
 
 	        if (only2)
-		        (*only2) = (float) mask_2 / (float) (mask_1 + mask_2);
+		        (*only2) = (float) vol_2 / (float) (vol_1 + vol_2);
         }
 
         return 0;
@@ -588,8 +799,8 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
 	mask1 = (char*) malloc(sizeof(char) * width * height);
 	mask2 = (char*) malloc(sizeof(char) * width * height);
 
-	region_polygon* op1 = offset_polygon(p1, -x, -y);
-	region_polygon* op2 = offset_polygon(p2, -x, -y);
+	op1 = offset_polygon(p1, -x, -y);
+	op2 = offset_polygon(p2, -x, -y);
 
 	rasterize_polygon(op1, mask1, width, height); 
 	rasterize_polygon(op2, mask2, width, height); 
@@ -620,7 +831,7 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
 
 #define COPY_POLYGON(TP, P) { P.count = TP->data.polygon.count; P.x = TP->data.polygon.x; P.y = TP->data.polygon.y; }
 
-region_overlap region_compute_overlap(region_container* ra, region_container* rb) {
+region_overlap region_compute_overlap(region_container* ra, region_container* rb, region_bounds bounds) {
 
     region_container* ta = ra;
     region_container* tb = rb;
@@ -642,7 +853,7 @@ region_overlap region_compute_overlap(region_container* ra, region_container* rb
         COPY_POLYGON(ta, p1);
         COPY_POLYGON(tb, p2);
 
-        overlap.overlap = compute_polygon_overlap(&p1, &p2, &(overlap.only1), &(overlap.only2));
+        overlap.overlap = compute_polygon_overlap(&p1, &p2, &(overlap.only1), &(overlap.only2), bounds);
 
     }
 
@@ -669,3 +880,23 @@ void region_mask(region_container* r, char* mask, int width, int height) {
         region_release(&t);
 
 }
+
+void region_mask_offset(region_container* r, char* mask, int x, int y, int width, int height) {
+
+    region_container* t = r;
+	region_polygon *p;
+
+    if (r->type == RECTANGLE)
+        t = region_convert(r, POLYGON);
+    
+	p = offset_polygon(&(t->data.polygon), -x, -y);
+
+	rasterize_polygon(p, mask, width, height); 
+
+    free_polygon(p);
+
+    if (t != r)
+        region_release(&t);
+
+}
+

@@ -288,8 +288,16 @@ __INLINE int write_string(message_stream* stream, const char* buf, int len) {
 
     } else {
 
-    	write(stream->files.output, buf, len);
-       
+	    int cnt = 0;
+
+	    while(cnt < len) {
+		    int l = write(stream->files.output, buf, len);
+		    if(l == -1) {
+			    return -1;
+		    }
+		    cnt += l;
+	    }
+
     }
 
 	return 1;

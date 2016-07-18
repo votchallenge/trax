@@ -142,7 +142,7 @@ char** parse_command(const char* command) {
 }
 
 
-Process::Process(string command, bool explicit_mode) : explicit_mode(explicit_mode) {
+Process::Process(string command, bool explicit_mode) : explicit_mode(explicit_mode), running(false) {
 
 #ifdef WIN32
 	piProcInfo.hProcess = 0;
@@ -282,6 +282,7 @@ bool Process::start() {
 		curdir, &siStartInfo, &piProcInfo )) {
 
 		std::cout << "Error: " << GetLastError()  << std::endl;
+        running = true;
 		cleanup();
 		return false;
 	}
@@ -349,6 +350,7 @@ bool Process::start() {
         chdir(directory.c_str());
 
     if (posix_spawnp(&pid, program, &action, NULL, arguments, vars_c.data())) {
+        running = true;
         cleanup();
         pid = 0;
         if (directory.size() > 0) chdir(cwd.c_str());
@@ -363,32 +365,28 @@ bool Process::start() {
 
 #endif
 
+    running = true;
+
     return true;
 
 }
 
 bool Process::stop() {
 
-#ifdef WIN32
+	if (!running) return false;
 
-	if (!piProcInfo.hProcess) return NULL;
+#ifdef WIN32
 
 	bool result = TerminateProcess(piProcInfo.hProcess, 0);
 
 	cleanup();
 
-	piProcInfo.hProcess = 0;
-
 	return result;
 #else
-
-    if (!pid) return false;
 
     kill(pid, SIGTERM);
 
     cleanup();
-
-    pid = 0;
 
 #endif
 
@@ -397,9 +395,9 @@ bool Process::stop() {
 //GetExitCodeProcess
 void Process::cleanup() {
 
-#ifdef WIN32
+    if (!running) return;
 
-	if (!piProcInfo.hProcess) return;
+#ifdef WIN32
 
 	CloseHandle(piProcInfo.hProcess);
 	CloseHandle(piProcInfo.hThread);
@@ -419,7 +417,6 @@ void Process::cleanup() {
 	CloseHandle(handle_ERR_Wr);
 
 #else
-	if (!pid) return;
 
     close(out[0]);
     close(err[0]);
@@ -432,15 +429,12 @@ void Process::cleanup() {
 
 #endif
 
+    running = false;
 }
 
 int Process::get_input() {
 
-#ifdef WIN32
-	if (!piProcInfo.hProcess) return -1;
-#else
-    if (!pid) return -1;
-#endif
+    if (!running) return -1;
 
     return p_stdin;
 
@@ -448,11 +442,7 @@ int Process::get_input() {
 
 int Process::get_output() {
 
-#ifdef WIN32
-	if (!piProcInfo.hProcess) return -1;
-#else
-    if (!pid) return -1;
-#endif
+    if (!running) return -1;
 
     return p_stdout;
 
@@ -460,46 +450,69 @@ int Process::get_output() {
 
 int Process::get_error() {
 
-#ifdef WIN32
-	if (!piProcInfo.hProcess) return -1;
-#else
-    if (!pid) return -1;
-#endif
+    if (!running) return -1;
 
     return p_stderr;
 
 }
 
-bool Process::is_alive() {
+bool Process::is_alive(int *status) {
 
 #ifdef WIN32
 
-	DWORD dwExitCode = 9999;
+	DWORD dwExitCode = STILL_ACTIVE;
 
-	if (GetExitCodeProcess(piProcInfo.hProcess, &dwExitCode))
+	if (GetExitCodeProcess(piProcInfo.hProcess, &dwExitCode)) {
+        if (status) *status = dwExitCode;
 		return dwExitCode == STILL_ACTIVE;
-	else
+	} else
 		return false;
 
 #else
 
-    if (!pid) return false;
-
-    if (0 == kill(pid, 0))
-        return true;
-    else 
+    if (pid == 0) {
+        if (status) *status = exit_status;
         return false;
+    }
 
+
+    int childExitStatus;
+    int result = waitpid(pid, &childExitStatus, WNOHANG);
+    if (result <= 0) {
+        return result == 0;
+    }
+
+    if (WIFEXITED(childExitStatus)) {
+        exit_status = WEXITSTATUS(childExitStatus);
+    }
+
+    if (WIFSIGNALED(childExitStatus)) {
+        exit_status = WTERMSIG(childExitStatus);
+    }
+
+    if (WIFSTOPPED(childExitStatus)) {
+        exit_status = WSTOPSIG(childExitStatus);
+    }
+    
+    if (status) *status = exit_status;
+
+    cleanup();
+
+    pid = 0;
+
+    return true;
 #endif
 
 }
 
 int Process::get_handle() {
 
+    if (!running) return 0;
+
 #ifdef WIN32
-	if (!piProcInfo.hProcess) return 0; else return (int) GetProcessId(piProcInfo.hProcess);
+	return (int) GetProcessId(piProcInfo.hProcess);
 #else
-    if (!pid) return 0; else return pid;
+    return pid;
 #endif
 
 }

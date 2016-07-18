@@ -27,11 +27,22 @@
 
 #define TRAX_DEFAULT_CODE 0
 
+#define REGION_LEGACY_RASTERIZATION 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef enum region_type {SPECIAL, RECTANGLE, POLYGON, MASK} region_type;
+
+typedef struct region_bounds {
+
+	float top;
+	float bottom;
+	float left;
+	float right;
+
+} region_bounds;
 
 typedef struct region_polygon {
 
@@ -68,7 +79,17 @@ typedef struct region_overlap {
 
 } region_overlap;
 
-__TRAX_EXPORT region_overlap region_compute_overlap(region_container* ra, region_container* rb);
+extern const region_bounds region_no_bounds; 
+
+__TRAX_EXPORT int region_set_flags(int mask);
+
+__TRAX_EXPORT int region_clear_flags(int mask);
+
+__TRAX_EXPORT region_overlap region_compute_overlap(region_container* ra, region_container* rb, region_bounds bounds);
+
+__TRAX_EXPORT region_bounds region_create_bounds(float left, float top, float right, float bottom);
+
+__TRAX_EXPORT region_bounds region_compute_bounds(region_container* region);
 
 __TRAX_EXPORT int region_parse(char* buffer, region_container** region);
 
@@ -87,6 +108,8 @@ __TRAX_EXPORT region_container* region_create_rectangle(float x, float y, float 
 __TRAX_EXPORT region_container* region_create_polygon(int count);
 
 __TRAX_EXPORT void region_mask(region_container* r, char* mask, int width, int height);
+
+__TRAX_EXPORT void region_mask_offset(region_container* r, char* mask, int x, int y, int width, int height);
 
 #ifdef __cplusplus
 }

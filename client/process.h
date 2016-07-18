@@ -47,7 +47,7 @@ public:
 
     int get_handle();
 
-    bool is_alive();
+    bool is_alive(int *status = NULL);
 
     // Explicit streams
     bool is_explicit();
@@ -73,7 +73,10 @@ private:
     string directory;
     map<string, string> env;
 
+    bool running;
+
     int explicit_mode;
+    int exit_status;
 
 #ifdef WIN32
 	// http://msdn.microsoft.com/en-us/library/windows/desktop/ms682499%28v=vs.85%29.aspx
