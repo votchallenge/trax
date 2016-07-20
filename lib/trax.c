@@ -963,6 +963,8 @@ trax_image* trax_image_create_buffer(int length, const char* data) {
 
  int trax_image_get_type(const trax_image* image) {
 
+    if (!image) return TRAX_IMAGE_EMPTY;
+
     return image->type;
 
 }
@@ -1072,6 +1074,8 @@ trax_region* trax_region_get_bounds(const trax_region* region) {
 }
 
 int trax_region_get_type(const trax_region* region) {
+
+    if (!region) return TRAX_REGION_EMPTY;
 
     return REGION_TYPE(region);
 

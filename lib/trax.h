@@ -9,22 +9,22 @@
 #ifndef __TRAX_EXPORT
 #if defined(_MSC_VER)
 #if defined(_TRAX_BUILDING)
-    #define __TRAX_EXPORT __declspec(dllexport)
+#define __TRAX_EXPORT __declspec(dllexport)
 #else
-	#define __TRAX_EXPORT
+#define __TRAX_EXPORT
 #endif
 #elif defined(_GCC)
-    #define __TRAX_EXPORT __attribute__((visibility("default")))
+#define __TRAX_EXPORT __attribute__((visibility("default")))
 #else
-    #define __TRAX_EXPORT
+#define __TRAX_EXPORT
 #endif
 #endif
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
-    #define TRAX_NO_LOG (~0)
-	#pragma comment(lib, "ws2_32.lib")
+#define TRAX_NO_LOG (~0)
+#pragma comment(lib, "ws2_32.lib")
 #else
-    #define TRAX_NO_LOG -1
+#define TRAX_NO_LOG -1
 #endif
 
 #define TRAX_VERSION 1
@@ -39,8 +39,8 @@
 
 #define TRAX_IMAGE_EMPTY 0
 #define TRAX_IMAGE_PATH 1
-#define TRAX_IMAGE_URL 2 
-#define TRAX_IMAGE_MEMORY 4 
+#define TRAX_IMAGE_URL 2
+#define TRAX_IMAGE_MEMORY 4
 #define TRAX_IMAGE_BUFFER 8
 
 #define TRAX_IMAGE_BUFFER_ILLEGAL 0
@@ -52,9 +52,10 @@
 #define TRAX_IMAGE_MEMORY_GRAY16 2
 #define TRAX_IMAGE_MEMORY_RGB 3
 
-#define TRAX_REGION_SPECIAL 0
-#define TRAX_REGION_RECTANGLE 1
-#define TRAX_REGION_POLYGON 2
+#define TRAX_REGION_EMPTY 0
+#define TRAX_REGION_SPECIAL 1
+#define TRAX_REGION_RECTANGLE 2
+#define TRAX_REGION_POLYGON 3
 #define TRAX_REGION_MASK 4 // Not implemented yet!
 
 #define TRAX_FLAG_VALID 1
@@ -108,8 +109,8 @@ typedef void(*trax_enumerator)(const char *key, const char *value, const void *o
  * Some basic configuration data used to set up the server.
 **/
 typedef struct trax_configuration {
-        int format_region;
-        int format_image;
+    int format_region;
+    int format_image;
 } trax_configuration;
 
 /**
@@ -386,6 +387,394 @@ __TRAX_EXPORT void trax_properties_enumerate(trax_properties* properties, trax_e
 
 #ifdef __cplusplus
 }
+
+#include <string>
+#include <algorithm>
+
+namespace trax {
+
+class Image;
+class Region;
+class Properties;
+
+class Wrapper {
+public:
+    virtual ~Wrapper();
+
+protected:
+    Wrapper();
+    
+    Wrapper(const Wrapper& count);
+
+    void swap(Wrapper& lhs) throw();
+
+    long claims() throw();
+
+    /**
+     * Call after the wrapped pointer has been created or copied to increase
+     * reference count;
+    **/
+    void acquire();
+
+    /**
+     * Call instead of releasing memory to decrease reference count. If the 
+     * reference count comes to zero then cleanup() is called.
+    **/
+    void release() throw();
+
+    virtual void cleanup() = 0;
+
+public:
+
+    long* pn;
+
+};
+
+class Handle: public Wrapper {
+public:
+    /**
+     * Closes communication, sends quit message if needed.
+    **/
+    virtual ~Handle();
+
+    /**
+     * Sets the parameter for the client or server instance.
+    **/
+    int set_parameter(int id, int value);
+
+    /**
+     * Gets the parameter for the client or server instance.
+    **/
+    int get_parameter(int id, int* value);
+
+protected:
+
+    virtual void cleanup();
+
+    void wrap(trax_handle* obj);
+
+    Handle();
+    trax_handle* handle;
+};
+
+typedef trax_configuration Configuration;
+
+class Client: public Handle {
+public:
+    /**
+     * Sets up the protocol for the client side and returns a handle object.
+    **/
+    Client(int input, int output, trax_logger log);
+
+    /**
+     * Sets up the protocol for the client side and returns a handle object.
+    **/
+    Client(int server, trax_logger log,  int timeout = -1);
+
+    virtual ~Client();
+
+    /**
+    * Waits for a valid protocol message from the server.
+    **/
+    int wait(Region& region, Properties& properties);
+
+    /**
+    * Sends an initialize message.
+    **/
+    int initialize(const Image& image, const Region& region, const Properties& properties);
+
+    /**
+    * Sends a frame message.
+    **/
+    int frame(const Image& image, const Properties& properties);
+
+    const Configuration configuration();
+
+protected:
+
+    using Handle::cleanup;
+
+private:
+
+    Client& operator=(Client p) throw();
+
+};
+
+class Server: public Handle {
+public:
+
+    /**
+     * Sets up the protocol for the server side and returns a handle object.
+    **/
+    Server(Configuration configuration, trax_logger log);
+
+    virtual ~Server();
+
+    /**
+     * Waits for a valid protocol message from the client.
+    **/
+    int wait(Image& image, Region& region, Properties& properties);
+
+    /**
+     * Sends a status reply to the client.
+    **/
+    int reply(const Region& region, const Properties& properties);
+
+    const Configuration configuration();
+
+private:
+    Server& operator=(Server p) throw();
+
+};
+
+class Image : public Wrapper {
+friend Client;
+friend Server;
+public:
+
+    Image();
+
+    /**
+     * Creates a file-system path image description.
+    **/
+    static Image create_path(const std::string& path);
+
+    /**
+     * Creates a URL path image description.
+    **/
+    static Image create_url(const std::string& url);
+
+    /**
+     * Creates a raw buffer image description.
+    **/
+    static Image create_memory(int width, int height, int format);
+
+    /**
+     * Creates a file buffer image description.
+    **/
+    static Image create_buffer(int length, const char* data);
+
+    /**
+     * Releases image structure, frees allocated memory.
+    **/
+    ~Image();
+
+    /**
+     * Returns a type of the image handle.
+    **/
+    int type() const;
+
+    /**
+     * Returns a file path from a file-system path image description. This function
+     * returns a pointer to the internal data which should not be modified.
+    **/
+    const std::string get_path() const;
+
+    /**
+     * Returns a file path from a URL path image description. This function
+     * returns a pointer to the internal data which should not be modified.
+    **/
+    const std::string get_url() const;
+
+    /**
+     * Returns the header data of a memory image.
+    **/
+    void get_memory_header(int* width, int* height, int* format) const;
+
+    /**
+     * Returns a pointer for a writeable row in a data array of an image.
+    **/
+    char* write_memory_row(int row);
+
+    /**
+     * Returns a read-only pointer for a row in a data array of an image.
+    **/
+    const char* get_memory_row(int row) const;
+
+    /**
+     * Returns a file buffer and its length. This function
+     * returns a pointer to the internal data which should not be modified.
+    **/
+    const char* get_buffer(int* length, int* format) const;
+
+    Image& operator=(Image lhs) throw();
+
+protected:
+
+    virtual void cleanup();
+
+    void wrap(trax_image* obj);
+
+private:
+
+    trax_image* image;
+
+};
+
+class Region : public Wrapper {
+friend Client;
+friend Server;
+public:
+
+    Region();
+
+    /**
+     * Creates a special region object. Only one paramter (region code) required.
+    **/
+    static Region create_static(int code);
+
+    /**
+     * Creates a rectangle region.
+    **/
+    static Region create_rectangle(float x, float y, float width, float height);
+
+    /**
+     * Creates a polygon region object for a given amout of points. Note that the coordinates of the points
+     * are arbitrary and have to be set after allocation.
+    **/
+    static Region create_polygon(int count);
+
+    /**
+     * Releases region, frees allocated memory.
+    **/
+    ~Region();
+
+    /**
+     * Returns type identifier of the region object.
+    **/
+    int type() const;
+
+    /**
+     * Sets the code of a special region.
+    **/
+    void set(int code);
+
+    /**
+     * Returns a code of a special region object.
+    **/
+    int get() const;
+
+    /**
+     * Sets the coordinates for a rectangle region.
+    **/
+    void set(float x, float y, float width, float height);
+
+    /**
+     * Retreives coordinate from a rectangle region object.
+    **/
+    void get(float* x, float* y, float* width, float* height) const;
+
+    /**
+     * Sets coordinates of a given point in the polygon.
+    **/
+    void set_polygon_point(int index, float x, float y);
+
+    /**
+     * Retrieves the coordinates of a specific point in the polygon.
+    **/
+    void get_polygon_point(int index, float* x, float* y) const;
+
+    /**
+     * Returns the number of points in the polygon.
+    **/
+    int get_polygon_count() const;
+
+    /**
+     * Creates a rectangle region object that bounds the input region (in case the input
+     * region is also a rectangle it just clones it).
+     **/
+    Region bounds() const;
+
+    Region& operator=(Region lhs) throw();
+
+protected:
+
+    virtual void cleanup();
+
+    void wrap(trax_region* obj);
+
+private:
+
+    trax_region* region;
+};
+
+class Properties : public Wrapper {
+friend Client;
+friend Server;
+public:
+
+    /**
+     * Create a property object.
+     **/
+    Properties();
+
+    /**
+     * Destroy a properties object and clean up the memory.
+     **/
+    ~Properties();
+
+    /**
+     * Clear a properties object.
+     **/
+    void clear();
+
+    /**
+     * Set a string property (the value string is cloned).
+     **/
+    void set(const std::string key, const std::string value);
+
+    /**
+     * Set an integer property. The value will be encoded as a string.
+     **/
+    void set(const std::string key, int value);
+
+    /**
+     * Set an floating point value property. The value will be encoded as a string.
+     **/
+    void set(const std::string key, float value);
+
+    /**
+     * Get a string property.
+     **/
+    std::string get(const std::string key);
+
+    /**
+     * Get an integer property. A stored string value is converted to an integer. If this is not possible
+     * or the property does not exist a given default value is returned.
+     **/
+    int get(const std::string key, int def);
+
+    /**
+     * Get an floating point value property. A stored string value is converted to an integer. If this is not possible
+     * or the property does not exist a given default value is returned.
+     **/
+    float get(const std::string key, float def);
+
+    /**
+     * Iterate over the property set using a callback function. An optional pointer can be given and is forwarded
+     * to the callback.
+     **/
+    void enumerate(trax_enumerator enumerator, void* object);
+
+    Properties& operator=(Properties lhs) throw();
+
+protected:
+
+    virtual void cleanup();
+
+    void wrap(trax_properties* obj);
+
+private:
+
+    void ensure_unique();
+
+    trax_properties* properties;
+
+};
+
+
+}
+
 #endif
 
 #endif
