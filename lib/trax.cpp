@@ -160,6 +160,9 @@ Client::~Client() {
 int Client::wait(Region& region, Properties& properties) {
 
 	trax_region* tregion = NULL;
+
+	properties.ensure_unique();
+
 	int result = trax_client_wait(handle, &tregion, properties.properties);
 
 	if (tregion)
@@ -201,6 +204,8 @@ int Server::wait(Image& image, Region& region, Properties& properties) {
 
 	trax_image* timage = NULL;
 	trax_region* tregion = NULL;
+
+	properties.ensure_unique();
 
 	int result = trax_server_wait(handle, &timage, &tregion, properties.properties);
 
@@ -374,6 +379,7 @@ void  Region::set(float x, float y, float width, float height)  {
 }
 
 void  Region::get(float* x, float* y, float* width, float* height) const {
+
 	trax_region_get_rectangle(region, x, y, width, height);
 }
 
