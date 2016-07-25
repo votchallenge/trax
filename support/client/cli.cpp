@@ -45,6 +45,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <vector>
 #include <fstream>
 #include <sstream>
 #include <streambuf>
@@ -56,8 +57,6 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <trax/opencv.hpp>
 #endif
-
-#define TRAX_DEFAULT_PORT 9090
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <ctype.h>
@@ -87,16 +86,12 @@ __inline void sleep(long time) {
 #endif
 
 #include "getopt.h"
-#include "utilities.h"
+#include "region.h"
 
 using namespace std;
 using namespace trax;
 
-#define LOGGER_BUFFER_SIZE 1024
-
 #define CMD_OPTIONS "hsdI:G:f:O:S:r:t:T:p:e:xXQ"
-
-#define DEBUGMSG(...) if (debug) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
 
 #ifndef MAX
 #define MAX(a,b) ((a) > (b)) ? (a) : (b)
@@ -108,15 +103,7 @@ using namespace trax;
 
 float threshold = -1;
 int timeout = 30;
-bool debug = false;
-bool silent = false;
 int reinitialize = 0;
-string imagesFile;
-string groundtruthFile;
-string initializationFile;
-string outputFile;
-string timingFile;
-string trackerCommand;
 
 void print_help() {
 
@@ -127,7 +114,7 @@ void print_help() {
 
     cout << "Usage: traxclient [-h] [-d] [-I image_list] [-O output_file] \n";
     cout << "\t [-f threshold] [-r frames] [-G groundtruth_file] [-e name=value] \n";
-    cout << "\t [-p name=value] [-t timeout] [-s] [-T timings_file] [-x] [-X]\n";
+    cout << "\t [-p name=value] [-t timeout] [-s] [-T timing_file] [-x] [-X]\n";
     cout << "\t -- <command_part1> <command_part2> ...";
 
     cout << "\n\nProgram arguments: \n";
@@ -172,130 +159,150 @@ void configure_signals() {
 
 }
 
-void load_data(vector<string>& images, vector<region_container*>& groundtruth, vector<region_container*>& initialization) {
+#include <string.h>
 
-    std::ifstream if_images, if_groundtruth, if_initialization;
+typedef struct image_size {
+    int width;
+    int height;
+} image_size;
 
-    if_images.open(imagesFile.c_str(), std::ifstream::in);
-    if_groundtruth.open(groundtruthFile.c_str(), std::ifstream::in);
+// Based on the example from: http://www.wischik.com/lu/programmer/get-image-size.html
+// Retrieve image size from image header
+image_size image_get_size(Image image) { 
 
-    if (!initializationFile.empty())
-        if_initialization.open(initializationFile.c_str(), std::ifstream::in);
+    image_size result;
+    const string filename = image.get_path();
 
-    if (!if_groundtruth.is_open()) {
-        throw std::runtime_error("Groundtruth file not available.");
+    result.width = -1;
+    result.height = -1;
+
+    FILE *f=fopen(filename.c_str(),"rb");
+    if ( f==0 ) return result;
+
+    fseek(f,0,SEEK_END); 
+    long len=ftell(f);
+    fseek(f,0,SEEK_SET); 
+
+    if (len<24) {fclose(f); return result;}
+
+    // Strategy:
+    // reading GIF dimensions requires the first 10 bytes of the file
+    // reading PNG dimensions requires the first 24 bytes of the file
+    // reading JPEG dimensions requires scanning through jpeg chunks
+    // In all formats, the file is at least 24 bytes big, so we'll read that always
+    unsigned char buf[24];
+    fread(buf,1,24,f);
+
+    // For JPEGs, we need to read the first 12 bytes of each chunk.
+    // We'll read those 12 bytes at buf+2...buf+14, i.e. overwriting the existing buf.
+    if (buf[0]==0xFF && buf[1]==0xD8 && buf[2]==0xFF && buf[3]==0xE0 && buf[6]=='J' && buf[7]=='F' && buf[8]=='I' && buf[9]=='F') {
+        long pos=2;
+        while (buf[2]==0xFF) {
+            if (buf[3]==0xC0 || buf[3]==0xC1 || buf[3]==0xC2 || buf[3]==0xC3 || buf[3]==0xC9 || buf[3]==0xCA || buf[3]==0xCB) break;
+            pos += 2+(buf[4]<<8)+buf[5];
+            if (pos+12>len) break;
+            fseek(f,pos,SEEK_SET); fread(buf+2,1,12,f);    
+        }
     }
 
-    if (!if_images.is_open()) {
+    fclose(f);
+
+    // JPEG: (first two bytes of buf are first two bytes of the jpeg file; rest of buf is the DCT frame
+    if (buf[0]==0xFF && buf[1]==0xD8 && buf[2]==0xFF) { 
+        result.height = (buf[7]<<8) + buf[8];
+        result.width = (buf[9]<<8) + buf[10];
+    }
+
+    // GIF: first three bytes say "GIF", next three give version number. Then dimensions
+    if (buf[0]=='G' && buf[1]=='I' && buf[2]=='F') {
+        result.width = buf[6] + (buf[7]<<8);
+        result.height = buf[8] + (buf[9]<<8);
+    }
+
+    // PNG: the first frame is by definition an IHDR frame, which gives dimensions
+    if ( buf[0]==0x89 && buf[1]=='P' && buf[2]=='N' && buf[3]=='G' && buf[4]==0x0D && buf[5]==0x0A && buf[6]==0x1A && buf[7]==0x0A
+        && buf[12]=='I' && buf[13]=='H' && buf[14]=='D' && buf[15]=='R') {
+        result.width = (buf[16]<<24) + (buf[17]<<16) + (buf[18]<<8) + (buf[19]<<0);
+        result.height = (buf[20]<<24) + (buf[21]<<16) + (buf[22]<<8) + (buf[23]<<0);
+    }
+
+  return result;
+}
+
+void load_images(const string& file, vector<string>& list) {
+
+    std::ifstream input;
+
+    input.open(file.c_str(), std::ifstream::in);
+
+    if (!input.is_open())
         throw std::runtime_error("Image list file not available.");
+
+    while (true) {
+        string line;
+        getline(input, line);
+        if (!input.good()) break;
+        list.push_back(line);
     }
+    
+    input.close();
+}
 
-    size_t line_size = sizeof(char) * 2048;
-    char* gt_line_buffer = (char*) malloc(line_size);
-    char* it_line_buffer = (char*) malloc(line_size);
-    char* im_line_buffer = (char*) malloc(line_size);
+bool load_trajectory(const string& file, vector<Region>& trajectory) {
 
-    int line = 0;
+    std::ifstream input;
+
+    input.open(file.c_str(), std::ifstream::in);
+
+    if (!input.is_open())
+        throw std::runtime_error(string("Unable to open trajectory file: ") + file);
 
     while (1) {
 
-        if_groundtruth.getline(gt_line_buffer, line_size);
+        Region region;
+        input >> region;
 
-        if (!if_groundtruth.good()) break;
+        if (!input.good()) break;
 
-        if_images.getline(im_line_buffer, line_size);
-
-        if (!if_images.good()) break;
-
-        line++;
-
-        region_container* region;
-
-        if (region_parse(gt_line_buffer, &region)) {
-
-            groundtruth.push_back(region);
-            images.push_back(string(im_line_buffer));
-
-        } else
-            DEBUGMSG("Unable to parse region data at line %d!\n", line); // TODO: do not know how to handle this ... probably a warning
-
-        if (if_initialization.is_open()) {
-
-            if_initialization.getline(it_line_buffer, line_size);
-
-            if (!if_initialization.good()) break;
-
-            if (!if_initialization.good()) {
-
-                initialization.push_back(NULL);
-
-            } else {
-
-                region_container* initialization_region;
-
-                if (region_parse(it_line_buffer, &initialization_region)) {
-
-                    initialization.push_back(initialization_region);
-
-                } else initialization.push_back(NULL);
-
-            }
-
-        }
+        trajectory.push_back(region);
 
     }
 
-    if_groundtruth.close();
-    if_images.close();
-    if (if_initialization.is_open()) if_initialization.close();
+    input.close();
 
-    free(gt_line_buffer);
-    free(it_line_buffer);
-    free(im_line_buffer);
+    return false;
 
 }
 
-void save_data(vector<region_container*>& output) {
+void save_trajectory(const string& file, vector<Region>& trajectory) {
 
-    FILE *outFp = fopen(outputFile.c_str(), "w");
+    std::ofstream output;
 
-    if (!outFp) {
-        throw std::runtime_error("Unable to open output file for writing.");
-    }
+    output.open(file.c_str(), std::ofstream::out);
 
-    for (int i = 0; i < output.size(); i++) {
+    for (vector<Region>::iterator it = trajectory.begin(); it != trajectory.end(); it++) {
 
-        region_container* r = output[i];
-
-        if (!r) {
-            fprintf(outFp, "\n");
-            continue;
-        }
-
-        region_print(outFp, r);
-        fprintf(outFp, "\n");
+        output << *it;
 
     }
 
-    fclose(outFp);
+    output.close();
 
 }
 
-void save_timings(vector<long>& timings) {
+void save_timings(const string& file, vector<long>& timings) {
 
-    FILE *outFp = fopen(timingFile.c_str(), "w");
+    std::ofstream output;
 
-    if (!outFp) {
-        throw std::runtime_error("Unable to open timings file for writing.");
-    }
+    output.open(file.c_str(), std::ofstream::out);
 
-    for (int i = 0; i < timings.size(); i++) {
+    for (vector<long>::iterator it = timings.begin(); it != timings.end(); it++) {
 
-       fprintf(outFp, "%ld\n", timings[i]);
+        output << *it << endl;
 
     }
 
-    fclose(outFp);
+    output.close();
 
 }
 
@@ -314,11 +321,11 @@ Image load_image(string& path, int formats) {
     else
         throw std::runtime_error("No supported image format allowed");
 
-    Image image = NULL;
+    Image image;
 
     switch (image_format) {
     case TRAX_IMAGE_PATH: {
-        return Image.create_path(path);
+        return Image::create_path(path);
     }
     case TRAX_IMAGE_BUFFER: {
         // Read the file to memory
@@ -328,7 +335,7 @@ Image load_image(string& path, int formats) {
         std::string buffer(size, ' ');
         t.seekg(0);
         t.read(&buffer[0], size); 
-        return Image.create_buffer(buffer.size(), buffer.c_str());
+        return Image::create_buffer(buffer.size(), buffer.c_str());
         break;
     }
 #ifdef TRAX_BUILD_OPENCV
@@ -344,30 +351,26 @@ Image load_image(string& path, int formats) {
 
 }
 
+#define DEBUGMSG(...) if (verbosity == VERBOSITY_DEBUG) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
+
 int main( int argc, char** argv) {
     int c;
     int result = 0;
     bool overlap_bounded = false;
     bool query_mode = false;
-    bool explicit_mode = false;
-    bool socket_mode = false;
-    debug = false;
+    ConnectionMode connection = CONNECTION_DEFAULT;
+    VerbosityMode verbosity = VERBOSITY_DEFAULT;
     opterr = 0;
-    imagesFile = string("images.txt");
-    groundtruthFile = string("groundtruth.txt");
-    outputFile = string("output.txt");
-    initializationFile = string("");
 
-    trax_handle* trax = NULL;
-    Process* trackerProcess = NULL;
+    string timing_file;
+    string tracker_command;
+    string images_file("images.txt");
+    string groundtruth_file("groundtruth.txt");
+    string output_file("output.txt");
+    string initialization_file;
 
-    vector<string> images;
-    vector<region_container*> groundtruth;
-    vector<region_container*> initialization;
-    vector<region_container*> output;
-    vector<long> timings;
+    Properties properties;
     map<string, string> environment;
-    trax_properties* properties = trax_properties_create();
 
     configure_signals();
 
@@ -379,31 +382,31 @@ int main( int argc, char** argv) {
                 print_help();
                 exit(0);
             case 'd':
-                debug = true;
+                verbosity = VERBOSITY_DEBUG;
                 break;
             case 's':
-                silent = true;
+                verbosity = VERBOSITY_SILENT;
                 break;
             case 'x':
-                explicit_mode = true;
+                connection = CONNECTION_EXPLICIT;
                 break;
             case 'X':
-                socket_mode = true;
+                connection = CONNECTION_SOCKETS;
                 break;
             case 'Q':
                 query_mode = true;
                 break;
             case 'I':
-                imagesFile = string(optarg);
+                images_file = string(optarg);
                 break;
             case 'G':
-                groundtruthFile = string(optarg);
+                groundtruth_file = string(optarg);
                 break;
             case 'O':
-                outputFile = string(optarg);
+                output_file = string(optarg);
                 break;
             case 'S':
-                initializationFile = string(optarg);
+                initialization_file = string(optarg);
                 break;
             case 'f':
                 threshold = (float) MIN(1, MAX(0, (float)atof(optarg)));
@@ -415,7 +418,7 @@ int main( int argc, char** argv) {
                 timeout = MAX(0, atoi(optarg));
                 break;
             case 'T':
-                timingFile = string(optarg);
+                timing_file = string(optarg);
                 break;
             case 'e': {
                 char* var = optarg;
@@ -429,7 +432,8 @@ int main( int argc, char** argv) {
                 char* ptr = strchr(var, '=');
                 if (!ptr) break;
                 string key(var, ptr-var);
-                trax_properties_set(properties, key.c_str(), ptr+1);
+                string value(ptr+1);
+                properties.set(key, value);
                 break;
             }
             default:
@@ -445,8 +449,7 @@ int main( int argc, char** argv) {
                 buffer << " \"" << string(argv[i]) << "\" ";
             }
 
-            trackerCommand = buffer.str();
-
+            tracker_command = buffer.str();
 
         } else {
             print_help();
@@ -466,7 +469,7 @@ int main( int argc, char** argv) {
                 region_set_flags(REGION_LEGACY_RASTERIZATION);
         }
 
-        DEBUGMSG("Tracker command: '%s'\n", trackerCommand.c_str());
+        DEBUGMSG("Tracker command: '%s'\n", tracker_command.c_str());
 
         if (threshold >= 0)
             DEBUGMSG("Failure overlap threshold: %.2f\n", threshold);
@@ -474,84 +477,108 @@ int main( int argc, char** argv) {
         if (timeout >= 1)
             DEBUGMSG("Timeout: %d\n", timeout);
 
-        if (!query_mode)
-            load_data(images, groundtruth, initialization);
-
         if (query_mode) {
-        // Query mode: in query mode we only check if the client successfuly connects to the tracker and receives introduction message.
-        // In the future we can also output some basic data about the tracker.
+            // Query mode: in query mode we only check if the client successfuly connects to the tracker and receives introduction message.
+            // In the future we can also output some basic data about the tracker.
 
-            TrackerProcess tracker(trackerCommand, environment);
-            if (tracker.test()) {
+            TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
+            if (tracker.ready()) {
                 result = 0;
             } else {
                 result = -1;
             }
 
         } else {
-        // Tracking mode: the default mode where the entire sequence is processed.
+
+            // Tracking mode: the default mode where the entire sequence is processed.
+
+            vector<string> images;
+            vector<Region> groundtruth;
+            vector<Region> initialization;
+            vector<Region> output;
+            vector<long> timings;
+
+            load_images(images_file, images);
+            load_trajectory(groundtruth_file, groundtruth);
+
+            DEBUGMSG("Images loaded from file %s.\n", images_file.c_str());
+            DEBUGMSG("Groundtruth loaded from file %s.\n", groundtruth_file.c_str());
+
+            if (images.size() < groundtruth.size()) {
+                DEBUGMSG("Warning: Image sequence shorter that groundtruth. Truncating.");
+                groundtruth = vector<Region>(groundtruth.begin(), groundtruth.begin() + images.size());
+            }
+
+            if (images.size() > groundtruth.size()) {
+                DEBUGMSG("Warning: Image sequence longer that groundtruth. Truncating.");
+                images = vector<string>(images.begin(), images.begin() + groundtruth.size());
+            }
+
+            if (!initialization_file.empty()) {
+                load_trajectory(initialization_file, initialization);
+                DEBUGMSG("Initialization loaded from file %s.\n", initialization_file.c_str());
+            } else {
+                initialization = vector<Region>(groundtruth.begin(), groundtruth.end());
+            }
+
+            DEBUGMSG("Sequence length: %ld frames.\n", images.size());
+
+            TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
+
             int frame = 0;
             while (frame < images.size()) {
 
-
-                Image image = load_image(trax, images[frame]);
-                
-                trax_region* initialize = NULL;
-
-                // Check if we can initialize from separate initialization source
-                // or from groundtruth.
-                if (initialization.size() > 0) {
-
-                    for (; frame < images.size(); frame++) {
-                        if (initialization[frame]) break;
-                        output.push_back(region_create_special(0));
-                    }
-
-                    if (frame == images.size()) break;
-
-                    initialize = initialization[frame];
-
-                } else {
-
-                    initialize = groundtruth[frame];
-
+                for (; frame < images.size(); frame++) {
+                    if (!initialization[frame].empty()) break;
+                    DEBUGMSG("Skipping frame %d, no initialization data. \n", frame);
+                    output.push_back(Region::create_special(0));
                 }
+
+                if (frame == images.size()) break;
+
+                if (!tracker.ready()) {
+                    throw std::runtime_error("Tracker process not alive anymore.");
+                }
+
+                Region initialize = initialization[frame];
+                Image image = load_image(images[frame], tracker.image_formats());
 
                 // Start timing a frame
                 clock_t timing_toc;
                 clock_t timing_tic = clock();
 
+                if (!tracker.initialize(image, initialize, properties)) {
+                    throw std::runtime_error("Unable to initialize tracker.");
+                }
+
                 while (true) {
                     // Repeat while tracking the target.
 
-                    region_container* status = NULL;
+                    Region status;
+                    Properties additional;
 
-                    trax_properties* additional = trax_properties_create();
+                    //watchdog_reset(trackerProcess, timeout);
 
-                    watchdog_reset(trackerProcess, timeout);
-
-                    int result = trax_client_wait(trax, (trax_region**) &status, additional);
+                    bool result = tracker.wait(status, additional);
 
                     // Stop timing a frame
                     timing_toc = clock();
 
-                    if (result == TRAX_STATE) {
+                    if (result) {
                         // Default option, the tracker returns a valid status.
 
-                        region_container* gt = groundtruth[frame];
-                        region_bounds bounds = region_no_bounds;
+                        Region reference = groundtruth[frame];
+                        Bounds bounds;
 
                         if (overlap_bounded) {
                             image_size is = image_get_size(image);
                             DEBUGMSG("Bounds for overlap calculation %dx%d\n", is.width, is.height); 
-                            bounds = region_create_bounds(0, 0, is.width, is.height);
+                            bounds = Bounds(0, 0, is.width, is.height);
                         }
 
-                        float overlap = region_compute_overlap(gt, status, bounds).overlap;
+                        float overlap = reference.overlap(status, bounds);
 
                         DEBUGMSG("Region overlap: %.2f\n", overlap);
-
-                        trax_properties_release(&additional);
 
                         // Check the failure criterion.
                         if (threshold >= 0 && overlap <= threshold) {
@@ -559,58 +586,35 @@ int main( int argc, char** argv) {
                             break;
                         }
 
-                        if (tracking)
+                        if (tracker.tracking())
                             output.push_back(status);
                         else {
-                            region_release(&status);
-                            output.push_back(region_create_special(1));
+                            output.push_back(Region::create_special(1));
                         }
 
                         timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
 
                     } else if (result == TRAX_QUIT) {
                         // The tracker has requested termination of connection.
-
-                        trax_properties_release(&additional);
-
                         DEBUGMSG("Termination requested by tracker.\n");
-
                         break;
                     } else {
                         // In case of an error ...
-
-                        trax_properties_release(&additional);
                         throw std::runtime_error("Unable to contact tracker.");
                     }
 
                     frame++;
 
                     if (frame >= images.size()) break;
-
-                    trax_image* image = load_image(trax, images[frame]);
+                    Image image = load_image(images[frame], tracker.image_formats());
 
                     // Start timing a frame
                     timing_tic = clock();
 
-                    if (trax_client_frame(trax, image, NULL) < 0)
+                    Properties no_properties;
+                    if (!tracker.frame(image, no_properties))
                         throw std::runtime_error("Unable to send new frame.");
 
-                    trax_image_release(&image);
-
-                    tracking = true;
-
-                }
-
-                trax_cleanup(&trax);
-
-                watchdog_reset(NULL, 0);
-
-                sleep(0);
-
-                if (trackerProcess) {
-                    trackerProcess->stop();
-                    delete trackerProcess;
-                    trackerProcess = NULL;
                 }
 
                 if (frame < images.size()) {
@@ -619,69 +623,45 @@ int main( int argc, char** argv) {
                     if (reinitialize > 0) {
                         // If reinitialization is specified after 1 or more frames ...
                         int j = frame + 1;
-                        output.push_back(region_create_special(2));
+                        output.push_back(Region::create_special(2));
                         timings.push_back(0);
                         for (; j < frame + reinitialize && j < images.size(); j++) {
-                            output.push_back(region_create_special(0));
+                            output.push_back(Region::create_special(0));
                             timings.push_back(0);
                         }
                         frame = j;
+
+                        if (frame < images.size()) tracker.reset();
+
                     } else {
                         // ... otherwise just fill the remaining part of sequence with empty frames.
                         int j = frame + 1;
-                        output.push_back(region_create_special(2));
+                        output.push_back(Region::create_special(2));
                         timings.push_back(0);
                         for (; j < images.size(); j++) {
-                            output.push_back(region_create_special(0));
+                            output.push_back(Region::create_special(0));
                             timings.push_back(0);
                         }
                         break;
                     }
+                } else {
+
                 }
             }
 
             if (output.size() > 0)
-                save_data(output);
+                save_trajectory(output_file, output);
 
-            if (timings.size() > 0 && timingFile.size() > 0)
-                save_timings(timings);
+            if (timings.size() > 0 && timing_file.size() > 0)
+                save_timings(timing_file, timings);
 
         }
 
     } catch (std::runtime_error e) {
 
         fprintf(stderr, "Error: %s\n", e.what());
-
-        trax_cleanup(&trax);
-
-        if (trackerProcess) {
-            int exit_status;
-
-            trackerProcess->stop();
-            trackerProcess->is_alive(&exit_status);
-
-            delete trackerProcess;
-            trackerProcess = NULL;
-
-            if (exit_status == 0) {
-                DEBUGMSG("Tracker exited normally.\n");
-            } else {
-                fprintf(stderr, "Tracker exited (exit code %d)\n", exit_status);
-            }
-
-        }
-
         result = -1;
 
-    }
-
-    trax_properties_release(&properties);
-
-    for (int i = 0; i < images.size(); i++) {
-        //trax_image_release(&images[i]);
-        region_release(&groundtruth[i]);
-        if (output.size() > i && output[i]) region_release(&output[i]);
-        if (initialization.size() > i && initialization[i]) region_release(&initialization[i]);
     }
 
     exit(result);

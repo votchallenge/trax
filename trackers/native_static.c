@@ -49,17 +49,9 @@ void sleep(long time) {
 #  endif
 #endif
 
-static FILE* log;
-
-void trax_file_logger(const char *string) {
-    if (string)
-        fputs(string, log);
-    else
-        fflush(log);
-}
-
 int main( int argc, char** argv)
 {
+    FILE* log;
     int run;
     int wait = 0;    
     trax_image* img = NULL;
@@ -72,11 +64,11 @@ int main( int argc, char** argv)
 
     trax_handle* trax;
     trax_configuration config;
-    config.format_region = TRAX_REGION_RECTANGLE;
-    config.format_image = TRAX_IMAGE_MEMORY;
+    config.format_region = TRAX_REGION_ANY;
+    config.format_image = TRAX_IMAGE_ANY;
 
     log = argc > 1 ? fopen(argv[1], "w") : NULL;
-    trax = trax_server_setup(config, (log ? trax_file_logger : NULL));
+    trax = trax_server_setup(config, log ? trax_logger_setup_file(log) : trax_no_log);
 
     run = 1;
 
@@ -102,7 +94,7 @@ int main( int argc, char** argv)
             if (wait > 0) sleep(wait);
 
             if (mem) trax_region_release(&mem);
-            mem = trax_region_get_bounds(reg);
+            mem = trax_region_clone(reg);
 
             trax_server_reply(trax, mem, NULL);
 

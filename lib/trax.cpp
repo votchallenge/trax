@@ -3,6 +3,74 @@
 
 namespace trax {
 
+Configuration::Configuration(int image_formats, int region_formats) {
+
+	this->format_image = image_formats;
+	this->format_region = region_formats;
+}
+
+Configuration::Configuration(trax_configuration config) {
+
+	this->format_image = config.format_image;
+	this->format_region = config.format_region;
+}
+
+Configuration::~Configuration() {
+
+}
+
+Logging::Logging(trax_logging logging) {
+
+	this->callback = logging.callback;
+	this->data = logging.data;
+	this->flags = logging.flags;
+
+}
+
+Logging::Logging(trax_logger callback, void* data, int flags) {
+
+	this->callback = callback;
+	this->data = data;
+	this->flags = flags;
+
+}
+
+Logging::~Logging() {
+
+}
+
+
+Bounds::Bounds() {
+
+	this->left = trax_no_bounds.left;
+	this->top = trax_no_bounds.top;
+	this->right = trax_no_bounds.right;
+	this->bottom = trax_no_bounds.bottom;
+
+}
+
+Bounds::Bounds(trax_bounds bounds) {
+
+	this->left = bounds.left;
+	this->top = bounds.top;
+	this->right = bounds.right;
+	this->bottom = bounds.bottom;
+
+}
+
+Bounds::Bounds(float left, float top, float right, float bottom) {
+
+	this->left = left;
+	this->top = top;
+	this->right = right;
+	this->bottom = bottom;
+
+}
+
+Bounds::~Bounds() {
+
+}
+
 Wrapper::Wrapper() : pn(NULL) {
 
 }
@@ -15,8 +83,7 @@ Wrapper::~Wrapper() {
 	
 }
 
-void Wrapper::swap(Wrapper& lhs) throw() // never throws
-{
+void Wrapper::swap(Wrapper& lhs) throw() {
     std::swap(pn, lhs.pn);
 }
 
@@ -51,6 +118,11 @@ Handle::Handle() {
 	handle = NULL;
 }
 
+Handle::Handle(const Handle& original) : Wrapper(original) {
+	if (original.handle) acquire();
+	handle = original.handle;
+}
+
 Handle::~Handle() {
 	release();
 }
@@ -69,15 +141,15 @@ int Handle::get_parameter(int id, int* value) {
 
 void Handle::wrap(trax_handle* obj) {
 	release();
+	if (obj) acquire();
 	handle = obj;
-	acquire();
 }
 
-Client::Client(int input, int output, trax_logger log) {
-	wrap(trax_client_setup_file(input, output,log));
+Client::Client(int input, int output, Logging log) {
+	wrap(trax_client_setup_file(input, output, log));
 }
 
-Client::Client(int server, trax_logger log, int timeout) {
+Client::Client(int server, Logging log, int timeout) {
 	wrap(trax_client_setup_socket(server, timeout, log));
 }
 
@@ -111,11 +183,11 @@ int Client::frame(const Image& image, const Properties& properties) {
 
 const Configuration Client::configuration() {
 
-	return handle->config;
+	return Configuration(handle->config);
 
 }
 
-Server::Server(Configuration configuration, trax_logger log) {
+Server::Server(Configuration configuration, Logging log) {
 
 	wrap(trax_server_setup(configuration, log));
 
@@ -149,12 +221,17 @@ int Server::reply(const Region& region, const Properties& properties) {
 
 const Configuration Server::configuration() {
 
-	return handle->config;
+	return Configuration(handle->config);
 
 }
 
 Image::Image() {
 	image = NULL;
+}
+
+Image::Image(const Image& original) : Wrapper(original) {
+	if (original.image) acquire();
+	image = original.image;
 }
 
 Image Image::create_path(const std::string& path) {
@@ -189,6 +266,10 @@ int Image::type() const {
 	return trax_image_get_type(image);
 }
 
+bool Image::empty() const  {
+	return type() == TRAX_IMAGE_EMPTY;
+}
+
 const std::string Image::get_path() const {
 	return std::string(trax_image_get_path(image));
 }
@@ -220,7 +301,7 @@ void Image::cleanup() {
 void Image::wrap(trax_image* obj) {
 	release();
 	image = obj;
-	acquire();
+	if (image) acquire();
 }
 
 Image& Image::operator=(Image lhs) throw() {
@@ -233,7 +314,12 @@ Region::Region() {
 	region = NULL;
 }
 
-Region Region::create_static(int code) {
+Region::Region(const Region& original) : Wrapper(original) {
+	if (original.region) acquire();
+	region = original.region;
+}
+
+Region Region::create_special(int code) {
 
 	Region region;
 	region.wrap(trax_region_create_special(code));
@@ -263,6 +349,10 @@ Region::~Region() {
 
 int Region::type() const  {
 	return trax_region_get_type(region);
+}
+
+bool Region::empty() const  {
+	return type() == TRAX_REGION_EMPTY;
 }
 
 void Region::set(int code) {
@@ -302,20 +392,37 @@ int  Region::get_polygon_count() const {
 	return trax_region_get_polygon_count(region);
 }
 
-Region Region::bounds() const {
-	Region b;
-	b.wrap(trax_region_get_bounds(region));
-	return b;
+Region Region::convert(int format) const {
+	if (empty()) return Region();
+
+	Region temp;
+	temp.wrap(trax_region_convert(region, format));
+
+	return temp;
+}
+
+Bounds Region::bounds() const {
+	if (empty()) return Bounds();
+
+	return Bounds(trax_region_bounds(region));
 }
 
 void Region::cleanup() {
 	trax_region_release(&region);
 }
 
+float Region::overlap(const Region& region, const Bounds& bounds) const {
+
+	if (empty() || region.empty()) return 0;
+
+	trax_region_overlap(this->region, region.region, bounds);
+
+}
+
 void Region::wrap(trax_region* obj) {
 	release();
+	if (obj) acquire();
 	region = obj;
-	acquire();
 }
 
 Region& Region::operator=(Region lhs) throw() {
@@ -324,8 +431,40 @@ Region& Region::operator=(Region lhs) throw() {
 	return *this;
 }
 
+std::ostream& operator<< (std::ostream& output, const Region& region) {
+
+	if (region.region) {
+
+		char* str = trax_region_encode(region.region);
+
+		if (str)
+			output << str;
+	}
+
+	output << std::endl;
+	return output;
+
+}
+
+std::istream& operator>> (std::istream& input, Region &region) {
+
+	std::string str;
+
+	std::getline(input, str);
+
+	region.wrap(trax_region_decode(str.c_str()));
+
+	return input;
+}
+
+
 Properties::Properties() {
-	
+	properties = NULL;
+}
+
+Properties::Properties(const Properties& original) : Wrapper(original) {
+	if (original.properties) acquire();
+	properties = original.properties;
 }
 
 Properties::~Properties() {
@@ -370,7 +509,7 @@ float Properties::get(const std::string key, float def)  {
 	return trax_properties_get_float(properties, key.c_str(), def);
 }
 
-void Properties::enumerate(trax_enumerator enumerator, void* object)  {
+void Properties::enumerate(Enumerator enumerator, void* object)  {
 	if (!properties) return;
 	trax_properties_enumerate(properties, enumerator, object);
 }
@@ -393,7 +532,15 @@ Properties& Properties::operator=(Properties lhs) throw() {
 }
 
 void copy_enumerator(const char *key, const char *value, const void *obj) {
+
 	trax_properties_set((trax_properties*) obj, key, value);
+
+}
+
+void print_enumerator(const char *key, const char *value, const void *obj) {
+	
+	*((std::ostream *) obj) << key << "=" << value << std::endl;
+
 }
 
 void Properties::ensure_unique() {
@@ -407,5 +554,13 @@ void Properties::ensure_unique() {
 	}
 
 }
+
+std::ostream& operator<< (std::ostream& output, const Properties& properties) {
+
+	if (!properties.properties) return output;
+	trax_properties_enumerate(properties.properties, print_enumerator, &output);
+	return output;
+}
+
 
 }

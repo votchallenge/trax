@@ -1,0 +1,10 @@
+
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+ADD_EXECUTABLE(test_core test.c)
+TARGET_LINK_LIBRARIES(test_core trax)
+
+ADD_EXECUTABLE(test_cpp test.cpp debugging.c)
+TARGET_LINK_LIBRARIES(test_cpp trax dl)

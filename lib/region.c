@@ -67,29 +67,40 @@ region_container* __create_region(region_type type) {
 
 }
 
-int _parse_sequence(char* buffer, float** data) {
+static inline const char* _str_find(const char* in, const char delimiter) {
+
+	int i = 0;
+	while (in[i] && in[i] != delimiter) {
+		i++;
+	}
+
+	return (in[i] == delimiter) ? &(in[i])+1 : NULL;
+
+}
+
+int _parse_sequence(const char* buffer, float** data) {
 
     int i;
 
     float* numbers = (float*) malloc(sizeof(float) * (strlen(buffer) / 2));
 
-	char* pch = strtok(buffer, ",");
+	const char* pch = buffer;
     for (i = 0; ; i++) {
         
-        if (pch){
+        if (pch) {
             #if defined (_MSC_VER)
             if(tolower(pch[0]) == 'n' && tolower(pch[1]) == 'a' && tolower(pch[2]) == 'n'){    
                numbers[i] = NAN;
-            }else{
+            } else {
                numbers[i] = (float) atof(pch);
             }
             #else
             numbers[i] = (float) atof(pch);
             #endif 
-        }else 
+        } else 
             break;
 
-		pch = strtok(NULL, ",");
+		pch = _str_find(pch, ',');
     }
 
 	if (i > 0) {
@@ -105,12 +116,12 @@ int _parse_sequence(char* buffer, float** data) {
     return i;
 }
 
-int region_parse(char* buffer, region_container** region) {
+int region_parse(const char* buffer, region_container** region) {
 
     float* data = NULL;
     int num;
     
-	char* tmp = buffer;
+	const char* tmp = buffer;
 
 	(*region) = NULL;
 
@@ -120,7 +131,6 @@ int region_parse(char* buffer, region_container** region) {
 	}
 
 	num = _parse_sequence(buffer, &data);
-    
     // If at least one of the elements is NaN, then the region cannot be parsed
     // We return special region with a default code.
     if (!__is_valid_sequence(data, num) || num == 0) {
@@ -449,7 +459,7 @@ region_polygon* allocate_polygon(int count) {
 	return polygon;
 }
 
-region_polygon* clone_polygon(region_polygon* polygon) {
+region_polygon* clone_polygon(const region_polygon* polygon) {
 
 	region_polygon* clone = allocate_polygon(polygon->count);
 
@@ -459,7 +469,7 @@ region_polygon* clone_polygon(region_polygon* polygon) {
 	return clone;
 }
 
-region_polygon* offset_polygon(region_polygon* polygon, float x, float y) {
+region_polygon* offset_polygon(const region_polygon* polygon, float x, float y) {
 
 	int i;
 	region_polygon* clone = clone_polygon(polygon);
@@ -472,7 +482,7 @@ region_polygon* offset_polygon(region_polygon* polygon, float x, float y) {
 	return clone;
 }
 
-region_polygon* round_polygon(region_polygon* polygon) {
+region_polygon* round_polygon(const region_polygon* polygon) {
 
 	int i;
 	region_polygon* clone = clone_polygon(polygon);
@@ -485,7 +495,7 @@ region_polygon* round_polygon(region_polygon* polygon) {
 	return clone;
 }
 
-void print_polygon(region_polygon* polygon) {
+void print_polygon(const region_polygon* polygon) {
 
 	int i;
 	printf("%d:", polygon->count);
@@ -498,7 +508,7 @@ void print_polygon(region_polygon* polygon) {
 
 }
 
-region_bounds compute_bounds(region_polygon* polygon) {
+region_bounds compute_bounds(const region_polygon* polygon) {
 
 	int i;
 	region_bounds bounds;
@@ -576,7 +586,7 @@ region_bounds region_create_bounds(float left, float top, float right, float bot
     return result;
 }
 
-region_bounds region_compute_bounds(region_container* region) {
+region_bounds region_compute_bounds(const region_container* region) {
 
     region_bounds bounds;
 	switch (region->type) {
@@ -607,11 +617,11 @@ region_bounds region_compute_bounds(region_container* region) {
 
 }
 
-int rasterize_polygon(region_polygon* polygon_input, char* mask, int width, int height) {
+int rasterize_polygon(const region_polygon* polygon_input, char* mask, int width, int height) {
 
 	int nodes, pixelY, i, j, swap;
     int sum = 0;
-    region_polygon* polygon = polygon_input;
+    region_polygon* polygon = (region_polygon*) polygon_input;
 
 	int* nodeX = (int*) malloc(sizeof(int) * polygon->count);
 
@@ -732,7 +742,7 @@ int rasterize_polygon(region_polygon* polygon_input, char* mask, int width, int 
     return sum;
 }
 
-float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *only1, float *only2, region_bounds bounds) {
+float compute_polygon_overlap(const region_polygon* p1, const region_polygon* p2, float *only1, float *only2, region_bounds bounds) {
 
     int i;
     int vol_1 = 0;
@@ -831,10 +841,10 @@ float compute_polygon_overlap(region_polygon* p1, region_polygon* p2, float *onl
 
 #define COPY_POLYGON(TP, P) { P.count = TP->data.polygon.count; P.x = TP->data.polygon.x; P.y = TP->data.polygon.y; }
 
-region_overlap region_compute_overlap(region_container* ra, region_container* rb, region_bounds bounds) {
+region_overlap region_compute_overlap(const region_container* ra, const region_container* rb, region_bounds bounds) {
 
-    region_container* ta = ra;
-    region_container* tb = rb;
+    region_container* ta = (region_container *) ra;
+    region_container* tb = (region_container *) rb;
     region_overlap overlap;
 	overlap.overlap = 0;
 	overlap.only1 = 0;

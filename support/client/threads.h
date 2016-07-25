@@ -30,7 +30,7 @@ extern "C" {
 #define RELEASE_THREAD(T) simple_threads_release_thread(T)
 #define JOIN_THREAD(T) simple_threads_join_thread(T)
 
-#define THREAD_CALLBACK(NAME, ARGUMENT) DWORD WINAPI NAME(void* ARG)
+#define THREAD_CALLBACK(NAME, ARGUMENT) DWORD WINAPI NAME(void* ARGUMENT)
 #define THREAD HANDLE
 #define THREAD_MUTEX HANDLE
 #define THREAD_COND HANDLE
@@ -64,7 +64,7 @@ typedef struct pthread_wrapper {
 #define RELEASE_THREAD(T) simple_threads_release_thread(T)
 #define JOIN_THREAD(T) simple_threads_join_thread(T)
 
-#define THREAD_CALLBACK(NAME, ARGUMENT) void* NAME(void* ARG)
+#define THREAD_CALLBACK(NAME, ARGUMENT) void* NAME(void* ARGUMENT)
 #define THREAD pthread_wrapper
 #define THREAD_MUTEX pthread_mutex_t
 #define THREAD_COND pthread_cond_t

@@ -3,6 +3,7 @@
 //#include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <float.h>
 
 #define _TRAX_BUILDING
 
@@ -17,6 +18,8 @@
 #define VALIDATE_ALIVE_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && !(H->flags & TRAX_FLAG_TERMINATED))
 #define VALIDATE_SERVER_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && (H->flags & TRAX_FLAG_SERVER))
 #define VALIDATE_CLIENT_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && !(H->flags & TRAX_FLAG_SERVER))
+
+#define LOGGER(H) (((H)->logging))
 
 #define BUFFER_LENGTH 64
 #define MAX_URI_SCHEME 16
@@ -55,18 +58,33 @@ const char* trax_version() {
     return (const char*) (TRAX_BUILD_VERSION);
 }
 
-void trax_stdout_logger(const char *string) {
+void file_logger(const char *string, void* data) {
+    if (!data) return;
+
     if (string)
-        fputs(string, stdout);
+        fputs(string, (FILE*) data);
     else
-        fflush(stdout);
+        fflush((FILE*) data);
 }
 
-void trax_stderr_logger(const char *string) {
-    if (string)
-        fputs(string, stderr);
-    else
-        fflush(stderr);
+const trax_logging trax_no_log = { 0, NULL, NULL };
+
+const trax_bounds trax_no_bounds = { -FLT_MAX, FLT_MAX, -FLT_MAX, FLT_MAX };
+
+trax_logging trax_logger_setup(trax_logger callback, void* data, int flags) {
+
+    trax_logging logging;
+    logging.callback = callback;
+    logging.data = data;
+    logging.flags = flags;
+    return logging;
+
+}
+
+trax_logging trax_logger_setup_file(FILE* file) {
+
+    return trax_logger_setup(file_logger, file, 0);
+
 }
 
 struct trax_properties {
@@ -408,11 +426,12 @@ void region_formats_encode(int formats, char *key) {
 
 
 void copy_properties(trax_properties* source, trax_properties* dest) {
+
     trax_properties_enumerate(source, copy_property, dest);
 
 }
 
-trax_handle* client_setup(message_stream* stream, trax_logger log) {
+trax_handle* client_setup(message_stream* stream, const trax_logging log) {
 
     trax_properties* tmp_properties;
     string_list arguments;
@@ -423,14 +442,14 @@ trax_handle* client_setup(message_stream* stream, trax_logger log) {
 
     client->flags = (0 & ~TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
 
-    client->log = log;
+    client->logging = log;
     client->stream = stream;
     client->properties = NULL;
 
     tmp_properties = trax_properties_create();
     LIST_CREATE(arguments, 8);
   
-    if (read_message((message_stream*)client->stream, client->log, &arguments, tmp_properties) != TRAX_HELLO) {
+    if (read_message((message_stream*)client->stream, &LOGGER(client), &arguments, tmp_properties) != TRAX_HELLO) {
         goto failure;
     }
 
@@ -463,7 +482,7 @@ failure:
 
 }
 
-trax_handle* server_setup(trax_configuration config, message_stream* stream, trax_logger log) {
+trax_handle* server_setup(trax_configuration config, message_stream* stream, const trax_logging log) {
 
     trax_properties* properties;
     trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
@@ -471,8 +490,8 @@ trax_handle* server_setup(trax_configuration config, message_stream* stream, tra
     char tmp[BUFFER_LENGTH];
 
     server->flags = (TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
+    server->logging = log;
 
-    server->log = log;
     server->stream = stream;
     server->properties = NULL;
 
@@ -490,7 +509,7 @@ trax_handle* server_setup(trax_configuration config, message_stream* stream, tra
    
     LIST_CREATE(arguments, 1);
 
-    write_message((message_stream*)server->stream, server->log, TRAX_HELLO, arguments, properties);
+    write_message((message_stream*)server->stream, &LOGGER(server), TRAX_HELLO, arguments, properties);
 
     trax_properties_release(&properties);
 
@@ -501,7 +520,7 @@ trax_handle* server_setup(trax_configuration config, message_stream* stream, tra
 }
 
 
-trax_handle* trax_client_setup_file(int input, int output, trax_logger log) {
+trax_handle* trax_client_setup_file(int input, int output, const trax_logging log) {
 
     message_stream* stream = create_message_stream_file(input, output);
     
@@ -509,7 +528,7 @@ trax_handle* trax_client_setup_file(int input, int output, trax_logger log) {
 
 }
 
-trax_handle* trax_client_setup_socket(int server, int timeout, trax_logger log) {
+trax_handle* trax_client_setup_socket(int server, int timeout, trax_logging log) {
 
     message_stream* stream = create_message_stream_socket_accept(server, timeout);
     
@@ -533,7 +552,7 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
     tmp_properties = trax_properties_create();
     LIST_CREATE(arguments, 8);
 
-    result = read_message((message_stream*)client->stream, client->log, &arguments, tmp_properties);
+    result = read_message((message_stream*)client->stream, &LOGGER(client), &arguments, tmp_properties);
 
     if (result == TRAX_STATE) {
 
@@ -625,7 +644,7 @@ int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* 
         free(data);
     }
 
-    write_message((message_stream*)client->stream, client->log, TRAX_INITIALIZE, arguments, properties);
+    write_message((message_stream*)client->stream, &LOGGER(client), TRAX_INITIALIZE, arguments, properties);
 
     return TRAX_OK;
 
@@ -652,7 +671,7 @@ int trax_client_frame(trax_handle* client, trax_image* image, trax_properties* p
         LIST_APPEND_DIRECT(arguments, buffer);
     } else goto failure;
 
-    write_message((message_stream*)client->stream, client->log, TRAX_FRAME, arguments, properties);
+    write_message((message_stream*)client->stream, &LOGGER(client), TRAX_FRAME, arguments, properties);
 
     return TRAX_OK;
 
@@ -664,7 +683,7 @@ failure:
 
 }
 
-trax_handle* trax_server_setup(trax_configuration config, trax_logger log) {
+trax_handle* trax_server_setup(trax_configuration config, trax_logging log) {
 
     message_stream* stream;
 
@@ -699,7 +718,7 @@ trax_handle* trax_server_setup(trax_configuration config, trax_logger log) {
 
 }
 
-trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, trax_logger log) {
+trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, trax_logging log) {
 
     message_stream* stream = create_message_stream_file(input, output);
     
@@ -721,7 +740,7 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 
     *image = NULL;
 
-    result = read_message((message_stream*)server->stream, server->log, &arguments, tmp_properties);
+    result = read_message((message_stream*)server->stream, &LOGGER(server), &arguments, tmp_properties);
 
     if (result == TRAX_FRAME) {
 
@@ -801,7 +820,7 @@ int trax_server_reply(trax_handle* server, trax_region* region, trax_properties*
 
     LIST_APPEND_DIRECT(arguments, data);
 
-    write_message((message_stream*)server->stream, server->log, TRAX_STATE, arguments, properties);
+    write_message((message_stream*)server->stream, &LOGGER(server), TRAX_STATE, arguments, properties);
 
     LIST_DESTROY(arguments);
 
@@ -822,7 +841,7 @@ int trax_cleanup(trax_handle** handle) {
         LIST_CREATE(arguments, 1);
         tmp_properties = trax_properties_create();
 
-        write_message((message_stream*)(*handle)->stream, (*handle)->log, TRAX_QUIT, arguments, tmp_properties);
+        write_message((message_stream*)(*handle)->stream, &LOGGER(*handle), TRAX_QUIT, arguments, tmp_properties);
 
         LIST_DESTROY(arguments);
         trax_properties_release(&tmp_properties);
@@ -830,10 +849,6 @@ int trax_cleanup(trax_handle** handle) {
     }
 
     (*handle)->flags |= TRAX_FLAG_TERMINATED;
-
-    if ((*handle)->log) {
-        (*handle)->log = 0;
-    }
 
     if ((*handle)->properties) {
         trax_properties_release(&((*handle)->properties));
@@ -1067,6 +1082,51 @@ trax_region* trax_region_create_rectangle(float x, float y, float width, float h
 
 }
 
+trax_bounds trax_region_bounds(const trax_region* region) {
+
+    trax_bounds tb;
+    region_bounds rb = region_compute_bounds(region);
+
+    tb.top = rb.top;
+    tb.left = rb.left;
+    tb.right = rb.right;
+    tb.bottom = rb.bottom;
+
+    return tb;
+
+}
+
+trax_region* trax_region_clone(const trax_region* region) {
+
+    if (!region) return NULL;
+
+    return region_convert(region, REGION_TYPE(region));
+
+}
+
+trax_region* trax_region_convert(const trax_region* region, int format) {
+
+    if (!region) return NULL;
+
+    return region_convert(region, format);
+
+}
+
+float trax_region_overlap(const trax_region* a, const trax_region* b, const trax_bounds bounds) {
+
+    region_bounds rb;
+
+    if (!a || !b) return 0;
+
+    rb.top = bounds.top;
+    rb.left = bounds.left;
+    rb.right = bounds.right;
+    rb.bottom = bounds.bottom;
+
+    return region_compute_overlap(a, b, rb).overlap;
+
+}
+
 trax_region* trax_region_get_bounds(const trax_region* region) {
 
     return region_convert(REGION(region), RECTANGLE);
@@ -1145,6 +1205,23 @@ int trax_region_get_polygon_count(const trax_region* region) {
     assert(REGION(region)->type == POLYGON);
 
     return REGION(region)->data.polygon.count;
+
+}
+
+char* trax_region_encode(const trax_region* region) {
+
+    return region_string(REGION(region));
+
+}
+
+trax_region* trax_region_decode(const char* data) {
+
+    region_container* region;
+
+    if (!region_parse(data, &region))
+        return NULL;
+
+    return (trax_region*) region;
 
 }
 
@@ -1250,7 +1327,7 @@ float trax_properties_get_float(const trax_properties* properties, const char* k
 
 }
 
-void trax_properties_enumerate(trax_properties* properties, trax_enumerator enumerator, void* object) {
+void trax_properties_enumerate(trax_properties* properties, trax_enumerator enumerator, const void* object) {
     if (properties && enumerator) {
         
         sm_enum(properties->map, enumerator, object);

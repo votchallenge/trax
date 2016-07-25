@@ -4,7 +4,7 @@
 #define _REGION_H_
 
 #ifndef __TRAX_EXPORT
-#if defined(_MSC_VER)
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #if defined(_TRAX_BUILDING)
     #define __TRAX_EXPORT __declspec(dllexport)
 #else
@@ -85,13 +85,13 @@ __TRAX_EXPORT int region_set_flags(int mask);
 
 __TRAX_EXPORT int region_clear_flags(int mask);
 
-__TRAX_EXPORT region_overlap region_compute_overlap(region_container* ra, region_container* rb, region_bounds bounds);
+__TRAX_EXPORT region_overlap region_compute_overlap(const region_container* ra, const region_container* rb, region_bounds bounds);
 
 __TRAX_EXPORT region_bounds region_create_bounds(float left, float top, float right, float bottom);
 
-__TRAX_EXPORT region_bounds region_compute_bounds(region_container* region);
+__TRAX_EXPORT region_bounds region_compute_bounds(const region_container* region);
 
-__TRAX_EXPORT int region_parse(char* buffer, region_container** region);
+__TRAX_EXPORT int region_parse(const char* buffer, region_container** region);
 
 __TRAX_EXPORT char* region_string(region_container* region);
 

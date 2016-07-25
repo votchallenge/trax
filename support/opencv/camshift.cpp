@@ -59,28 +59,25 @@ int vmin = 10, vmax = 256, smin = 30;
 int main( int argc, char** argv )
 {
 
-    trax_handle* trax;
-    trax_configuration config;
-    config.format_region = TRAX_REGION_RECTANGLE;
-    config.format_image = TRAX_IMAGE_MEMORY | TRAX_IMAGE_BUFFER | TRAX_IMAGE_PATH;
+    trax::Configuration config(TRAX_IMAGE_MEMORY | TRAX_IMAGE_BUFFER | TRAX_IMAGE_PATH, TRAX_REGION_RECTANGLE);
 
     // Call trax_server_setup to initialize trax protocol
-    trax = trax_server_setup(config, NULL);
+    trax::Server handle(config, trax_no_log);
 
-    trax_image* img = NULL;
-    trax_region* rect = NULL;
+    trax::Image img;
+    trax::Region rect;
 
     Mat frame, hsv, hue, mask, hist, backproj;
 
     for(;;)
     {
-        trax_properties* prop = trax_properties_create();
+        trax::Properties prop;
 
         // The main idea of Trax interface is to leave the control to the master program
         // and just follow the instructions that the tracker gets. 
         // The main function for this is trax_wait that actually listens for commands.
 
-        int tr = trax_server_wait(trax, &img, &rect, prop);
+        int tr = handle.wait(img, rect, prop);
 
         // There are two important commands. The first one is TRAX_INITIALIZE that tells the
         // tracker how to initialize.
@@ -88,8 +85,7 @@ int main( int argc, char** argv )
 
             float x, y, width, height;
 
-            trax_region_get_rectangle(rect, &(x), &(y),
-                &(width), &(height));
+            rect.get(&(x), &(y), &(width), &(height));
 
             // The bounding box of the object is given during initialization
             selection.x = x;
@@ -100,30 +96,26 @@ int main( int argc, char** argv )
             // With every parameter master program can also give one or more key-value
             // parameters. This is useful for seting some tracking parameters externally.
 
-            vmin = trax_properties_get_int(prop, "vmin", vmin);
-            vmax = trax_properties_get_int(prop, "vmax", vmax);
-            smin = trax_properties_get_int(prop, "smin", smin);
+            vmin = prop.get("vmin", vmin);
+            vmax = prop.get("vmax", vmax);
+            smin = prop.get("smin", smin);
 
             track_object = -1;
 
-            trax_server_reply(trax, rect, NULL);
+            handle.reply(rect, trax::Properties());
         } else
         // The second one is TRAX_FRAME that tells the tracker what to process next.
         if (tr == TRAX_FRAME) {
 
             if (track_object < 1) {
                 // Tracker was not initialized successfully
-                trax_properties_release(&prop);
                 break;
             }
         } 
         // Any other command is either TRAX_QUIT or illegal, so we exit.
         else {
-            trax_properties_release(&prop);
             break;
         }
-
-        trax_properties_release(&prop);
 
         // In trax mode images are read from the disk. The master program tells the
         // tracker where to get them.
@@ -183,25 +175,14 @@ int main( int argc, char** argv )
 
         // At the end of single frame processing we send back the estimated
         // bounding box and wait for further instructions.
-        trax_region* region = trax_region_create_rectangle(trackWindow.x, trackWindow.y, trackWindow.width, trackWindow.height);
+        trax::Region region = trax::Region::create_rectangle(trackWindow.x, trackWindow.y, trackWindow.width, trackWindow.height);
 
         // Note that the tracker also has an option of sending additional data
         // back to the main program in a form of key-value pairs. We do not use
         // this option here, so this part is empty.
-        trax_server_reply(trax, region, NULL);
-
-        trax_region_release(&region);
-
-        if (img) trax_image_release(&img);
-        if (rect) trax_region_release(&rect);
+        handle.reply(region, trax::Properties());
 
     }
-
-    if (img) trax_image_release(&img);
-    if (rect) trax_region_release(&rect);
-
-    // Call trax_cleanup to release potentially allocated resources 
-    trax_cleanup(&trax);
 
     return 0;
 }

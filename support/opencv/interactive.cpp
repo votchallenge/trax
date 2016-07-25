@@ -64,15 +64,11 @@ void on_mouse(int event, int x, int y, int, void* data) {
 
 int main( int argc, char** argv)
 { 
-    trax_image* img = NULL;
-    trax_region* reg = NULL;
+    trax::Image img;
+    trax::Region reg;
 
-    trax_handle* trax;
-    trax_configuration config;
-    config.format_region = TRAX_REGION_RECTANGLE;
-    config.format_image = TRAX_IMAGE_MEMORY | TRAX_IMAGE_BUFFER;
-
-    trax = trax_server_setup(config, NULL);
+    trax::Configuration config(TRAX_IMAGE_MEMORY | TRAX_IMAGE_BUFFER, TRAX_REGION_RECTANGLE);
+    trax::Server handle(config, trax_no_log);
 
     cv::namedWindow(WINDOW_NAME);
 
@@ -84,28 +80,21 @@ int main( int argc, char** argv)
     while(run)
     {
 
-        trax_properties* prop = trax_properties_create();
+        trax::Properties prop;
 
-        int tr = trax_server_wait(trax, &img, &reg, prop);
+        int tr = handle.wait(img, reg, prop);
 
          if (tr == TRAX_INITIALIZE) {
 
             rectangle = trax::region_to_rect(reg);
             frame = trax::image_to_mat(img);
 
-            trax_region_release(&reg);
-            trax_image_release(&img);
-
         } else if (tr == TRAX_FRAME) {
 
             frame = trax::image_to_mat(img);
-            trax_image_release(&img);
 
         } else {
-
-            trax_properties_release(&prop);
             break;
-
         }
 
         cv::rectangle(frame, rectangle.tl(), rectangle.br(), cv::Scalar(0, 0, 255));
@@ -125,13 +114,10 @@ int main( int argc, char** argv)
 
         }
 
-        reg = trax::rect_to_region(rectangle);
-        trax_server_reply(trax, reg, NULL);
-        trax_region_release(&reg);
+        trax::Region status = trax::rect_to_region(rectangle);
+        handle.reply(status, trax::Properties());
 
     }
-
-    trax_cleanup(&trax);
 
     return 0;
 }

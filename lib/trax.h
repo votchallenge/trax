@@ -43,6 +43,8 @@
 #define TRAX_IMAGE_MEMORY 4
 #define TRAX_IMAGE_BUFFER 8
 
+#define TRAX_IMAGE_ANY (TRAX_IMAGE_PATH | TRAX_IMAGE_URL | TRAX_IMAGE_MEMORY | TRAX_IMAGE_BUFFER)
+
 #define TRAX_IMAGE_BUFFER_ILLEGAL 0
 #define TRAX_IMAGE_BUFFER_PNG 1
 #define TRAX_IMAGE_BUFFER_JPEG 2
@@ -57,6 +59,8 @@
 #define TRAX_REGION_RECTANGLE 2
 #define TRAX_REGION_POLYGON 3
 #define TRAX_REGION_MASK 4 // Not implemented yet!
+
+#define TRAX_REGION_ANY (TRAX_REGION_RECTANGLE | TRAX_REGION_POLYGON)
 
 #define TRAX_FLAG_VALID 1
 #define TRAX_FLAG_SERVER 2
@@ -77,9 +81,7 @@ extern "C" {
 #endif
 
 /**
- * A trax image data structure. At the moment only the path format is supported
- * so a lot of fields are empty.
- * Use trax_image_* functions to access the data.
+ * A trax image data structure. Use trax_image_* functions to access the data.
 **/
 typedef struct trax_image {
     short type;
@@ -101,9 +103,27 @@ typedef void trax_region;
 **/
 typedef struct trax_properties trax_properties;
 
-typedef void(*trax_logger)(const char *string);
+typedef struct trax_bounds {
+
+    float top;
+    float bottom;
+    float left;
+    float right;
+
+} trax_bounds;
+
+typedef void(*trax_logger)(const char *string, void *obj);
 
 typedef void(*trax_enumerator)(const char *key, const char *value, const void *obj);
+
+/**
+ * Some basic configuration data used to set up the server.
+**/
+typedef struct trax_logging {
+    int flags;
+    trax_logger callback;
+    void* data;
+} trax_logging;
 
 /**
  * Some basic configuration data used to set up the server.
@@ -121,9 +141,13 @@ typedef struct trax_handle {
     int version;
     void* stream;
     trax_properties* properties;
-    trax_logger log;
+    trax_logging logging;
     trax_configuration config;
 } trax_handle;
+
+extern const trax_logging trax_no_log; 
+
+extern const trax_bounds trax_no_bounds; 
 
 /**
  * Returns library version.
@@ -131,24 +155,24 @@ typedef struct trax_handle {
 __TRAX_EXPORT const char* trax_version();
 
 /**
- * Default logger that outputs to standard output stream.
+ * A handy function to initialize a logging configuration structure.
 **/
-__TRAX_EXPORT void trax_stdout_logger(const char *string);
+__TRAX_EXPORT trax_logging trax_logger_setup(trax_logger callback, void* data, int flags);
 
 /**
- * Default logger that outputs to standard error stream.
+ * A handy function to initialize a logging configuration structure for file logging.
 **/
-__TRAX_EXPORT void trax_stderr_logger(const char *string);
-
-/**
- * Setups the protocol state object for the client and returns a handle object.
-**/
-__TRAX_EXPORT trax_handle* trax_client_setup_file(int input, int output, trax_logger log);
+__TRAX_EXPORT trax_logging trax_logger_setup_file(FILE* file);
 
 /**
  * Setups the protocol state object for the client and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_client_setup_socket(int server, int timeout, trax_logger log);
+__TRAX_EXPORT trax_handle* trax_client_setup_file(int input, int output, trax_logging log);
+
+/**
+ * Setups the protocol state object for the client and returns a handle object.
+**/
+__TRAX_EXPORT trax_handle* trax_client_setup_socket(int server, int timeout, trax_logging log);
 
 /**
  * Waits for a valid protocol message from the server.
@@ -168,12 +192,12 @@ __TRAX_EXPORT int trax_client_frame(trax_handle* client, trax_image* image, trax
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_server_setup(trax_configuration config, trax_logger log);
+__TRAX_EXPORT trax_handle* trax_server_setup(trax_configuration config, trax_logging log);
 
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, trax_logger log);
+__TRAX_EXPORT trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, trax_logging log);
 
 /**
  * Waits for a valid protocol message from the client.
@@ -192,12 +216,12 @@ __TRAX_EXPORT int trax_server_reply(trax_handle* server, trax_region* region, tr
 __TRAX_EXPORT int trax_cleanup(trax_handle** handle);
 
 /**
- * Sets the parameter for the client or server instance.
+ * Sets the parameter of the client or server instance.
 **/
 __TRAX_EXPORT int trax_set_parameter(trax_handle* handle, int id, int value);
 
 /**
- * Gets the parameter for the client or server instance.
+ * Gets the parameter of the client or server instance.
 **/
 __TRAX_EXPORT int trax_get_parameter(trax_handle* handle, int id, int* value);
 
@@ -326,10 +350,34 @@ __TRAX_EXPORT void trax_region_get_polygon_point(const trax_region* region, int 
 __TRAX_EXPORT int trax_region_get_polygon_count(const trax_region* region);
 
 /**
- * Creates a rectangle region object that bounds the input region (in case the input
- * region is also a rectangle it just clones it).
+ * Calculates a bounding box region that bounds the input region.
  **/
-__TRAX_EXPORT trax_region* trax_region_get_bounds(const trax_region* region);
+__TRAX_EXPORT trax_bounds trax_region_bounds(const trax_region* region);
+
+/**
+ * Clones a region object.
+ **/
+__TRAX_EXPORT trax_region* trax_region_clone(const trax_region* region);
+
+/**
+ * Converts region between different formats (if possible).
+ **/
+__TRAX_EXPORT trax_region* trax_region_convert(const trax_region* region, int format);
+
+/**
+ * Calculates the spatial Jaccard index for two regions (overlap).
+ **/
+__TRAX_EXPORT float trax_region_overlap(const trax_region* a, const trax_region* b, const trax_bounds bounds);
+
+/**
+ * Encodes a region object to a string representation.
+ **/
+__TRAX_EXPORT char* trax_region_encode(const trax_region* region);
+
+/**
+ * Decodes string representation of a region to an object.
+ **/
+__TRAX_EXPORT trax_region* trax_region_decode(const char* data);
 
 /**
  * Destroy a properties object and clean up the memory.
@@ -383,19 +431,44 @@ __TRAX_EXPORT float trax_properties_get_float(const trax_properties* properties,
  * Iterate over the property set using a callback function. An optional pointer can be given and is forwarded
  * to the callback.
  **/
-__TRAX_EXPORT void trax_properties_enumerate(trax_properties* properties, trax_enumerator enumerator, void* object);
+__TRAX_EXPORT void trax_properties_enumerate(trax_properties* properties, trax_enumerator enumerator, const void* object);
 
 #ifdef __cplusplus
 }
 
 #include <string>
 #include <algorithm>
+#include <iostream>
 
 namespace trax {
 
 class Image;
 class Region;
 class Properties;
+
+typedef trax_enumerator Enumerator;
+
+class Configuration : public ::trax_configuration {
+public:
+    Configuration(trax_configuration config);
+    Configuration(int image_formats, int region_formats);
+    virtual ~Configuration();
+};
+
+class Logging : public ::trax_logging {
+public:
+    Logging(trax_logging logging);
+    Logging(trax_logger callback = NULL, void* data = NULL, int flags = 0);
+    virtual ~Logging();
+};
+
+class Bounds : public ::trax_bounds {
+public:
+    Bounds();
+    Bounds(trax_bounds bounds);
+    Bounds(float left, float top, float right, float bottom);
+    virtual ~Bounds();
+};
 
 class Wrapper {
 public:
@@ -424,7 +497,7 @@ protected:
 
     virtual void cleanup() = 0;
 
-public:
+private:
 
     long* pn;
 
@@ -454,22 +527,23 @@ protected:
     void wrap(trax_handle* obj);
 
     Handle();
+    
+    Handle(const Handle& original);
+    
     trax_handle* handle;
 };
-
-typedef trax_configuration Configuration;
 
 class Client: public Handle {
 public:
     /**
      * Sets up the protocol for the client side and returns a handle object.
     **/
-    Client(int input, int output, trax_logger log);
+    Client(int input, int output, Logging logger);
 
     /**
      * Sets up the protocol for the client side and returns a handle object.
     **/
-    Client(int server, trax_logger log,  int timeout = -1);
+    Client(int server, Logging logger,  int timeout = -1);
 
     virtual ~Client();
 
@@ -506,7 +580,7 @@ public:
     /**
      * Sets up the protocol for the server side and returns a handle object.
     **/
-    Server(Configuration configuration, trax_logger log);
+    Server(Configuration configuration, Logging log);
 
     virtual ~Server();
 
@@ -534,6 +608,8 @@ public:
 
     Image();
 
+    Image(const Image& original);
+
     /**
      * Creates a file-system path image description.
     **/
@@ -557,12 +633,17 @@ public:
     /**
      * Releases image structure, frees allocated memory.
     **/
-    ~Image();
+    virtual ~Image();
 
     /**
      * Returns a type of the image handle.
     **/
     int type() const;
+
+    /**
+     * Checks if image container is empty.
+    **/
+    bool empty() const;
 
     /**
      * Returns a file path from a file-system path image description. This function
@@ -618,10 +699,12 @@ public:
 
     Region();
 
+    Region(const Region& original);
+
     /**
      * Creates a special region object. Only one paramter (region code) required.
     **/
-    static Region create_static(int code);
+    static Region create_special(int code);
 
     /**
      * Creates a rectangle region.
@@ -637,12 +720,17 @@ public:
     /**
      * Releases region, frees allocated memory.
     **/
-    ~Region();
+    virtual ~Region();
 
     /**
      * Returns type identifier of the region object.
     **/
     int type() const;
+
+    /**
+     * Checks if region container is empty.
+    **/
+    bool empty() const;
 
     /**
      * Sets the code of a special region.
@@ -680,12 +768,19 @@ public:
     int get_polygon_count() const;
 
     /**
-     * Creates a rectangle region object that bounds the input region (in case the input
-     * region is also a rectangle it just clones it).
+     * Computes bounds of a region.
      **/
-    Region bounds() const;
+    Bounds bounds() const;
+
+    Region convert(int type) const;
+
+    float overlap(const Region& region, const Bounds& bounds) const;
 
     Region& operator=(Region lhs) throw();
+
+    friend std::ostream& operator<< (std::ostream& output, const Region& region);
+
+    friend std::istream& operator>> (std::istream& input, Region &D);
 
 protected:
 
@@ -709,9 +804,14 @@ public:
     Properties();
 
     /**
+     * A copy constructor.
+     **/
+    Properties(const Properties& original);
+
+    /**
      * Destroy a properties object and clean up the memory.
      **/
-    ~Properties();
+    virtual ~Properties();
 
     /**
      * Clear a properties object.
@@ -754,10 +854,12 @@ public:
      * Iterate over the property set using a callback function. An optional pointer can be given and is forwarded
      * to the callback.
      **/
-    void enumerate(trax_enumerator enumerator, void* object);
+    void enumerate(Enumerator enumerator, void* object);
 
     Properties& operator=(Properties lhs) throw();
 
+    friend std::ostream& operator<< (std::ostream& output, const Properties& properties);
+    
 protected:
 
     virtual void cleanup();

@@ -162,6 +162,8 @@ Process::Process(string command, bool explicit_mode) : explicit_mode(explicit_mo
 
 Process::~Process() {
 
+    stop();
+
     int i = 0;
 
     while (arguments[i]) {

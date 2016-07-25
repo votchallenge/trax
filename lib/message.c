@@ -67,7 +67,9 @@ static void initialize_sockets(void) {}
 
 #define VALIDATE_MESSAGE_STREAM(S) assert((S->flags & TRAX_STREAM_FILES) || (S->flags & TRAX_STREAM_SOCKET))
 
-#define LOG_CHAR(L, C) { char tmp[2]; tmp[1] = 0; tmp[0] = C; L(tmp); }
+#define LOG_STR(L, S) { if ((L) && (L)->callback ) { (L)->callback(S, (L)->data); } }
+
+#define LOG_CHAR(L, C) { if ((L) && (L)->callback ) { char tmp[2]; tmp[1] = 0; tmp[0] = C; (L)->callback(tmp, (L)->data); } }
 
 #define MAX_KEY_LENGTH 64
 
@@ -303,7 +305,7 @@ __INLINE int write_string(message_stream* stream, const char* buf, int len) {
 	return 1;
 }
 
-int read_message(message_stream* stream, trax_logger log, string_list* arguments, trax_properties* properties) {
+int read_message(message_stream* stream, trax_logging* log, string_list* arguments, trax_properties* properties) {
 	
 	int message_type = -1;
     int prefix_length = strlen(TRAX_PREFIX);
@@ -328,7 +330,7 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
     		complete = TRUE;
     	} else chr = (char) val;
 
-        if (log) LOG_CHAR(log, chr);
+        LOG_CHAR(log, chr);
 
         switch (state) {
             case PARSE_STATE_TYPE: { // Parsing message type
@@ -628,7 +630,7 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
     BUFFER_DESTROY(key_buffer);
     BUFFER_DESTROY(value_buffer);
 
-    if (log) log(NULL); // Flush the log stream
+    LOG_STR(log, NULL) // Flush the log stream
 
     return message_type;
     
@@ -636,22 +638,22 @@ int read_message(message_stream* stream, trax_logger log, string_list* arguments
 
 typedef struct file_pair {
     message_stream* stream;
-    trax_logger log;
+    trax_logging* log;
 } file_pair;
 
 
 
-#define OUTPUT_STRING(S) { int len = strlen(S); write_string(stream, S, len); if (log) log(S); }
+#define OUTPUT_STRING(S) { int len = strlen(S); write_string(stream, S, len); LOG_STR(log, S); }
 #define OUTPUT_ESCAPED(S) { int i = 0; while (1) { \
     if (!S[i]) break; \
-    if (S[i] == '"' || S[i] == '\\') { write_string(stream, "\\", 1); if (log) log("\\"); } \
-     write_string(stream, &(S[i]), 1); if (log) LOG_CHAR(log, S[i]); i++; } \
+    if (S[i] == '"' || S[i] == '\\') { write_string(stream, "\\", 1); LOG_STR(log, "\\"); } \
+     write_string(stream, &(S[i]), 1); LOG_CHAR(log, S[i]); i++; } \
     }
 
 void __output_properties(const char *key, const char *value, const void *obj) {
     
     message_stream* stream = ((file_pair *) obj)->stream;
-    trax_logger log = ((file_pair *) obj)->log;
+    trax_logging* log = ((file_pair *) obj)->log;
 
     OUTPUT_STRING("\"");
     OUTPUT_STRING(key);
@@ -661,7 +663,7 @@ void __output_properties(const char *key, const char *value, const void *obj) {
 
 }
 
-void write_message(message_stream* stream, trax_logger log, int type, const string_list arguments, trax_properties* properties) {
+void write_message(message_stream* stream, trax_logging* log, int type, const string_list arguments, trax_properties* properties) {
 
     int i;
 
@@ -715,7 +717,7 @@ void write_message(message_stream* stream, trax_logger log, int type, const stri
 
         OUTPUT_STRING("\n");
 
-        if (log) log(NULL); // Flush the log stream
+        LOG_STR(log, NULL); // Flush the log stream
 
     }
 
