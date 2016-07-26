@@ -39,6 +39,7 @@
 // protocol to client. The purpose of the application mainly testing and demonstrative.
 
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <trax/opencv.hpp>
 #include <trax.h>
 
@@ -67,7 +68,7 @@ int main( int argc, char** argv)
     trax::Image img;
     trax::Region reg;
 
-    trax::Configuration config(TRAX_IMAGE_MEMORY | TRAX_IMAGE_BUFFER, TRAX_REGION_RECTANGLE);
+    trax::Configuration config(TRAX_IMAGE_PATH | TRAX_IMAGE_MEMORY | TRAX_IMAGE_BUFFER, TRAX_REGION_RECTANGLE);
     trax::Server handle(config, trax_no_log);
 
     cv::namedWindow(WINDOW_NAME);

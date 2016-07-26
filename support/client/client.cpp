@@ -1,4 +1,7 @@
 
+#include <iostream>
+#include <fstream>
+
 #include <trax/client.hpp>
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
@@ -541,7 +544,6 @@ public:
 
 };
 
-
 TrackerProcess::TrackerProcess(const string& command, map<string, string> environment, int timeout, ConnectionMode connection, VerbosityMode verbosity) {
 
 	state = new State(command, environment, connection, verbosity, timeout);
@@ -569,6 +571,10 @@ bool TrackerProcess::initialize(Image& image, Region& region, Properties& proper
 
     state->tracking = result == TRAX_OK;
 
+    if (result == TRAX_ERROR) {
+    	state->stop_process();
+    }
+
     return result == TRAX_OK;
 
 }
@@ -588,6 +594,10 @@ bool TrackerProcess::wait(Region& region, Properties& properties) {
 
     state->tracking = result == TRAX_STATE;
 
+    if (result == TRAX_ERROR) {
+    	state->stop_process();
+    }
+
     return result == TRAX_STATE;
 
 }
@@ -605,6 +615,10 @@ bool TrackerProcess::frame(Image& image, Properties& properties) {
 	state->stop_watchdog();
 
     state->tracking = result == TRAX_OK;
+
+    if (result == TRAX_ERROR) {
+    	state->stop_process();
+    }
 
     return result == TRAX_OK;
 
@@ -645,5 +659,46 @@ int TrackerProcess::region_formats() {
 	return state->client->configuration().format_region;
 
 }
+
+void load_trajectory(const std::string& file, std::vector<Region>& trajectory) {
+
+    std::ifstream input;
+
+    input.open(file.c_str(), std::ifstream::in);
+
+    if (!input.is_open())
+        throw std::runtime_error(string("Unable to open trajectory file: ") + file);
+
+    while (1) {
+
+        Region region;
+        input >> region;
+
+        if (!input.good()) break;
+
+        trajectory.push_back(region);
+
+    }
+
+    input.close();
+
+}
+
+void save_trajectory(const std::string& file, std::vector<Region>& trajectory) {
+
+    std::ofstream output;
+
+    output.open(file.c_str(), std::ofstream::out);
+
+    for (std::vector<Region>::iterator it = trajectory.begin(); it != trajectory.end(); it++) {
+
+        output << *it;
+
+    }
+
+    output.close();
+
+}
+
 
 }

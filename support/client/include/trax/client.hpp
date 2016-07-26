@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 #include <trax.h>
 
 using namespace std;
@@ -40,6 +41,10 @@ private:
 	State* state;
 
 };
+
+void load_trajectory(const std::string& file, std::vector<Region>& trajectory);
+
+void save_trajectory(const std::string& file, std::vector<Region>& trajectory);
 
 }
 

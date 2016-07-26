@@ -774,7 +774,7 @@ public:
 
     Region convert(int type) const;
 
-    float overlap(const Region& region, const Bounds& bounds) const;
+    float overlap(const Region& region, const Bounds& bounds = Bounds()) const;
 
     Region& operator=(Region lhs) throw();
 

@@ -60,7 +60,6 @@
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <ctype.h>
-#include <winsock2.h>
 #include <windows.h>
 
 #define strcmpi _strcmpi
@@ -100,10 +99,6 @@ using namespace trax;
 #ifndef MIN
 #define MIN(a,b) ((a) < (b)) ? (a) : (b)
 #endif
-
-float threshold = -1;
-int timeout = 30;
-int reinitialize = 0;
 
 void print_help() {
 
@@ -248,48 +243,6 @@ void load_images(const string& file, vector<string>& list) {
     input.close();
 }
 
-bool load_trajectory(const string& file, vector<Region>& trajectory) {
-
-    std::ifstream input;
-
-    input.open(file.c_str(), std::ifstream::in);
-
-    if (!input.is_open())
-        throw std::runtime_error(string("Unable to open trajectory file: ") + file);
-
-    while (1) {
-
-        Region region;
-        input >> region;
-
-        if (!input.good()) break;
-
-        trajectory.push_back(region);
-
-    }
-
-    input.close();
-
-    return false;
-
-}
-
-void save_trajectory(const string& file, vector<Region>& trajectory) {
-
-    std::ofstream output;
-
-    output.open(file.c_str(), std::ofstream::out);
-
-    for (vector<Region>::iterator it = trajectory.begin(); it != trajectory.end(); it++) {
-
-        output << *it;
-
-    }
-
-    output.close();
-
-}
-
 void save_timings(const string& file, vector<long>& timings) {
 
     std::ofstream output;
@@ -361,6 +314,9 @@ int main( int argc, char** argv) {
     ConnectionMode connection = CONNECTION_DEFAULT;
     VerbosityMode verbosity = VERBOSITY_DEFAULT;
     opterr = 0;
+    float threshold = -1;
+    int timeout = 30;
+    int reinitialize = 0;
 
     string timing_file;
     string tracker_command;
@@ -594,13 +550,15 @@ int main( int argc, char** argv) {
 
                         timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
 
-                    } else if (result == TRAX_QUIT) {
-                        // The tracker has requested termination of connection.
-                        DEBUGMSG("Termination requested by tracker.\n");
-                        break;
                     } else {
-                        // In case of an error ...
-                        throw std::runtime_error("Unable to contact tracker.");
+                        if (tracker.ready()) {
+                            // The tracker has requested termination of connection.
+                            DEBUGMSG("Termination requested by tracker.\n");
+                            break;
+                        } else {
+                            // In case of an error ...
+                            throw std::runtime_error("Unable to contact tracker.");
+                        }
                     }
 
                     frame++;
