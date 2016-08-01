@@ -30,13 +30,15 @@
         (((region_container*) (VP))->type == RECTANGLE) ? TRAX_REGION_RECTANGLE : \
         (((region_container*) (VP))->type == POLYGON) ? TRAX_REGION_POLYGON : \
         (((region_container*) (VP))->type == MASK) ? TRAX_REGION_MASK : \
-        SPECIAL)
+        (((region_container*) (VP))->type == SPECIAL) ? TRAX_REGION_SPECIAL : \
+        EMPTY)
 
 #define REGION_TYPE_BACK(T) (\
     ( T == TRAX_REGION_RECTANGLE ) ? RECTANGLE :\
     ( T == TRAX_REGION_POLYGON ) ? POLYGON :\
     ( T == TRAX_REGION_MASK ) ? MASK :\
-     SPECIAL)
+    ( T == TRAX_REGION_SPECIAL ) ? SPECIAL :\
+     EMPTY)
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <io.h>
@@ -1108,7 +1110,7 @@ trax_region* trax_region_convert(const trax_region* region, int format) {
 
     if (!region) return NULL;
 
-    return region_convert(region, format);
+    return region_convert(region, REGION_TYPE_BACK(format));
 
 }
 
