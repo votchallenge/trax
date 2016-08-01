@@ -3,6 +3,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <string>
+#include <vector>
 
 namespace trax {
 
@@ -84,6 +85,40 @@ Image mat_to_image(const cv::Mat& mat) {
 Region rect_to_region(const cv::Rect rect) {
 	
 	return Region::create_rectangle(rect.x, rect.y, rect.width, rect.height);
+
+}
+
+void draw_region(cv::Mat& canvas, const Region& region, cv::Scalar color, int width) {
+
+    if (region.empty()) return;
+
+    switch (region.type()) {
+        case TRAX_REGION_RECTANGLE: {
+            cv::Rect rectangle = region_to_rect(region);
+            cv::rectangle(canvas, rectangle.tl(), rectangle.br(), color, width);
+            break;
+        }
+        case TRAX_REGION_POLYGON: {
+            std::vector<cv::Point> points;
+
+            for (int i = 0; i < region.get_polygon_count(); i++) {
+                float x, y;
+                region.get_polygon_point(0, &x, &y);
+                points.push_back(cv::Point(x, y));
+            }
+
+            const cv::Point* ppoints = &points[0];
+            int npoints = (int) points.size();
+
+            if (width < 1) 
+                cv::fillPoly(canvas, &ppoints, &npoints, 1, color);
+            else
+                cv::polylines(canvas, &ppoints, &npoints, 1, true, color, width);
+
+            break;
+        }
+    }
+
 
 }
 
