@@ -778,6 +778,8 @@ public:
 
     Region& operator=(Region lhs) throw();
 
+    operator std::string () const;
+
     friend std::ostream& operator<< (std::ostream& output, const Region& region);
 
     friend std::istream& operator>> (std::istream& input, Region &D);

@@ -437,14 +437,33 @@ Region& Region::operator=(Region lhs) throw() {
 	return *this;
 }
 
+Region::operator std::string () const {
+
+	std::string result;
+
+	if (!empty()) {
+		char* str = trax_region_encode(region);
+
+		if (str) {
+			result = std::string(str);
+			free(str);
+		}
+
+	}
+	return result;
+
+}
+
 std::ostream& operator<< (std::ostream& output, const Region& region) {
 
-	if (region.region) {
+	if (!region.empty()) {
 
 		char* str = trax_region_encode(region.region);
 
-		if (str)
+		if (str) {
 			output << str;
+			free(str);
+		}
 	}
 
 	output << std::endl;

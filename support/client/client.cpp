@@ -232,7 +232,10 @@ public:
 
 	    	start_watchdog();
 
-	    	Logging logger(client_logger, this, 0);
+	    	Logging logger = trax_no_log;
+			
+			if (verbosity != VERBOSITY_SILENT) 
+				logger = Logging(client_logger, this, 0);
 
 	        if (connection == CONNECTION_SOCKETS) {
 	            DEBUGMSG(this, "Setting up TraX with TCP socket connection\n");
@@ -658,14 +661,16 @@ int TrackerProcess::region_formats() {
 
 }
 
-void load_trajectory(const std::string& file, std::vector<Region>& trajectory) {
+int load_trajectory(const std::string& file, std::vector<Region>& trajectory) {
 
     std::ifstream input;
 
     input.open(file.c_str(), std::ifstream::in);
 
     if (!input.is_open())
-        throw std::runtime_error(string("Unable to open trajectory file: ") + file);
+        return 0;
+
+    int elements = 0;
 
     while (1) {
 
@@ -676,9 +681,13 @@ void load_trajectory(const std::string& file, std::vector<Region>& trajectory) {
 
         trajectory.push_back(region);
 
+        elements++;
+
     }
 
     input.close();
+
+    return elements;
 
 }
 

@@ -42,7 +42,7 @@ private:
 
 };
 
-void load_trajectory(const std::string& file, std::vector<Region>& trajectory);
+int load_trajectory(const std::string& file, std::vector<Region>& trajectory);
 
 void save_trajectory(const std::string& file, std::vector<Region>& trajectory);
 
