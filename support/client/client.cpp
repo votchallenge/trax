@@ -455,7 +455,7 @@ public:
 
 	}
 
-	static void client_logger(const char *string, void* obj) {
+	static void client_logger(const char *string, int length, void* obj) {
 
 		State* state  = (State*) obj; 
 
@@ -473,7 +473,7 @@ public:
 
 	    } else {
 
-	        while (*string) {
+	        for (int i = 0; i < length; i++) {
 	  
 	            state->stdout_length++;
 
@@ -482,9 +482,9 @@ public:
 	                if (state->stdout_length == state->line_truncate)
 	                    state->stdout_buffer[state->stdout_position++] = '\n';
 
-	            } else state->stdout_buffer[state->stdout_position++] = *string;
+	            } else state->stdout_buffer[state->stdout_position++] = string[i];
 
-	            if (state->stdout_position == (LOGGER_BUFFER_SIZE-1) || *string == '\n') {
+	            if (state->stdout_position == (LOGGER_BUFFER_SIZE-1) || string[i] == '\n') {
 
 	                state->stdout_buffer[state->stdout_position] = 0;
 
@@ -496,11 +496,9 @@ public:
 
 	                MUTEX_UNLOCK(state->logger_mutex);
 
-	                if (*string == '\n') state->stdout_length = 0;
+	                if (string[i] == '\n') state->stdout_length = 0;
 
 	            }
-
-	            string++;
 
 	        }
 

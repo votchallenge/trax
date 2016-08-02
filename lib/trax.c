@@ -60,11 +60,11 @@ const char* trax_version() {
     return (const char*) (TRAX_BUILD_VERSION);
 }
 
-void file_logger(const char *string, void* data) {
+void file_logger(const char *string, int length, void* data) {
     if (!data) return;
 
     if (string)
-        fputs(string, (FILE*) data);
+        fwrite(string, sizeof(char), length, (FILE*) data);
     else
         fflush((FILE*) data);
 }

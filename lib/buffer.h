@@ -20,6 +20,8 @@ typedef struct string_list {
 	int size;
 } string_list;
 
+#define BUFFER_INCREMENT_STEP 4096
+
 #define BUFFER_CREATE(B, L) {(B).size = L; (B).buffer = (char*) malloc(sizeof(char) * (B).size); (B).position = 0;}
 
 #define BUFFER_RESET(B) {(B).position = 0;}
@@ -36,7 +38,7 @@ typedef struct string_list {
 #define BUFFER_PUSH(B, C) { \
 		int required = 1; \
 		if (required > (B).size - (B).position) { \
-			(B).size = (B).position + 512; \
+			(B).size = (B).position + BUFFER_INCREMENT_STEP; \
 			(B).buffer = (char*) realloc((B).buffer, sizeof(char) * (B).size); \
 		} \
         (B).buffer[(B).position] = C; \

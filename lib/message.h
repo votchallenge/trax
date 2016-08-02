@@ -7,7 +7,7 @@
 #define TRAX_STREAM_SOCKET 2
 #define TRAX_STREAM_SOCKET_LISTEN 8
 
-#define TRAX_BUFFER_SIZE 512
+#define TRAX_BUFFER_SIZE 4096
 
 #include <stdio.h>
 #include <assert.h>

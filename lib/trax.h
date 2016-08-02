@@ -112,7 +112,7 @@ typedef struct trax_bounds {
 
 } trax_bounds;
 
-typedef void(*trax_logger)(const char *string, void *obj);
+typedef void(*trax_logger)(const char *string, int length, void *obj);
 
 typedef void(*trax_enumerator)(const char *key, const char *value, const void *obj);
 

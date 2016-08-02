@@ -67,9 +67,9 @@ static void initialize_sockets(void) {}
 
 #define VALIDATE_MESSAGE_STREAM(S) assert((S->flags & TRAX_STREAM_FILES) || (S->flags & TRAX_STREAM_SOCKET))
 
-#define LOG_STR(L, S) { if ((L) && (L)->callback ) { (L)->callback(S, (L)->data); } }
+#define LOG_BUFFER(L, S, N) { if ((L) && (L)->callback ) { (L)->callback(S, N, (L)->data); } }
 
-#define LOG_CHAR(L, C) { if ((L) && (L)->callback ) { char tmp[2]; tmp[1] = 0; tmp[0] = C; (L)->callback(tmp, (L)->data); } }
+#define LOG_CHAR(L, C) { if ((L) && (L)->callback ) { (L)->callback(&(C), 1, (L)->data); } }
 
 #define MAX_KEY_LENGTH 64
 
@@ -271,40 +271,6 @@ __INLINE int read_character(message_stream* stream) {
 
 }
 
-__INLINE int write_string(message_stream* stream, const char* buf, int len) {
-    char chr;
-
-    if (len < 1) return 1;
-
-    if (stream->flags & TRAX_STREAM_SOCKET) {
-
-	    int cnt = 0;
-
-	    while(cnt < len) {
-		    int l = send(stream->socket.socket, buf+cnt, len-cnt,0);
-		    if(l == -1) {
-			    return -1;
-		    }
-		    cnt += l;
-	    }
-
-    } else {
-
-	    int cnt = 0;
-
-	    while(cnt < len) {
-		    int l = write(stream->files.output, buf, len);
-		    if(l == -1) {
-			    return -1;
-		    }
-		    cnt += l;
-	    }
-
-    }
-
-	return 1;
-}
-
 int read_message(message_stream* stream, trax_logging* log, string_list* arguments, trax_properties* properties) {
 	
 	int message_type = -1;
@@ -315,8 +281,8 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
 
 	VALIDATE_MESSAGE_STREAM(stream);
 
-    BUFFER_CREATE(key_buffer, 512);
-    BUFFER_CREATE(value_buffer, 512);
+    BUFFER_CREATE(key_buffer, BUFFER_INCREMENT_STEP);
+    BUFFER_CREATE(value_buffer, BUFFER_INCREMENT_STEP);
     LIST_RESET((*arguments));
 
     while (!complete) {
@@ -630,10 +596,67 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
     BUFFER_DESTROY(key_buffer);
     BUFFER_DESTROY(value_buffer);
 
-    LOG_STR(log, NULL) // Flush the log stream
+    LOG_BUFFER(log, NULL, 0) // Flush the log stream
 
     return message_type;
     
+}
+
+int write_buffer(message_stream* stream, const char* buf, int len, trax_logging* log) {
+    char chr;
+
+    if (len < 1) return 1;
+
+    if (stream->flags & TRAX_STREAM_SOCKET) {
+
+        int cnt = 0;
+
+        while(cnt < len) {
+            int l = send(stream->socket.socket, buf+cnt, len-cnt, 0);
+            if(l == -1) {
+                return -1;
+            }
+            cnt += l;
+        }
+
+    } else {
+
+        int cnt = 0;
+
+        while(cnt < len) {
+            int l = write(stream->files.output, buf+cnt, len-cnt);
+            if(l == -1) {
+                return -1;
+            }
+            cnt += l;
+        }
+
+    }
+
+    LOG_BUFFER(log, buf, len);
+
+    return 1;
+}
+
+int write_buffer_escaped(message_stream* stream, const char* buf, int len, trax_logging* log) {
+    int i = 0, j = 0;
+
+    if (len < 1) return 1;
+
+    while (i < len) {
+        if (buf[i] == '"' || buf[i] == '\\') {
+            if (write_buffer(stream, &(buf[j]), i - j, log) != -1)
+                return -1;
+            j = i;
+            if (write_buffer(stream, "\\", 1, log) != 1)
+                return -1;
+        }
+        i++;
+    }
+    if (write_buffer(stream, &(buf[j]), i - j, log) != -1)
+        return -1;
+
+    return 1;
 }
 
 typedef struct file_pair {
@@ -641,15 +664,14 @@ typedef struct file_pair {
     trax_logging* log;
 } file_pair;
 
-
-
-#define OUTPUT_STRING(S) { int len = strlen(S); write_string(stream, S, len); LOG_STR(log, S); }
-#define OUTPUT_ESCAPED(S) { int i = 0; while (1) { \
+#define OUTPUT_STRING(S) { int len = strlen(S); write_buffer(stream, S, len, log); }
+#define OUTPUT_ESCAPED(S) { int len = strlen(S); write_buffer_escaped(stream, S, len, log); }
+/*#define OUTPUT_ESCAPED(S) { int i = 0; while (1) { \
     if (!S[i]) break; \
     if (S[i] == '"' || S[i] == '\\') { write_string(stream, "\\", 1); LOG_STR(log, "\\"); } \
      write_string(stream, &(S[i]), 1); LOG_CHAR(log, S[i]); i++; } \
     }
-
+*/
 void __output_properties(const char *key, const char *value, const void *obj) {
     
     message_stream* stream = ((file_pair *) obj)->stream;
@@ -704,7 +726,6 @@ void write_message(message_stream* stream, trax_logging* log, int type, const st
         OUTPUT_STRING("\"");
         OUTPUT_ESCAPED(arg);
         OUTPUT_STRING("\" ");
-
     }
 
     {
@@ -717,7 +738,7 @@ void write_message(message_stream* stream, trax_logging* log, int type, const st
 
         OUTPUT_STRING("\n");
 
-        LOG_STR(log, NULL); // Flush the log stream
+        LOG_BUFFER(log, NULL, 0); // Flush the log stream
 
     }
 
