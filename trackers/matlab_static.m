@@ -2,7 +2,7 @@ function [] = matlab_static()
 
 cleanup = onCleanup(@() exit() );
 
-traxserver('setup', 'polygon', 'path');
+traxserver('setup', 'polygon', {'path', 'memory', 'data'});
 
 memory = [0 0 0 0];
 
