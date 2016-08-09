@@ -121,7 +121,7 @@ int main( int argc, char** argv) {
         height = (int) (bounds.bottom - bounds.top + 1) + 1;
 
         raster = (char*) malloc(sizeof(char) * width * height);
-        region_mask_offset(a, raster, (int) bounds.left, (int) bounds.top, width, height);
+        region_get_mask_offset(a, raster, (int) bounds.left, (int) bounds.top, width, height);
 
         fprintf(stdout, "Region: ");
         region_print(stdout, a);
