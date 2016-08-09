@@ -316,7 +316,7 @@ trax_image* image_decode(char* buffer) {
         int format, outlen;
         char* token;
 
-        token = resource + 1;
+        token = resource;
         resource = strntok(token, ';', 32);
         if (!resource) return NULL;
         format = decode_buffer_format(token);
