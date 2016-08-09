@@ -118,8 +118,6 @@ void draw_region(cv::Mat& canvas, const Region& region, cv::Scalar color, int wi
             break;
         }
     }
-
-
 }
 
 }
