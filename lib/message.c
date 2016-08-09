@@ -644,12 +644,21 @@ int write_buffer_escaped(message_stream* stream, const char* buf, int len, trax_
     if (len < 1) return 1;
 
     while (i < len) {
-        if (buf[i] == '"' || buf[i] == '\\') {
+        // Handle special characters by writting the currenlty scanned part of
+        // the buffer and inserting escape character.
+        if (buf[i] == '"' || buf[i] == '\\' || buf[i] == '\n') {
             if (write_buffer(stream, &(buf[j]), i - j, log) != -1)
                 return -1;
             j = i;
             if (write_buffer(stream, "\\", 1, log) != 1)
                 return -1;
+            // In case of new line we do not insert that symbol but character 'n'.
+            if (buf[i] == '\n') {
+                if (write_buffer(stream, "n", 1, log) != 1)
+                    return -1;
+                j++;
+            }
+
         }
         i++;
     }
