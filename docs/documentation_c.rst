@@ -599,9 +599,96 @@ Properties
 Integration tutorial
 --------------------
 
-The library can be easily integrated into C and C++ code (although a C++ wrapper also exists) and can be also linked into other programming languages that enable linking of C libraries. Below is an sripped-down example of a C tracker with a typical tracking loop.
+The library can be easily integrated into C and C++ code (although a C++ wrapper also exists) and can be also linked into other programming languages that enable linking of C libraries. Below is an sripped-down example of a C tracker skeleton with a typical tracking loop. Note that this is not a complete example and servers only as a demonstration of a typical tracker on a tracking-loop level.
 
+.. code-block:: c
+  :linenos:
+  
+  #include <stdio.h>
 
+  int main( int argc, char** argv)
+  {
+      int i; 
+      FILE* out;
+      rectangle_type region;
+      image_type image;
 
-The code can be modified to use the TraX protocol by including the C library header and linking the library when building the executable.
+      out = fopen("trajectory.txt", "w");
+
+      region = read_bounding_box();
+      image = read_image(1); 
+      region = initialize_tracker(region, image);
+
+      write_frame(out, region);
+
+      for (i = 2; ; i++)
+      {
+        image = read_image(i); 
+        region = update_tracker(image);
+        write_frame(out, region);
+      }
+
+      fclose(out);
+      return 0;
+  }
+
+The code above can be modified to use the TraX protocol by including the C library header and changing the tracking loop to accept frames from the protocol insead of directly reading them from the filesystem. It also requires linking the protocol library (``libtrax``) when building the tracker executable.
+
+.. code-block:: c
+  :linenos:
+
+  #include <stdio.h>
+
+  // Include TraX library header
+  #include "trax.h"
+
+  int main( int argc, char** argv)
+  {
+      int run = 1; 
+      trax_image* img = NULL;
+      trax_region* reg = NULL;
+
+      // Call trax_server_setup at the beginning
+      trax_handle* handle;
+      trax_configuration config;
+      config.format_region = TRAX_REGION_RECTANGLE;
+      config.format_image = TRAX_IMAGE_PATH;
+
+      handle = trax_server_setup(config, trax_no_log);
+
+      while(run)
+      {
+          int tr = trax_server_wait(handle, &img, &reg, NULL);
+
+          // There are two important commands. The first one is 
+          // TRAX_INITIALIZE that tells the tracker how to initialize.
+          if (tr == TRAX_INITIALIZE) {
+
+              rectangle_type region = initialize_tracker(
+                  region_to_rectangle(reg), load_image(img));
+              trax_server_reply(handle, rectangle_to_region(region), NULL);
+
+          } else
+          // The second one is TRAX_FRAME that tells the tracker what to process next.
+          if (tr == TRAX_FRAME) {
+
+              rectangle_type region = update_tracker(load_image(img));
+              trax_server_reply(handle, rectangle_to_region(region), NULL);
+
+          } 
+          // Any other command is either TRAX_QUIT or illegal, so we exit.
+          else {
+              run = 0;
+          }
+
+          if (img) trax_image_release(&img);
+          if (reg) trax_region_release(&reg);
+
+      }
+
+      // TraX: Call trax_cleanup at the end
+      trax_cleanup(&handle);
+
+      return 0;
+  }
 
