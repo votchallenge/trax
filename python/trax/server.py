@@ -1,11 +1,7 @@
 """
-\file server.py
-
-@brief Python implementation of the TraX sever
-
-@author Alessio Dore, Luka Cehovin
-
-@date 2016
+Implementation of the TraX sever. This module provides implementation 
+of the server side of the protocol and is therefore meant to be used in the
+tracker.
 """
 
 import os
@@ -24,15 +20,15 @@ DEFAULT_HOST = '127.0.0.1'
 
 TRAX_VERSION = 1
 
-Request = collections.namedtuple('Request', ['type', 'image', 'region', 'parameters'])
+class Request(collections.namedtuple('Request', ['type', 'image', 'region', 'parameters'])):
+    """ A container class for client requests. Contains fileds type, image, region and parameters. """
 
 class Server(MessageParser):
     """ TraX server implementation class."""
     def __init__(self, options, verbose=False):
-        """ Constructor
+        """ Constructor.
         
-        Args: 
-            verbose: if True display log info
+            :param bool verbose: if True display log info
         """
         if verbose:
             log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
@@ -79,10 +75,10 @@ class Server(MessageParser):
         return
         
     def wait(self):
-        """ Wait for client message request. Recognize it and parse them when received 
+        """ Wait for client message request. Recognize it and parse them when received .
         
-        Returns: 
-            request: a request structure
+            :returns: A request structure
+            :rtype: trax.server.Request
         """
         
         message = self._read_message()    
@@ -110,17 +106,17 @@ class Server(MessageParser):
             return Request(MessageType.ERROR, None, None, None)
 
     def status(self, region, properties=None):
-        """ Reply to client with a status region and optional properties
+        """ Reply to client with a status region and optional properties.
         
-        Args: 
-            region: Resulting region object.
-            properties: Optional arguments as a dictionary.     
+        
+            :param trax.region.Region region: Resulting region object.
+            :param dict properties: Optional arguments as a dictionary.     
         """
         assert(isinstance(region, trax.region.Region))
         self._write_message(MessageType.STATUS, [region], properties)
 
     def __enter__(self):
-        """ To support instantiation with 'with' statement """
+        """ To support instantiation with 'with' statement. """
         return self
 
     def __exit__(self,*args,**kwargs):
@@ -128,6 +124,7 @@ class Server(MessageParser):
         self.quit()
 
     def quit(self):
+        """ Sends quit message and end terminates communication. """
         try:
             self._close()
             if hasattr(self, 'socket'):
@@ -137,20 +134,18 @@ class Server(MessageParser):
 
 class ServerOptions(object):
     """ TraX server options """
-    def __init__(self, region, image, name=None, identifier=None, version=TRAX_VERSION):
-        """ Constructor
+    def __init__(self, region, image, name=None, identifier=None):
+        """ Constructor for server configuration
         
-        Args:
-            name: name of the tracker
-            identifier: identifier of the current implementation
-            region: region format. Supported: REGION_RECTANGLE, REGION_POLYGON  
-            image: image format. Supported: IMAGE_PATH 
-            version: version of the TraX protocol
+            :param str name: name of the tracker
+            :param str identifier: identifier of the current implementation
+            :param str region: region format.
+            :param str image: image format. 
         """
 
         # other formats not implemented yet
         assert(region in [trax.region.RECTANGLE, trax.region.POLYGON])
-        assert(image == trax.image.PATH)
+        assert(image in [trax.image.PATH, trax.image.URL, trax.image.MEMORY, trax.image.BUFFER])
 
         if name:
             self.name = name
@@ -158,5 +153,5 @@ class ServerOptions(object):
             self.identifier = identifier
         self.region = region
         self.image = image
-        self.version = version
+        self.version = TRAX_VERSION
     

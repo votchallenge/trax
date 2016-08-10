@@ -1,11 +1,5 @@
 """
-\file region.py
-
-@brief Python implementation of the TraX protocol - region classes
-
-@author Alessio Dore, Luka Cehovin
-
-@date 2016
+Region description classes.
 """
 
 import os
@@ -99,11 +93,10 @@ class Rectangle(Region):
     def __init__(self, x=0, y=0, width=0, height=0):
         """ Constructor
         
-        Args:
-            x: top left x coord of the rectangle region
-            y: top left y coord of the rectangle region
-            w: width of the rectangle region
-            h: height of the rectangle region
+            :param float x: top left x coord of the rectangle region
+            :param float y: top left y coord of the rectangle region
+            :param float w: width of the rectangle region
+            :param float h: height of the rectangle region
         """
         super(Rectangle, self).__init__()
         self.type = RECTANGLE
@@ -120,7 +113,7 @@ class Polygon(Region):
         """
         Constructor
     
-        Args: points list of points coordinates as tuples [(x1,y1), (x2,y2),...,(xN,yN)]  
+        :param list points: List of points as tuples [(x1,y1), (x2,y2),...,(xN,yN)]  
         """
         super(Polygon, self).__init__()
         assert(isinstance(points, list))

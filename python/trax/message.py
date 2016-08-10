@@ -250,14 +250,14 @@ class MessageParser(object):
             self._fout.write(" ")
             if not isinstance(arg, str):
                 arg = str(arg)
-            arg = arg.replace("\"", "\\\"")
+            arg = arg.replace("\"", "\\\"").replace("\\", "\\\\").replace("\n", "\\n")
             self._fout.write('\"' + arg + '\"') 
                 
         # optional arguments
         if properties:
             for k, v in properties.items():
                 self._fout.write(" ")
-                arg = "{}={}".format(k, str(v)).replace("\"", "\\\"")
+                arg = "{}={}".format(k, str(v)).replace("\"", "\\\"").replace("\\", "\\\\").replace("\n", "\\n")
                 self._fout.write('\"' + arg + '\"') 
 
         self._fout.write("\n")  
