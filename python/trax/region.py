@@ -6,11 +6,22 @@ import os
 import sys
 
 SPECIAL = "special"
+""" Constant for special region type """
+
 RECTANGLE = "rectangle"
+""" Constant for rectangle region type """
+
 POLYGON = "polygon"
-MASK = "mask"
+""" Constant for polygon region type """
 
 def convert(region, to):
+    """
+    Perform conversion from one region type to another (if possible).
+
+    :param Region region: original region
+    :param str to: type of desired result
+    :result: converter region or None if conversion is not possible
+    """
 
     if to == RECTANGLE:
 
@@ -66,21 +77,26 @@ def parse(string):
     return None
 
 class Region(object):
-    """ Base class for region """
-    def __init__(self):
-        pass
+    """ 
+    Base class for all region containers
+
+    :var type: type of the region
+    """
+    def __init__(self, type):
+        self.type = type
 
 class Special(Region):
-    """ Special region 
+    """ 
+    Special region 
+
+    :var code: Code value
     """
     def __init__(self, code):
         """ Constructor
         
-        Args:
-            code: special code
+        :param code: Special code
         """
-        super(Special, self).__init__()
-        self.type = SPECIAL
+        super(Special, self).__init__(SPECIAL)
         self.code = int(code)
 
     def __str__(self):
@@ -88,7 +104,13 @@ class Special(Region):
         return '{}'.format(self.code)
  
 class Rectangle(Region):
-    """ Rectangle region 
+    """ 
+    Rectangle region 
+
+    :var x: top left x coord of the rectangle region
+    :var float y: top left y coord of the rectangle region
+    :var float w: width of the rectangle region
+    :var float h: height of the rectangle region
     """
     def __init__(self, x=0, y=0, width=0, height=0):
         """ Constructor
@@ -98,8 +120,7 @@ class Rectangle(Region):
             :param float w: width of the rectangle region
             :param float h: height of the rectangle region
         """
-        super(Rectangle, self).__init__()
-        self.type = RECTANGLE
+        super(Rectangle, self).__init__(RECTANGLE)
         self.x, self.y, self.width, self.height = x, y, width, height
 
     def __str__(self):
@@ -107,7 +128,11 @@ class Rectangle(Region):
         return '{},{},{},{}'.format(self.x, self.y, self.width, self.height)
         
 class Polygon(Region):
-    """ Polygon region 
+    """ 
+    Polygon region 
+
+    :var list points: List of points as tuples [(x1,y1), (x2,y2),...,(xN,yN)]  
+    :var int count: number of points
     """
     def __init__(self, points):
         """
@@ -115,13 +140,12 @@ class Polygon(Region):
     
         :param list points: List of points as tuples [(x1,y1), (x2,y2),...,(xN,yN)]  
         """
-        super(Polygon, self).__init__()
+        super(Polygon, self).__init__(POLYGON)
         assert(isinstance(points, list))
         # do not allow empty list
-        assert(reduce(lambda x,y: x and y, [isinstance(p,tuple) for p in points], False))
+        assert(reduce(lambda x,y: x and y, [isinstance(p, tuple) for p in points], False))
         self.count = len(points) 
         self.points = points
-        self.type = POLYGON
 
     def __str__(self):
         """ Create string from class to send to client """

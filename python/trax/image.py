@@ -13,10 +13,20 @@ FILE_PATTERN = re.compile('^file://(?P<file>.+)')
 DATA_PATTERN = re.compile('^data:(?P<format>[a-z/0-9]+);(?:[a-z/0-9]+;)?')
 IMAGE_PATTERN = re.compile('^image:(?P<width>[0-9]+);(?P<height>[0-9]+);(?P<format>[a-z/0-9]+);')
 
+
 PATH = "path"
+""" Constant for file path image """
+
+
 URL = "url"
+""" Constant for remote or local URL image """
+
+
 BUFFER = "buffer"
+""" Constant for encoded memory buffer image """
+
 MEMORY = "memory"
+""" Constant for raw memory image """
 
 IMAGE_SETUPS = {
     'gray8' : (numpy.uint8, 1),
@@ -25,7 +35,7 @@ IMAGE_SETUPS = {
 }
 
 def parse(string):
-    """ In derived classes implement method to parse image string """
+    """ Parses string image representation to one of the containers """
 
     match = DATA_PATTERN.match(string)
     if match:
@@ -60,33 +70,40 @@ def parse(string):
     return None
 
 class Image(object):
+    """ 
+    Base class for all image containers
 
-    """ Type of image object """
-    type = None
-
-    """ Base class for image """
-    def __init__(self):
-        pass
+    :var type: Type constant for the image
+    """
+    def __init__(self, type):
+        self.type = type
 
 class FileImage(Image):
-    """ Image saved in a local file """
+    """ 
+    Image saved in a local file 
+
+    :var path: Path to the image file
+    """
     def __init__(self, path=None):
+        super(FileImage, self).__init__(PATH)
         self.path = path
-        self.type = PATH
         
     def __str__(self):
         """ Create string from image data """
         return self.path
 
 class URLImage(Image):
-    """ Image saved in a local or remote resource """
+    """ 
+    Image saved in a local or remote resource 
 
-    url = None
+    :var url: URL of the image
+    """
+
     """ Contains URL as string """
 
     def __init__(self, url=None):
+        super(URLImage, self).__init__(URL)
         self.url = url
-        self.type = URL
         
     def __str__(self):
         """ Create string from image data """
@@ -95,8 +112,8 @@ class URLImage(Image):
 class MemoryImage(Image):
     """ Image saved in memory as a numpy array """
     def __init__(self, image):
+        super(MemoryImage, self).__init__(MEMORY)
         self.image = image
-        self.type = MEMORY
         
     def __str__(self):
         """ Create string from image data """
@@ -108,9 +125,9 @@ class MemoryImage(Image):
 class BufferImage(Image):
     """ Image encoded in a memory buffer stored in JPEG or PNG file format """
     def __init__(self, data=None, format="unknown"):
+        super(BufferImage, self).__init__(BUFFER)
         self.data = data
         self.format = format
-        self.type = BUFFER
         
     def __str__(self):
         """ Create string from image data """
