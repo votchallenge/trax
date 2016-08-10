@@ -6,7 +6,6 @@ import os
 import sys
 import base64
 import re
-import numpy
 
 URL_PATTERN = re.compile('^(?:[a-z-]+)://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
 FILE_PATTERN = re.compile('^file://(?P<file>.+)')
@@ -17,22 +16,14 @@ IMAGE_PATTERN = re.compile('^image:(?P<width>[0-9]+);(?P<height>[0-9]+);(?P<form
 PATH = "path"
 """ Constant for file path image """
 
-
 URL = "url"
 """ Constant for remote or local URL image """
-
 
 BUFFER = "buffer"
 """ Constant for encoded memory buffer image """
 
 MEMORY = "memory"
 """ Constant for raw memory image """
-
-IMAGE_SETUPS = {
-    'gray8' : (numpy.uint8, 1),
-    'gray16' : (numpy.uint16, 1),
-    'rgb' : (numpy.uint8, 3),
-}
 
 def parse(string):
     """ Parses string image representation to one of the containers """
@@ -48,6 +39,14 @@ def parse(string):
     else: 
         match = IMAGE_PATTERN.match(string)
         if match:
+            import numpy
+
+            IMAGE_SETUPS = {
+                'gray8' : (numpy.uint8, 1),
+                'gray16' : (numpy.uint16, 1),
+                'rgb' : (numpy.uint8, 3),
+            }
+
             width = int(match.group("width"))
             height = int(match.group("height"))
             format = match.group("format")
