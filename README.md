@@ -4,23 +4,42 @@ About the TraX protocol
 What is TraX protocol?
 ----------------------
 
-[Visual Tracking eXchange protocol](http://prints.vicos.si/publications/311/) is a simple protocol that enables easier evaluation of computer vision tracking algorithms. The basic idea is that a tracker communicates with the evaluation software using a set of text commands over the (standard) input/output streams.
+[Visual Tracking eXchange protocol](http://prints.vicos.si/publications/311/) is a simple protocol that enables easier evaluation of computer vision tracking algorithms. The basic idea is that a tracker communicates with the evaluation software using a set of text commands over the (standard) input/output streams or TCP sockets.
 
-Reference C server and client implementation
+Reference server and client implementation
 --------------------------------------------
 
-libtrax is a reference C implementation for the Tracking eXchange protocol that enables researchers to quickly add support for the protocol in their C or C++ tracker (servers) as well as client tools. 
-Examples of integration in a tracker are provided in the `trackers` directory. A simple static tracker is available that explains the basic concept of the integration without too much logic. A more complex example is available in the form of the OpenCV implementation of the CamShift tracker.
+libtrax is a reference implementation of the Tracking eXchange protocol written in plain C. It enables researchers to quickly add support for the protocol in their C or C++ tracker (servers) as well as write new clients (evaluation, various tools). 
 
-Matlab server implementation
-----------------------------
+Integration examples are provided in the `trackers` directory. A simple static tracker is available that explains the basic concept of the integration without too much tracker-specific details.
+
+Other languages
+---------------
+
+### C++
+
+C library also comes with a C++ wrapper that provides easier interaction in C++ code by exposing object-oriented API and automatic memory handling via reference counting.
+
+### Matlab/Octave
 
 It is technically not possible to have a Matlab-only implementation of TraX protocol on all platforms because of the way Matlab handles terminal input and output. Therefore, Matlab TraX implementation is available as a MEX function that links the C library. It is available in the `matlab` directory. In case of using Matlab on Windows, the only way to use TraX is to use TCP/IP sockets, which means that both the client and server have to explicitly enable this (see help of `traxclient` for more details).
 
-Python server implementation
-----------------------------
+### Python
 
 Besides being able to use C library directly from Python, there is also a pure Python implementation of the server available in the `python` directory. An example of a tracker is available in the `trackers` directory.
+
+Support utilities
+-----------------
+
+The repositoy also contains utilities that make ceratin frequent tasks easier:
+
+ * Client library: a C++ library for writing client software, managing tracker process, also provides a CLI client executable.
+ * OpenCV utilities: conversions between TraX library structures and OpenCV objects.
+
+Documentation
+-------------
+
+Documentation for the protocol and libraries is available on [ReadTheDocs](http://trax.readthedocs.io/).
 
 License
 -------
