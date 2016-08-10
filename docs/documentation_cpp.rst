@@ -17,146 +17,240 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
 .. cpp:class:: Configuration
 
-A wrapper class for 
+   A wrapper class for 
 
-.. cpp:function:: Configuration(trax_configuration config)
-
-
-.. cpp:function:: Configuration(int image_formats, int region_formats)
+   .. cpp:function:: Configuration(trax_configuration config)
 
 
-.. cpp:function:: ~Configuration()
+   .. cpp:function:: Configuration(int image_formats, int region_formats)
+
+
+   .. cpp:function:: ~Configuration()
 
 .. cpp:class:: Logging 
 
-A wrapper class for 
+   A wrapper class for 
 
-.. cpp:function:: Logging(trax_logging logging)
+   .. cpp:function:: Logging(trax_logging logging)
 
-.. cpp:function:: Logging(trax_logger callback = NULL, void* data = NULL, int flags = 0)
+   .. cpp:function:: Logging(trax_logger callback = NULL, void* data = NULL, int flags = 0)
 
-.. cpp:function:: ~Logging()
+   .. cpp:function:: ~Logging()
 
 .. cpp:class:: Bounds 
 
-.. cpp:function:: Bounds()
+   .. cpp:function:: Bounds()
 
-.. cpp:function:: Bounds(trax_bounds bounds)
+   .. cpp:function:: Bounds(trax_bounds bounds)
 
 
-.. cpp:function:: Bounds(float left, float top, float right, float bottom)
+   .. cpp:function:: Bounds(float left, float top, float right, float bottom)
 
-.. cpp:function:: ~Bounds()
+   .. cpp:function:: ~Bounds()
 
 
 .. cpp:class:: Client
 
-.. cpp:function:: Client(int input, int output, Logging logger)
+   .. cpp:function:: Client(int input, int output, Logging logger)
 
-   Sets up the protocol for the client side and returns a handle object.
+      Sets up the protocol for the client side and returns a handle object.
 
-.. cpp:function:: Client(int server, Logging logger,  int timeout = -1)
+   .. cpp:function:: Client(int server, Logging logger,  int timeout = -1)
 
-   Sets up the protocol for the client side and returns a handle object.
+      Sets up the protocol for the client side and returns a handle object.
 
-.. cpp:function:: ~Client()
+   .. cpp:function:: ~Client()
 
-.. cpp:function:: int wait(Region& region, Properties& properties)
+   .. cpp:function:: int wait(Region& region, Properties& properties)
 
-   Waits for a valid protocol message from the server.
+      Waits for a valid protocol message from the server.
 
-.. cpp:function:: int initialize(const Image& image, const Region& region, const Properties& properties)
+   .. cpp:function:: int initialize(const Image& image, const Region& region, const Properties& properties)
 
-   Sends an initialize message.
+      Sends an initialize message.
 
-.. cpp:function:: int frame(const Image& image, const Properties& properties)
+   .. cpp:function:: int frame(const Image& image, const Properties& properties)
 
-   Sends a frame message.
+      Sends a frame message.
 
-.. cpp:function:: const Configuration configuration()
+   .. cpp:function:: const Configuration configuration()
 
 
 .. cpp:class:: Server
 
+   .. cpp:function:: Server(Configuration configuration, Logging log)
 
-.. cpp:function:: Server(Configuration configuration, Logging log)
+      Sets up the protocol for the server side and returns a handle object.
 
-   Sets up the protocol for the server side and returns a handle object.
+   .. cpp:function:: ~Server()
 
-.. cpp:function:: ~Server()
+   .. cpp:function:: int wait(Image& image, Region& region, Properties& properties)
 
-.. cpp:function:: int wait(Image& image, Region& region, Properties& properties)
+      Waits for a valid protocol message from the client.
 
-   Waits for a valid protocol message from the client.
+   .. cpp:function:: int reply(const Region& region, const Properties& properties)
 
-.. cpp:function:: int reply(const Region& region, const Properties& properties)
+      Sends a status reply to the client.
 
-   Sends a status reply to the client.
-
-.. cpp:function:: const Configuration configuration()
+   .. cpp:function:: const Configuration configuration()
 
 
 .. cpp:class:: Image
 
-.. cpp:function:: Image()
+   .. cpp:function:: Image()
 
-.. cpp:function:: Image(const Image& original)
+   .. cpp:function:: Image(const Image& original)
 
-.. cpp:function:: static Image create_path(const std::string& path)
+   .. cpp:function:: static Image create_path(const std::string& path)
 
-   Creates a file-system path image description. See :c:func:`trax_image_create_path`.
+      Creates a file-system path image description. See :c:func:`trax_image_create_path`.
 
-.. cpp:function:: static Image create_url(const std::string& url)
+   .. cpp:function:: static Image create_url(const std::string& url)
 
-   Creates a URL path image description.  See :c:func:`trax_image_create_url`.
+      Creates a URL path image description.  See :c:func:`trax_image_create_url`.
 
-.. cpp:function:: static Image create_memory(int width, int height, int format)
+   .. cpp:function:: static Image create_memory(int width, int height, int format)
 
-   Creates a raw buffer image description.See :c:func:`trax_image_create_memory`.
+      Creates a raw buffer image description.See :c:func:`trax_image_create_memory`.
 
-.. cpp:function:: static Image create_buffer(int length, const char* data)
+   .. cpp:function:: static Image create_buffer(int length, const char* data)
 
-   Creates a file buffer image description. See :c:func:`trax_image_create_buffer`.
+      Creates a file buffer image description. See :c:func:`trax_image_create_buffer`.
 
-.. cpp:function::  ~Image()
+   .. cpp:function::  ~Image()
 
-   Releases image structure, frees allocated memory.
- 
-.. cpp:function:: int type() const
+      Releases image structure, frees allocated memory.
+    
+   .. cpp:function:: int type() const
 
-   Returns a type of the image handle. See :c:func:`trax_image_get_type`.
+      Returns a type of the image handle. See :c:func:`trax_image_get_type`.
 
-.. cpp:function:: bool empty() const
+   .. cpp:function:: bool empty() const
 
-   Checks if image container is empty.
+      Checks if image container is empty.
 
-.. cpp:function:: const std::string get_path() const
+   .. cpp:function:: const std::string get_path() const
 
-   Returns a file path from a file-system path image description. This function returns a pointer to the internal data which should not be modified.
+      Returns a file path from a file-system path image description. This function returns a pointer to the internal data which should not be modified.
 
-.. cpp:function:: const std::string get_url() const
+   .. cpp:function:: const std::string get_url() const
 
-   Returns a file path from a URL path image description. This function returns a pointer to the internal data which should not be modified.
+      Returns a file path from a URL path image description. This function returns a pointer to the internal data which should not be modified.
 
-.. cpp:function:: void get_memory_header(int* width, int* height, int* format) const
+   .. cpp:function:: void get_memory_header(int* width, int* height, int* format) const
 
-   Returns the header data of a memory image.
+      Returns the header data of a memory image.
 
-.. cpp:function:: char* write_memory_row(int row)
+   .. cpp:function:: char* write_memory_row(int row)
 
-   Returns a pointer for a writeable row in a data array of an image.
+      Returns a pointer for a writeable row in a data array of an image.
 
-.. cpp:function:: const char* get_memory_row(int row) const
+   .. cpp:function:: const char* get_memory_row(int row) const
 
-   Returns a read-only pointer for a row in a data array of an image.
+      Returns a read-only pointer for a row in a data array of an image.
 
-.. cpp:function:: const char* get_buffer(int* length, int* format) const
+   .. cpp:function:: const char* get_buffer(int* length, int* format) const
 
-   Returns a file buffer and its length. This function returns a pointer to the internal data which should not be modified.
+      Returns a file buffer and its length. This function returns a pointer to the internal data which should not be modified.
 
 
 Integration tutorial
 --------------------
+
+In C++ tracker implementations you can use either the C++ wrapper or basic C protocol implementation. The wrapper is more conveninent as it is object-oriented and provides automatic deallocation of resources via reference counting. Below is an sripped-down example of a C++ tracker skeleton with a typical tracking loop. Note that this is not a complete example and servers only as a demonstration of a typical tracker on a tracking-loop level.
+
+.. code-block:: c++
+  :linenos:
+  
+  #include <iostream>
+  #include <fstream>
+
+  using namescpace std;
+
+  int main( int argc, char** argv)
+  {
+      int i; 
+      FILE* out;
+      Rectangle region;
+      Image image;
+      Tracker tracker;
+
+      ofstream out;
+      output.open("trajectory.txt", ofstream::out);
+
+      region = read_bounding_box();
+      image = read_image(1);
+      region = tracker.initialize(region, image);
+
+      out << region << endl;
+
+      for (i = 2; ; i++)
+      {
+        image = read_image(i); 
+        region = tracker.update(image);
+        out << region << endl;
+      }
+
+      out.close();
+      return 0;
+  }
+
+The code above can be modified to use the TraX protocol by including the C/C++ library header and changing the tracking loop to accept frames from the protocol insead of directly reading them from the filesystem. It also requires linking the protocol library (``libtrax``) when building the tracker executable.
+
+.. code-block:: c++
+  :linenos:
+
+  #include <stdio.h>
+
+  // Include TraX library header
+  #include "trax.h"
+
+  using namespace std;
+
+  int main( int argc, char** argv)
+  {
+      int run = 1; 
+      trax_image* img = NULL;
+      trax_region* reg = NULL;
+
+      // Initialize protocol
+      trax::Server handle(trax::Configuration(TRAX_IMAGE_PATH,
+            TRAX_REGION_RECTANGLE), trax_no_log);
+
+      while(run)
+      {
+         trax::Image image;
+         trax::Region region;
+         trax::Properties properties;
+
+         int tr = handle.wait(image, region, properties);
+
+         // There are two important commands. The first one is 
+         // TRAX_INITIALIZE that tells the tracker how to initialize.
+         if (tr == TRAX_INITIALIZE) {
+
+            rectangle_type region = tracker.initialize(
+                 region_to_rectangle(region), load_image(image));
+
+            handle.reply(rectangle_to_region(region), trax::Properties());
+
+         } else
+         // The second one is TRAX_FRAME that tells the tracker what to process next.
+         if (tr == TRAX_FRAME) {
+
+            rectangle_type region = tracker.update(load_image(image));
+            handle.reply(rectangle_to_region(region), trax::Properties());
+
+         }
+         // Any other command is either TRAX_QUIT or illegal, so we exit.
+         else {
+              run = 0;
+         }
+
+      }
+
+      return 0;
+  }
 
 
 
