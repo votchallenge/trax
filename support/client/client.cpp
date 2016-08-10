@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #include <trax/client.hpp>
 
@@ -248,6 +249,13 @@ public:
 	        if (!client) throw std::runtime_error("Unable to establish connection.");
 
 			stop_watchdog();
+
+		    int exit_status;
+		    if (!process->is_alive(&exit_status)) {
+		    	std::stringstream sstm;
+				sstm << "Tracker exited with exit code " << exit_status;
+		    	throw std::runtime_error(sstm.str());
+		    }
 
 		    DEBUGMSG(this, "Tracker process ID: %d \n", process->get_handle());
 
