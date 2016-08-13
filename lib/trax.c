@@ -114,8 +114,8 @@ char* parse_uri(char* buffer) {
 int verify_image_format(const char* buffer) {
 
     int i;
-    char jpeg_prefix[] = { 255, 216, 255, 224 }; 
-    char png_prefix[] = { 137, 80, 78, 71 }; 
+    char jpeg_prefix[] = { (char) 255, (char) 216, (char) 255, (char) 224 }; 
+    char png_prefix[] = { (char) 137, (char) 80, (char) 78, (char) 71 }; 
 
     for (i = 0; i < 4; i++) {
         if (buffer[i] != jpeg_prefix[i])
@@ -167,7 +167,7 @@ int decode_memory_format(char* name) {
 }
 
 
-int compare_prefix(char* str, char* prefix) {
+int compare_prefix(char* str, const char* prefix) {
     int i = 0;
 
     while (1) {
@@ -226,7 +226,7 @@ char* image_encode(trax_image* image) {
     }
     case TRAX_IMAGE_MEMORY: {
         int offset = 0;
-        char* format = image->format == TRAX_IMAGE_MEMORY_RGB ? "rgb" : 
+        const char* format = image->format == TRAX_IMAGE_MEMORY_RGB ? "rgb" : 
             image->format == TRAX_IMAGE_MEMORY_GRAY8 ? "gray8" : 
             image->format == TRAX_IMAGE_MEMORY_GRAY16 ? "gray16" : NULL;
         int depth = image->format == TRAX_IMAGE_MEMORY_RGB ? 1 : 
@@ -240,20 +240,20 @@ char* image_encode(trax_image* image) {
 
         result = (char*) malloc(sizeof(char) * (encoded + header + 1));
         offset += sprintf(result, "image:%d;%d;%s;", image->width, image->height, format);
-        base64encode(result + offset, image->data, length);
+        base64encode(result + offset, (unsigned char*)image->data, length);
         break;
     }
     case TRAX_IMAGE_BUFFER: {
         int offset = 0;
         int length = image->width;
-        char* format = (image->format == TRAX_IMAGE_BUFFER_JPEG) ? "image/jpeg" : 
+        const char* format = (image->format == TRAX_IMAGE_BUFFER_JPEG) ? "image/jpeg" : 
             ((image->format == TRAX_IMAGE_BUFFER_PNG) ? "image/png" : NULL);
         int body = base64encodelen(length);
         int header = snprintf(NULL, 0, "data:%s;", format);
         assert(format);
         result = (char*) malloc(sizeof(char) * (body + header + 1));
         offset += sprintf(result, "data:%s;", format);
-        offset += base64encode(result + offset, image->data, length);
+        offset += base64encode(result + offset, (unsigned char*) image->data, length);
         //result[offset] = 0;
         break;
     }
@@ -308,7 +308,7 @@ trax_image* image_decode(char* buffer) {
         result->height = height;
         result->format = format;
         result->data = (char*) malloc(sizeof(char) * allocated);
-        verify = base64decode(result->data, resource);
+        verify = base64decode((unsigned char*)result->data, resource);
 
         assert(verify == allocated);
 
@@ -329,7 +329,7 @@ trax_image* image_decode(char* buffer) {
         result->format = format;
 
         result->data = (char*) malloc(sizeof(char) * (outlen));
-        base64decode(result->data, resource);
+        base64decode((unsigned char*)result->data, resource);
     } else {
         *(resource--) = ':'; // Restore the semicolon and use the buffer as URL
         result = trax_image_create_url(buffer);
@@ -1087,7 +1087,7 @@ trax_region* trax_region_create_rectangle(float x, float y, float width, float h
 trax_bounds trax_region_bounds(const trax_region* region) {
 
     trax_bounds tb;
-    region_bounds rb = region_compute_bounds(region);
+    region_bounds rb = region_compute_bounds(REGION(region));
 
     tb.top = rb.top;
     tb.left = rb.left;
@@ -1102,7 +1102,7 @@ trax_region* trax_region_clone(const trax_region* region) {
 
     if (!region) return NULL;
 
-    return region_convert(region, REGION_TYPE(region));
+    return region_convert(REGION(region), REGION_TYPE_BACK(trax_region_get_type(region)));
 
 }
 
@@ -1110,7 +1110,7 @@ trax_region* trax_region_convert(const trax_region* region, int format) {
 
     if (!region) return NULL;
 
-    return region_convert(region, REGION_TYPE_BACK(format));
+    return region_convert(REGION(region), REGION_TYPE_BACK(format));
 
 }
 
@@ -1121,11 +1121,11 @@ float trax_region_overlap(const trax_region* a, const trax_region* b, const trax
     if (!a || !b) return 0;
 
     rb.top = bounds.top;
-    rb.left = bounds.left;
+    rb.left = bounds.left;  
     rb.right = bounds.right;
     rb.bottom = bounds.bottom;
 
-    return region_compute_overlap(a, b, rb).overlap;
+    return region_compute_overlap(REGION(a), REGION(b), rb).overlap;
 
 }
 
