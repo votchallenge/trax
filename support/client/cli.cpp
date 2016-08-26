@@ -477,7 +477,7 @@ int main( int argc, char** argv) {
                 initialization = vector<Region>(groundtruth.begin(), groundtruth.end());
             }
 
-            DEBUGMSG("Sequence length: %ld frames.\n", images.size());
+            DEBUGMSG("Sequence length: %d frames.\n", (int) images.size());
 
             TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
 

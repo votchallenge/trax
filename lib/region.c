@@ -877,7 +877,7 @@ region_overlap region_compute_overlap(const region_container* ra, const region_c
 
 }
 
-void region_mask(region_container* r, char* mask, int width, int height) {
+void region_get_mask(region_container* r, char* mask, int width, int height) {
 
     region_container* t = r;
 
@@ -891,7 +891,7 @@ void region_mask(region_container* r, char* mask, int width, int height) {
 
 }
 
-void region_mask_offset(region_container* r, char* mask, int x, int y, int width, int height) {
+void region_get_mask_offset(region_container* r, char* mask, int x, int y, int width, int height) {
 
     region_container* t = r;
 	region_polygon *p;
