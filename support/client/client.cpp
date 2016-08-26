@@ -10,7 +10,6 @@
 #include <ctype.h>
 #include <winsock2.h>
 #include <windows.h>
-#include "getopt_win.h"
 
 #define strcmpi _strcmpi
 
