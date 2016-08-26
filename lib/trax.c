@@ -1015,7 +1015,7 @@ void trax_image_get_memory_header(const trax_image* image, int* width, int* heig
         (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : \
         (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0))) \
 
-#define MEMORY_CHANNELS(image) (channels = image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1)
+#define MEMORY_CHANNELS(image) (image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1)
 
 char* trax_image_write_memory_row(trax_image* image, int row) {
 

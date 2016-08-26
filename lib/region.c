@@ -693,7 +693,7 @@ int rasterize_polygon(const region_polygon* polygon_input, char* mask, int width
 			    (((int)polygon->y[j] <= pixelY) && ((int)polygon->y[i] > pixelY)) ||
                 (((int)polygon->y[i] < pixelY) && ((int)polygon->y[j] >= pixelY)) ||
 		        (((int)polygon->y[j] < pixelY) && ((int)polygon->y[i] >= pixelY)) ||
-                (((int)polygon->y[i] == (int)polygon->y[j])) && ((int)polygon->y[i] == pixelY)) {
+                (((int)polygon->y[i] == (int)polygon->y[j]) && ((int)polygon->y[i] == pixelY))) {
                     double r = (polygon->y[j] - polygon->y[i]);
                     double k = (polygon->x[j] - polygon->x[i]);
                     if (r != 0)
