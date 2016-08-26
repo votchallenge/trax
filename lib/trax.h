@@ -602,8 +602,8 @@ private:
 };
 
 class Image : public Wrapper {
-friend Client;
-friend Server;
+friend class Client;
+friend class Server;
 public:
 
     Image();
@@ -693,8 +693,8 @@ private:
 };
 
 class Region : public Wrapper {
-friend Client;
-friend Server;
+friend class Client;
+friend class Server;
 public:
 
     Region();
@@ -796,8 +796,8 @@ private:
 };
 
 class Properties : public Wrapper {
-friend Client;
-friend Server;
+friend class Client;
+friend class Server;
 public:
 
     /**
