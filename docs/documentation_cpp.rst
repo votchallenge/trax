@@ -154,6 +154,56 @@ The wrapper is composed of several classes, mostly following the underlying C fu
       Returns a file buffer and its length. This function returns a pointer to the internal data which should not be modified.
 
 
+.. cpp:class:: Properties
+
+   .. cpp:function:: Properties()
+
+      Create a property object.
+
+   .. cpp:function:: Properties(const Properties& original)
+
+      A copy constructor.
+
+   .. cpp:function::  ~Properties()
+
+      Destroy a properties object and clean up the memory.
+
+   .. cpp:function:: void clear()
+
+      Clear a properties object.
+
+   .. cpp:function:: void set(const std::string key, const std::string value)
+
+      Set a string property (the value string is cloned).
+
+   .. cpp:function:: void set(const std::string key, int value)
+
+      Set an integer property. The value will be encoded as a string.
+
+   .. cpp:function:: void set(const std::string key, float value)
+
+      Set an floating point value property. The value will be encoded as a string.
+
+   .. cpp:function:: std::string get(const std::string key)
+
+      Get a string property.
+
+   .. cpp:function:: int get(const std::string key, int def)
+
+      Get an integer property. A stored string value is converted to an integer. If this is not possible or the property does not exist a given default value is returned.
+
+   .. cpp:function:: float get(const std::string key, float def)
+
+      Get an floating point value property. A stored string value is converted to an float. If this is not possible or the property does not exist a given default value is returned.
+
+   .. cpp:function:: bool get(const std::string key, bool def)
+
+      Get an boolean point value property. A stored string value is converted to an integer and checked if it is zero. If this is not possible or the property does not exist a given default value is returned.
+
+   .. cpp:function:: void enumerate(Enumerator enumerator, void* object)
+
+      Iterate over the property set using a callback function. An optional pointer can be given and is forwarded to the callback.
+
 Integration tutorial
 --------------------
 

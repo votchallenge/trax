@@ -39,11 +39,13 @@ Protocol messages and states
 Below we list the valid messages of the protocol as well as the states of the client and server. Despite the apparent simplicity of the protocol its execution should be strict. An inappropriate or indecipherable message should result in immediate termination of connection in case of both parties.
 
  - ``hello`` (server): The message is sent by the server to introduce itself and list its capabilities. This message specifies no mandatory arguments, however, the server can report the capabilities using the optional named arguments. The official arguments, recognized by the first version of the protocol are:
+
   * ``trax.version`` (integer): Specifies the supported version of the protocol. If not present, version 1 is assumed.
   * ``trax.name`` (string): Specifies the name of the tracker. The name can be used by the client to verify that the correct algorithm is executed.
   * ``trax.identifier`` (string): Specifies the identifier of the current implementation. The identifier can be used to determine the version of the tracker.
   * ``trax.image`` (string): Specifies the supported image format. See Section `Region formats`_ for the list of supported formats. By default it is assumed that the tracker can accept file paths as image source.
   * ``trax.region`` (string): Specifies the supported region format. See Section `Image formats`_ for the list of supported formats. By default it is assumed that the tracker can accept rectangles as region specification.
+ 
  - ``initialize`` (client): This message is sent by the client to initialize the tracker. The message contains the image data and the region of the object. The actual format of the required arguments is determined by the image and region formats specified by the server.
  - ``frame`` (client): This message is sent by the client to request processing of a new image. The message contains the image data. The actual format of the required argument is determined by the image format specified by the server.
  - ``state`` (server): This message is used by the server to send the new region to the client. The message contains region data in arbitrary supported format (most commonly the same format that the server proposed in the introduction message).
