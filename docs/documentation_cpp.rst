@@ -153,6 +153,80 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
       Returns a file buffer and its length. This function returns a pointer to the internal data which should not be modified.
 
+.. cpp:class:: Region
+
+   .. cpp:function:: Region()
+
+      Creates a new empty region.
+
+   .. cpp:function:: Region(const Region& original)
+
+      Creates a clone of region.
+
+   .. cpp:function:: static Region create_special(int code)
+
+      Creates a special region object. Only one paramter (region code) required.
+
+   .. cpp:function:: static Region create_rectangle(float x, float y, float width, float height)
+
+      Creates a rectangle region.
+
+   .. cpp:function:: static Region create_polygon(int count)
+
+      Creates a polygon region object for a given amout of points. Note that the coordinates of the points are arbitrary and have to be set after allocation.
+
+   .. cpp:function:: ~Region()
+
+      Releases region, frees allocated memory.
+
+   .. cpp:function:: int type() const
+
+      Returns type identifier of the region object.
+
+   .. cpp:function:: bool empty() const
+
+      Checks if region container is empty.
+
+   .. cpp:function:: void set(int code)
+
+      Sets the code of a special region.
+
+   .. cpp:function:: int get() const
+
+      Returns a code of a special region object.
+
+   .. cpp:function:: void set(float x, float y, float width, float height)
+
+      Sets the coordinates for a rectangle region.
+
+   .. cpp:function:: void get(float* x, float* y, float* width, float* height) const
+
+      Retreives coordinate from a rectangle region object.
+
+   .. cpp:function:: void set_polygon_point(int index, float x, float y)
+
+      Sets coordinates of a given point in the polygon.
+
+   .. cpp:function:: void get_polygon_point(int index, float* x, float* y) const
+
+      Retrieves the coordinates of a specific point in the polygon.
+
+   .. cpp:function:: int get_polygon_count() const
+
+      Returns the number of points in the polygon.
+
+   .. cpp:function:: Bounds bounds() const
+
+      Computes bounds of a region.
+
+   .. cpp:function:: Region convert(int type) const
+
+      Convert region to one of the other types if possible.
+
+   .. cpp:function:: float overlap(const Region& region, const Bounds& bounds = Bounds()) const
+
+      Calculates the Jaccard index overlap measure for the given regions with optional bounds that limit the calculation area.
+
 
 .. cpp:class:: Properties
 
