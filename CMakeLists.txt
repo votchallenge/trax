@@ -55,6 +55,7 @@ ENDIF (OpenCV_FOUND)
 
 IF (BUILD_OPENCV)
   ADD_SUBDIRECTORY(support/opencv)
+  INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/support/opencv/include)
 ENDIF (BUILD_OPENCV)
 
 SET (BUILD_CLIENT FALSE CACHE BOOL "Build with client support library and executable")
