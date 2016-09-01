@@ -534,6 +534,11 @@ float Properties::get(const std::string key, float def)  {
 	return trax_properties_get_float(properties, key.c_str(), def);
 }
 
+bool Properties::get(const std::string key, bool def)  {
+	if (!properties) return def;
+	return trax_properties_get_int(properties, key.c_str(), def) != 0;
+}
+
 void Properties::enumerate(Enumerator enumerator, void* object)  {
 	if (!properties) return;
 	trax_properties_enumerate(properties, enumerator, object);

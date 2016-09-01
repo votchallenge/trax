@@ -847,10 +847,16 @@ public:
     int get(const std::string key, int def);
 
     /**
-     * Get an floating point value property. A stored string value is converted to an integer. If this is not possible
+     * Get an floating point value property. A stored string value is converted to an float. If this is not possible
      * or the property does not exist a given default value is returned.
      **/
     float get(const std::string key, float def);
+
+    /**
+     * Get an boolean point value property. A stored string value is converted to an integer and checked if it is zero. If this is not possible
+     * or the property does not exist a given default value is returned.
+     **/
+    bool get(const std::string key, bool def);
 
     /**
      * Iterate over the property set using a callback function. An optional pointer can be given and is forwarded
