@@ -204,6 +204,8 @@ char* region_string(region_container* region) {
 	char* result = NULL;
 	string_buffer buffer;
 
+	if (!region) return NULL;
+
 	BUFFER_CREATE(buffer, 32);
 
 	if (region->type == SPECIAL) {
