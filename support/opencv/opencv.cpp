@@ -4,6 +4,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 namespace trax {
 
