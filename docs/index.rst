@@ -16,4 +16,5 @@ The source code for the reference library is availabe on `GitHub <https://github
    documentation_matlab
    support
    development
+   adoption
 
