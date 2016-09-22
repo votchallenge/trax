@@ -1175,10 +1175,10 @@ void trax_region_get_rectangle(const trax_region* region, float* x, float* y, fl
 
     assert(REGION(region)->type == RECTANGLE);
 
-    *x = REGION(region)->data.rectangle.x;
-    *y = REGION(region)->data.rectangle.y;
-    *width = REGION(region)->data.rectangle.width;
-    *height = REGION(region)->data.rectangle.height;
+    if (x) *x = REGION(region)->data.rectangle.x;
+    if (y) *y = REGION(region)->data.rectangle.y;
+    if (width) *width = REGION(region)->data.rectangle.width;
+    if (height) *height = REGION(region)->data.rectangle.height;
 
 }
 
@@ -1198,8 +1198,8 @@ void trax_region_get_polygon_point(const trax_region* region, int index, float* 
 
     assert (index >= 0 || index < (REGION(region)->data.polygon.count));
 
-    *x = REGION(region)->data.polygon.x[index];
-    *y = REGION(region)->data.polygon.y[index];
+    if (x) *x = REGION(region)->data.polygon.x[index];
+    if (y) *y = REGION(region)->data.polygon.y[index];
 }
 
 int trax_region_get_polygon_count(const trax_region* region) {
