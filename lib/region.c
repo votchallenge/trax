@@ -21,7 +21,8 @@
 #endif
 #endif
 
-#if defined (_MSC_VER)
+/* Visual Studio 2013 was first to add C99 INFINITY and NAN */
+#if defined (_MSC_VER) && _MSC_VER < 1800
 #define INFINITY (DBL_MAX+DBL_MAX)
 #define NAN (INFINITY-INFINITY)
 #endif
