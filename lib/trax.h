@@ -6,18 +6,28 @@
 #include <stdio.h>
 #include <fcntl.h>
 
-#ifndef __TRAX_EXPORT
-#if defined(_MSC_VER)
-#if defined(_TRAX_BUILDING)
-#define __TRAX_EXPORT __declspec(dllexport)
+#ifdef TRAX_STATIC_DEFINE
+#  define __TRAX_EXPORT
 #else
-#define __TRAX_EXPORT
-#endif
-#elif defined(_GCC)
-#define __TRAX_EXPORT __attribute__((visibility("default")))
-#else
-#define __TRAX_EXPORT
-#endif
+#  ifndef __TRAX_EXPORT
+#    if defined(_MSC_VER)
+#      ifdef trax_EXPORTS
+         /* We are building this library */
+#        define __TRAX_EXPORT __declspec(dllexport)
+#      else
+         /* We are using this library */
+#        define __TRAX_EXPORT __declspec(dllimport)
+#      endif
+#    elif defined(__GNUC__)
+#      ifdef trax_EXPORTS
+         /* We are building this library */
+#        define __TRAX_EXPORT __attribute__((visibility("default")))
+#      else
+         /* We are using this library */
+#        define __TRAX_EXPORT __attribute__((visibility("default")))
+#      endif
+#    endif
+#  endif
 #endif
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
@@ -145,9 +155,9 @@ typedef struct trax_handle {
     trax_configuration config;
 } trax_handle;
 
-extern const trax_logging trax_no_log; 
+__TRAX_EXPORT extern const trax_logging trax_no_log;
 
-extern const trax_bounds trax_no_bounds; 
+__TRAX_EXPORT extern const trax_bounds trax_no_bounds;
 
 /**
  * Returns library version.
@@ -448,21 +458,21 @@ class Properties;
 
 typedef trax_enumerator Enumerator;
 
-class Configuration : public ::trax_configuration {
+class __TRAX_EXPORT Configuration : public ::trax_configuration {
 public:
     Configuration(trax_configuration config);
     Configuration(int image_formats, int region_formats);
     virtual ~Configuration();
 };
 
-class Logging : public ::trax_logging {
+class __TRAX_EXPORT Logging : public ::trax_logging {
 public:
     Logging(trax_logging logging);
     Logging(trax_logger callback = NULL, void* data = NULL, int flags = 0);
     virtual ~Logging();
 };
 
-class Bounds : public ::trax_bounds {
+class __TRAX_EXPORT Bounds : public ::trax_bounds {
 public:
     Bounds();
     Bounds(trax_bounds bounds);
@@ -470,7 +480,7 @@ public:
     virtual ~Bounds();
 };
 
-class Wrapper {
+class __TRAX_EXPORT Wrapper {
 public:
     virtual ~Wrapper();
 
@@ -503,7 +513,7 @@ private:
 
 };
 
-class Handle: public Wrapper {
+class __TRAX_EXPORT Handle: public Wrapper {
 public:
     /**
      * Closes communication, sends quit message if needed.
@@ -533,7 +543,7 @@ protected:
     trax_handle* handle;
 };
 
-class Client: public Handle {
+class __TRAX_EXPORT Client: public Handle {
 public:
     /**
      * Sets up the protocol for the client side and returns a handle object.
@@ -574,7 +584,7 @@ private:
 
 };
 
-class Server: public Handle {
+class __TRAX_EXPORT Server: public Handle {
 public:
 
     /**
@@ -601,7 +611,7 @@ private:
 
 };
 
-class Image : public Wrapper {
+class __TRAX_EXPORT Image : public Wrapper {
 friend class Client;
 friend class Server;
 public:
@@ -692,7 +702,7 @@ private:
 
 };
 
-class Region : public Wrapper {
+class __TRAX_EXPORT Region : public Wrapper {
 friend class Client;
 friend class Server;
 public:
@@ -780,9 +790,9 @@ public:
 
     operator std::string () const;
 
-    friend std::ostream& operator<< (std::ostream& output, const Region& region);
+    friend __TRAX_EXPORT std::ostream& operator<< (std::ostream& output, const Region& region);
 
-    friend std::istream& operator>> (std::istream& input, Region &D);
+    friend __TRAX_EXPORT std::istream& operator>> (std::istream& input, Region &D);
 
 protected:
 
@@ -795,7 +805,7 @@ private:
     trax_region* region;
 };
 
-class Properties : public Wrapper {
+class __TRAX_EXPORT Properties : public Wrapper {
 friend class Client;
 friend class Server;
 public:
@@ -866,7 +876,7 @@ public:
 
     Properties& operator=(Properties lhs) throw();
 
-    friend std::ostream& operator<< (std::ostream& output, const Properties& properties);
+    friend __TRAX_EXPORT std::ostream& operator<< (std::ostream& output, const Properties& properties);
     
 protected:
 
