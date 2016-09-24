@@ -52,6 +52,12 @@ int get_shared_fd(int h, int read) {
 }
 #endif
 
+/* Visual Studio 2013 and earlier lack snprintf in their C99 library */
+#if defined(_MSC_VER) && _MSC_VER <= 1800
+#define snprintf _snprintf
+#endif
+
+
 #ifndef TRAX_BUILD_VERSION
 #define TRAX_BUILD_VERSION "unknown"
 #endif
