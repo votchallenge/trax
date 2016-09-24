@@ -29,6 +29,10 @@
 #include <windows.h>
 #pragma comment(lib, "ws2_32.lib")
 
+#if defined(_MSC_VER)
+#include <io.h>
+#endif
+
 #define strcmpi _strcmpi
 
 static int initialized = 0;
