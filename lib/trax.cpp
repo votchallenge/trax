@@ -421,8 +421,7 @@ float Region::overlap(const Region& region, const Bounds& bounds) const {
 
 	if (empty() || region.empty()) return 0;
 
-	trax_region_overlap(this->region, region.region, bounds);
-
+	return trax_region_overlap(this->region, region.region, bounds);
 }
 
 void Region::wrap(trax_region* obj) {
