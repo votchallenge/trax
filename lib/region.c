@@ -16,6 +16,9 @@
 #ifndef isinf
     #define isinf(x) (!_finite(x))
 #endif
+#ifndef inline
+    #define inline _inline
+#endif
 #endif
 
 #if defined (_MSC_VER)
