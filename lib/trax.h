@@ -167,12 +167,12 @@ __TRAX_EXPORT trax_logging trax_logger_setup_file(FILE* file);
 /**
  * Setups the protocol state object for the client and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_client_setup_file(int input, int output, trax_logging log);
+__TRAX_EXPORT trax_handle* trax_client_setup_file(int input, int output, const trax_logging log);
 
 /**
  * Setups the protocol state object for the client and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_client_setup_socket(int server, int timeout, trax_logging log);
+__TRAX_EXPORT trax_handle* trax_client_setup_socket(int server, int timeout, const trax_logging log);
 
 /**
  * Waits for a valid protocol message from the server.
@@ -192,12 +192,12 @@ __TRAX_EXPORT int trax_client_frame(trax_handle* client, trax_image* image, trax
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_server_setup(trax_configuration config, trax_logging log);
+__TRAX_EXPORT trax_handle* trax_server_setup(trax_configuration config, const trax_logging log);
 
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, trax_logging log);
+__TRAX_EXPORT trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, const trax_logging log);
 
 /**
  * Waits for a valid protocol message from the client.

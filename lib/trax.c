@@ -536,7 +536,7 @@ trax_handle* trax_client_setup_file(int input, int output, const trax_logging lo
 
 }
 
-trax_handle* trax_client_setup_socket(int server, int timeout, trax_logging log) {
+trax_handle* trax_client_setup_socket(int server, int timeout, const trax_logging log) {
 
     message_stream* stream = create_message_stream_socket_accept(server, timeout);
     
@@ -691,7 +691,7 @@ failure:
 
 }
 
-trax_handle* trax_server_setup(trax_configuration config, trax_logging log) {
+trax_handle* trax_server_setup(trax_configuration config, const trax_logging log) {
 
     message_stream* stream;
 
@@ -726,7 +726,7 @@ trax_handle* trax_server_setup(trax_configuration config, trax_logging log) {
 
 }
 
-trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, trax_logging log) {
+trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, const trax_logging log) {
 
     message_stream* stream = create_message_stream_file(input, output);
     
