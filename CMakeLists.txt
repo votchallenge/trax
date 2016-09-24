@@ -28,6 +28,11 @@ ELSE ()
     # Only build test executable on Unix systems / used only for development
 ENDIF ()
 
+if(MSVC)
+  add_definitions(/MP) # Build with multiple processes
+  add_definitions(/wd4244 /wd4267 /wd4018 /wd4355 /wd4800 /wd4251 /wd4996 /wd4146 /wd4305) # Ignore some of the warnings
+endif()
+
 LINK_LIBRARIES(${LIBRARIES})
 ADD_DEFINITIONS(-DTRAX_BUILD_VERSION="${BUILD_VERSION}")
 SET(TRAX_SOURCE lib/trax.c lib/region.c lib/strmap.c lib/message.c lib/base64.c lib/trax.cpp)
