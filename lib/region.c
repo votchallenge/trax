@@ -5,6 +5,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include <ctype.h>
 
 #include "region.h"
 #include "buffer.h"
@@ -16,9 +17,13 @@
 #ifndef isinf
     #define isinf(x) (!_finite(x))
 #endif
+#ifndef inline
+    #define inline _inline
+#endif
 #endif
 
-#if defined (_MSC_VER)
+/* Visual Studio 2013 was first to add C99 INFINITY and NAN */
+#if defined (_MSC_VER) && _MSC_VER < 1800
 #define INFINITY (DBL_MAX+DBL_MAX)
 #define NAN (INFINITY-INFINITY)
 #endif
@@ -54,12 +59,6 @@ int __is_valid_sequence(float* sequence, int len) {
     }
 
     return 1;
-}
-
-double round(double number) {
-
-    return number < 0.0 ? ceil(number - 0.5) : floor(number + 0.5);
-
 }
 
 region_container* __create_region(region_type type) {

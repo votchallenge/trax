@@ -29,6 +29,10 @@
 #include <windows.h>
 #pragma comment(lib, "ws2_32.lib")
 
+#if defined(_MSC_VER)
+#include <io.h>
+#endif
+
 #define strcmpi _strcmpi
 
 static int initialized = 0;
@@ -603,8 +607,6 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
 }
 
 int write_buffer(message_stream* stream, const char* buf, int len, trax_logging* log) {
-    char chr;
-
     if (len < 1) return 1;
 
     if (stream->flags & TRAX_STREAM_SOCKET) {

@@ -52,6 +52,12 @@ int get_shared_fd(int h, int read) {
 }
 #endif
 
+/* Visual Studio 2013 and earlier lack snprintf in their C99 library */
+#if defined(_MSC_VER) && _MSC_VER <= 1800
+#define snprintf _snprintf
+#endif
+
+
 #ifndef TRAX_BUILD_VERSION
 #define TRAX_BUILD_VERSION "unknown"
 #endif
@@ -530,7 +536,7 @@ trax_handle* trax_client_setup_file(int input, int output, const trax_logging lo
 
 }
 
-trax_handle* trax_client_setup_socket(int server, int timeout, trax_logging log) {
+trax_handle* trax_client_setup_socket(int server, int timeout, const trax_logging log) {
 
     message_stream* stream = create_message_stream_socket_accept(server, timeout);
     
@@ -685,7 +691,7 @@ failure:
 
 }
 
-trax_handle* trax_server_setup(trax_configuration config, trax_logging log) {
+trax_handle* trax_server_setup(trax_configuration config, const trax_logging log) {
 
     message_stream* stream;
 
@@ -720,7 +726,7 @@ trax_handle* trax_server_setup(trax_configuration config, trax_logging log) {
 
 }
 
-trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, trax_logging log) {
+trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, const trax_logging log) {
 
     message_stream* stream = create_message_stream_file(input, output);
     

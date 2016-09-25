@@ -121,8 +121,6 @@ int main( int argc, char** argv )
         // tracker where to get them.
         Mat frame = trax::image_to_mat(img);
 
-        int i, bin_w, c;
-
         if( frame.empty() )
             break;
 
