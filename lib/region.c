@@ -129,6 +129,10 @@ int region_parse(const char* buffer, region_container** region) {
 
 	(*region) = NULL;
 
+	if (!buffer || !buffer[0]) {
+		return 1;
+	}
+
 	if (buffer[0] == 'M') {
 		/* TODO: mask */
 		return 0;
