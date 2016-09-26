@@ -22,7 +22,7 @@ IF (WIN32 OR WIN64)
     SET(LIBRARIES ws2_32)
 ELSE ()
     SET(LIBRARIES m)
-    IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    IF (CMAKE_COMPILER_IS_GNUCXX)
         SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
     ENDIF ()
     # Only build test executable on Unix systems / used only for development
@@ -41,7 +41,7 @@ ADD_LIBRARY(traxstatic STATIC ${TRAX_SOURCE})
 
 TARGET_COMPILE_OPTIONS(traxstatic PUBLIC -DTRAX_STATIC_DEFINE)
 
-IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+IF (CMAKE_COMPILER_IS_GNUCXX)
     SET (BUILD_DEBUG FALSE CACHE BOOL "Build in debug mode (with tests)")
     IF (BUILD_DEBUG)
         SET_TARGET_PROPERTIES(trax PROPERTIES COMPILE_FLAGS "-finstrument-functions")
