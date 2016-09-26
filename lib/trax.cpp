@@ -74,44 +74,44 @@ Bounds::~Bounds() {
 Wrapper::Wrapper() : pn(NULL) {
 
 }
-    
+
 Wrapper::Wrapper(const Wrapper& count) : pn(count.pn) {
 
 }
 
 Wrapper::~Wrapper() {
-	
+
 }
 
 void Wrapper::swap(Wrapper& lhs) throw() {
-    std::swap(pn, lhs.pn);
+	std::swap(pn, lhs.pn);
 }
 
 long Wrapper::claims() throw() {
 	long count = 0;
 	if (NULL != pn)
 	{
-	    count = *pn;
+		count = *pn;
 	}
 	return count;
 }
 
 void Wrapper::acquire() {
-    if (NULL == pn)
-        pn = new long(1); // may throw std::bad_alloc
-    else
-        ++(*pn);
+	if (NULL == pn)
+		pn = new long(1); // may throw std::bad_alloc
+	else
+		++(*pn);
 }
 
 void Wrapper::release() throw() {
-    if (NULL != pn) {
-        --(*pn);
-        if (0 == *pn) {
-            cleanup();
-            delete pn;
-        }
-        pn = NULL;
-    }
+	if (NULL != pn) {
+		--(*pn);
+		if (0 == *pn) {
+			cleanup();
+			delete pn;
+		}
+		pn = NULL;
+	}
 }
 
 Handle::Handle() {
@@ -264,7 +264,7 @@ Image Image::create_buffer(int length, const char* data) {
 }
 
 Image::~Image() {
-	release();	
+	release();
 }
 
 int Image::type() const {
@@ -349,7 +349,7 @@ Region Region::create_polygon(int count) {
 }
 
 Region::~Region() {
-	release();	
+	release();
 }
 
 int Region::type() const  {
@@ -361,9 +361,9 @@ bool Region::empty() const  {
 }
 
 void Region::set(int code) {
-	if (type() != TRAX_REGION_SPECIAL || claims() > 1) 
+	if (type() != TRAX_REGION_SPECIAL || claims() > 1)
 		wrap(trax_region_create_special(code));
-	else 
+	else
 		trax_region_set_special(region, code);
 }
 
@@ -372,9 +372,9 @@ int Region::get() const {
 }
 
 void  Region::set(float x, float y, float width, float height)  {
-	if (type() != TRAX_REGION_RECTANGLE || claims() > 1) 
+	if (type() != TRAX_REGION_RECTANGLE || claims() > 1)
 		wrap(trax_region_create_rectangle(x, y, width, height));
-	else 
+	else
 		trax_region_set_rectangle(region, x, y, width, height);
 }
 
@@ -474,7 +474,41 @@ std::istream& operator>> (std::istream& input, Region &region) {
 
 	std::string str;
 
-	std::getline(input, str);
+	// The characters in the stream are read one-by-one using a std::streambuf.
+	// That is faster than reading them one-by-one using the std::istream.
+	// Code that uses streambuf this way must be guarded by a sentry object.
+	// The sentry object performs various tasks,
+	// such as thread synchronization and updating the stream state.
+
+	std::istream::sentry se(input, true);
+	std::streambuf* sb = input.rdbuf();
+	bool read = true;
+
+	while (read) {
+		int c = sb->sbumpc();
+		switch (c) {
+		case '\n': {
+			read = false;
+			break;
+		}
+		case '\r': {
+			if (sb->sgetc() == '\n')
+				sb->sbumpc();
+			read = false;
+			break;
+		}
+		case EOF: {
+			// Also handle the case when the last line has no line ending
+			if (str.empty())
+				input.setstate(std::ios::eofbit);
+			read = false;
+			break;
+		}
+		default:
+			str += (char)c;
+			break;
+		}
+	}
 
 	region.wrap(trax_region_decode(str.c_str()));
 
@@ -497,7 +531,7 @@ Properties::~Properties() {
 
 void Properties::clear()  {
 	if (!properties) return;
-	if (claims() > 1) 
+	if (claims() > 1)
 		release();
 	else
 		trax_properties_clear(properties);
@@ -567,7 +601,7 @@ void copy_enumerator(const char *key, const char *value, const void *obj) {
 }
 
 void print_enumerator(const char *key, const char *value, const void *obj) {
-	
+
 	*((std::ostream *) obj) << key << "=" << value << std::endl;
 
 }
