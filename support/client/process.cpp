@@ -26,16 +26,16 @@ const string __getcwd()
     char* r_buf;
 
     do {
-      buf = static_cast<char*>(realloc(buf, buf_size));
-      r_buf = getcwd(buf, buf_size);
-      if (!r_buf) {
-        if (errno == ERANGE) {
-          buf_size *= 2;
-        } else {
-          free(buf);
-          throw std::runtime_error("Unable to obtain current directory"); 
+        buf = static_cast<char*>(realloc(buf, buf_size));
+        r_buf = getcwd(buf, buf_size);
+        if (!r_buf) {
+            if (errno == ERANGE) {
+                buf_size *= 2;
+            } else {
+                free(buf);
+                throw std::runtime_error("Unable to obtain current directory");
+            }
         }
-      }
     } while (!r_buf);
 
     string str(buf);
@@ -54,26 +54,26 @@ inline const string int_to_string(int i) {
 }
 
 
-int __next_token(const char* str, int start, char* buffer, int len) 
+int __next_token(const char* str, int start, char* buffer, int len)
 {
     int i;
     int s = -1;
     int e = -1;
     short quotes = 0;
 
-    for (i = start; str[i] != '\0' ; i++) 
+    for (i = start; str[i] != '\0' ; i++)
     {
         if (s < 0 && str[i] != ' ')
         {
-            if (str[i] == '"') 
+            if (str[i] == '"')
             {
                 quotes = 1;
-                s = i+1;
+                s = i + 1;
             }
             else s = i;
             continue;
         }
-        if (s >= 0 && ((!quotes && str[i] == ' ') || (quotes && str[i] == '"' && (i == start || str[i-1] != '\''))))
+        if (s >= 0 && ((!quotes && str[i] == ' ') || (quotes && str[i] == '"' && (i == start || str[i - 1] != '\''))))
         {
             e = i;
             break;
@@ -94,7 +94,7 @@ int __next_token(const char* str, int start, char* buffer, int len)
 
     buffer[e - s] = '\0';
 
-    return str[e] == '\0' ? e : (quotes ? e+2 : e+1);
+    return str[e] == '\0' ? e : (quotes ? e + 2 : e + 1);
 }
 
 char** parse_command(const char* command) {
@@ -106,8 +106,8 @@ char** parse_command(const char* command) {
     int i = 0;
 
     while (1) {
-        
-        position = __next_token(command, position, buffer, 1024); 
+
+        position = __next_token(command, position, buffer, 1024);
 
         if (position < 0) {
             for (int j = 0; j < i; j++) delete[] tokens[j];
@@ -132,7 +132,7 @@ char** parse_command(const char* command) {
         return NULL;
     }
 
-    char** result = new char*[i+1];
+    char** result = new char*[i + 1];
     for (int j = 0; j < i; j++) result[j] = tokens[j];
     result[i] = NULL;
     delete [] tokens;
@@ -145,9 +145,9 @@ char** parse_command(const char* command) {
 Process::Process(string command, bool explicit_mode) : explicit_mode(explicit_mode), running(false) {
 
 #ifdef WIN32
-	piProcInfo.hProcess = 0;
+    piProcInfo.hProcess = 0;
 #else
-	pid = 0;
+    pid = 0;
 #endif
 
     char** tokens = parse_command(command.c_str());
@@ -182,130 +182,130 @@ bool Process::start() {
 
 #ifdef WIN32
 
-	handle_IN_Rd = NULL;
-	handle_IN_Wr = NULL;
-	handle_OUT_Rd = NULL;
-	handle_OUT_Wr = NULL;
-	handle_ERR_Rd = NULL;
-	handle_ERR_Wr = NULL;
+    handle_IN_Rd = NULL;
+    handle_IN_Wr = NULL;
+    handle_OUT_Rd = NULL;
+    handle_OUT_Wr = NULL;
+    handle_ERR_Rd = NULL;
+    handle_ERR_Wr = NULL;
 
-	p_stdin = -1;
-	p_stdout = -1;
-	p_stderr = -1;
+    p_stdin = -1;
+    p_stdout = -1;
+    p_stderr = -1;
 
-	SECURITY_ATTRIBUTES saAttr; 
+    SECURITY_ATTRIBUTES saAttr;
 
-	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES); 
-	saAttr.bInheritHandle = TRUE; 
-	saAttr.lpSecurityDescriptor = NULL; 
+    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+    saAttr.bInheritHandle = TRUE;
+    saAttr.lpSecurityDescriptor = NULL;
 
-	// Create a pipe for the child process's STDOUT. 
-   if ( ! CreatePipe(&handle_OUT_Rd, &handle_OUT_Wr, &saAttr, 0) ) 
-      return false; 
+    // Create a pipe for the child process's STDOUT.
+    if ( ! CreatePipe(&handle_OUT_Rd, &handle_OUT_Wr, &saAttr, 0) )
+        return false;
 
-	// Create a pipe for the child process's STDERR. 
-   if ( ! CreatePipe(&handle_ERR_Rd, &handle_ERR_Wr, &saAttr, 0) ) 
-      return false; 
+    // Create a pipe for the child process's STDERR.
+    if ( ! CreatePipe(&handle_ERR_Rd, &handle_ERR_Wr, &saAttr, 0) )
+        return false;
 
-    // Create a pipe for the child process's STDIN. 
-    if (! CreatePipe(&handle_IN_Rd, &handle_IN_Wr, &saAttr, 0)) 
-        return false; 
+    // Create a pipe for the child process's STDIN.
+    if (! CreatePipe(&handle_IN_Rd, &handle_IN_Wr, &saAttr, 0))
+        return false;
 
     if (explicit_mode) {
- 
+
         if ( ! SetHandleInformation(handle_IN_Rd, HANDLE_FLAG_INHERIT, 1) )
-            return false; 
+            return false;
 
         if ( ! SetHandleInformation(handle_OUT_Wr, HANDLE_FLAG_INHERIT, 1) )
-            return false; 
+            return false;
 
-    } 
+    }
 
-    // Ensure the write handle to the pipe for STDIN is not inherited.  
+    // Ensure the write handle to the pipe for STDIN is not inherited.
     if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
-        return false; 
+        return false;
 
     // Ensure the read handle to the pipe for STDOUT is not inherited.
     if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
-        return false; 
+        return false;
 
     // Ensure the read handle to the pipe for STDERR is not inherited.
     if ( ! SetHandleInformation(handle_ERR_Rd, HANDLE_FLAG_INHERIT, 0) )
-        return false; 
+        return false;
 
 
-	STARTUPINFO siStartInfo;
-	BOOL bSuccess = FALSE; 
- 
-	// Set up members of the PROCESS_INFORMATION structure. 
- 
-	ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
- 
+    STARTUPINFO siStartInfo;
+    BOOL bSuccess = FALSE;
 
-	stringstream cmdbuffer;
-	int curargument = 0;
-	while (arguments[curargument]) {
-		cmdbuffer << "\"" << arguments[curargument] << "\" ";
-		curargument++;
-	}
+    // Set up members of the PROCESS_INFORMATION structure.
+
+    ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 
 
-	stringstream envbuffer;
+    stringstream cmdbuffer;
+    int curargument = 0;
+    while (arguments[curargument]) {
+        cmdbuffer << "\"" << arguments[curargument] << "\" ";
+        curargument++;
+    }
+
+
+    stringstream envbuffer;
     map<string, string>::iterator iter;
     for (iter = env.begin(); iter != env.end(); ++iter) {
         envbuffer << iter->first << string("=") << iter->second << '\0';
     }
 
-	// Set up members of the STARTUPINFO structure. 
-	// This structure specifies the STDIN and STDOUT handles for redirection.
-	ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
-	siStartInfo.cb = sizeof(STARTUPINFO); 
+    // Set up members of the STARTUPINFO structure.
+    // This structure specifies the STDIN and STDOUT handles for redirection.
+    ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
+    siStartInfo.cb = sizeof(STARTUPINFO);
     if (!explicit_mode) {
-	    siStartInfo.hStdError = handle_ERR_Wr;
-	    siStartInfo.hStdOutput = handle_OUT_Wr;
-	    siStartInfo.hStdInput = handle_IN_Rd;
+        siStartInfo.hStdError = handle_ERR_Wr;
+        siStartInfo.hStdOutput = handle_OUT_Wr;
+        siStartInfo.hStdInput = handle_IN_Rd;
         siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
     } else {
-	    siStartInfo.hStdError = handle_ERR_Wr;
-		HANDLE pHandle = GetCurrentProcess();
-		HANDLE handle_IN_Rd2, handle_OUT_Wr2;
-		DuplicateHandle(pHandle, handle_IN_Rd, pHandle, &handle_IN_Rd2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
-		DuplicateHandle(pHandle, handle_OUT_Wr, pHandle, &handle_OUT_Wr2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
+        siStartInfo.hStdError = handle_ERR_Wr;
+        HANDLE pHandle = GetCurrentProcess();
+        HANDLE handle_IN_Rd2, handle_OUT_Wr2;
+        DuplicateHandle(pHandle, handle_IN_Rd, pHandle, &handle_IN_Rd2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
+        DuplicateHandle(pHandle, handle_OUT_Wr, pHandle, &handle_OUT_Wr2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
         envbuffer << string("TRAX_IN=") << handle_IN_Rd2 << '\0';
         envbuffer << string("TRAX_OUT=") << handle_OUT_Wr2 << '\0';
     }
-	
+
     envbuffer << '\0';
-	
-	LPCSTR curdir = directory.empty() ? NULL : directory.c_str();
 
-	if (!CreateProcess(NULL, (char *) cmdbuffer.str().c_str(), NULL, NULL, true, 0,
-		(void *)envbuffer.str().c_str(),
-		curdir, &siStartInfo, &piProcInfo )) {
+    LPCSTR curdir = directory.empty() ? NULL : directory.c_str();
 
-		std::cout << "Error: " << GetLastError()  << std::endl;
+    if (!CreateProcess(NULL, (char *) cmdbuffer.str().c_str(), NULL, NULL, true, 0,
+                       (void *)envbuffer.str().c_str(),
+                       curdir, &siStartInfo, &piProcInfo )) {
+
+        std::cout << "Error: " << GetLastError()  << std::endl;
         running = true;
-		cleanup();
-		return false;
-	}
+        cleanup();
+        return false;
+    }
 
-	int wrfd = _open_osfhandle((intptr_t)handle_IN_Wr, 0);
-	int rdfd = _open_osfhandle((intptr_t)handle_OUT_Rd, _O_RDONLY);
-	int erfd = _open_osfhandle((intptr_t)handle_ERR_Rd, _O_RDONLY);
+    int wrfd = _open_osfhandle((intptr_t)handle_IN_Wr, 0);
+    int rdfd = _open_osfhandle((intptr_t)handle_OUT_Rd, _O_RDONLY);
+    int erfd = _open_osfhandle((intptr_t)handle_ERR_Rd, _O_RDONLY);
 
-	if (wrfd == -1 || rdfd == -1) {
-		stop();
-		return false;
-	}
+    if (wrfd == -1 || rdfd == -1) {
+        stop();
+        return false;
+    }
 
     p_stdin = wrfd;
     p_stdout = rdfd;
     p_stderr = erfd;
 
-	if (!p_stdin || !p_stdout) {
-		stop();
-		return false;
-	}
+    if (!p_stdin || !p_stdout) {
+        stop();
+        return false;
+    }
 
 #else
 
@@ -319,7 +319,7 @@ bool Process::start() {
 
     map<string, string>::iterator iter;
     for (iter = env.begin(); iter != env.end(); ++iter) {
-       // if (iter->first == "PWD") continue;
+        // if (iter->first == "PWD") continue;
         vars.push_back(iter->first + string("=") + iter->second);
     }
 
@@ -338,7 +338,7 @@ bool Process::start() {
         vars.push_back(string("TRAX_IN=") + int_to_string(out[0]));
     }
 
-    std::vector<char *> vars_c(vars.size() + 1); 
+    std::vector<char *> vars_c(vars.size() + 1);
 
     for (std::size_t i = 0; i != vars.size(); ++i) {
         vars_c[i] = &vars[i][0];
@@ -375,15 +375,15 @@ bool Process::start() {
 
 bool Process::stop() {
 
-	if (!running) return false;
+    if (!running) return false;
 
 #ifdef WIN32
 
-	bool result = TerminateProcess(piProcInfo.hProcess, 0);
+    bool result = TerminateProcess(piProcInfo.hProcess, 0);
 
-	cleanup();
+    cleanup();
 
-	return result;
+    return result;
 #else
 
     kill(pid, SIGTERM);
@@ -401,29 +401,22 @@ void Process::cleanup() {
 
 #ifdef WIN32
 
-	CloseHandle(piProcInfo.hProcess);
-	CloseHandle(piProcInfo.hThread);
+    CloseHandle(piProcInfo.hProcess);
+    CloseHandle(piProcInfo.hThread);
 
-	if (p_stdin)
-		close(p_stdin);
-	if (p_stdout)
-		close(p_stdout);
-	if (p_stderr)
-		close(p_stderr);
+    if (p_stdin)
+        close(p_stdin);
+    if (p_stdout)
+        close(p_stdout);
+    if (p_stderr)
+        close(p_stderr);
 
-    __try
-    {
- 	    CloseHandle(handle_IN_Rd);
-	    CloseHandle(handle_IN_Wr);
-	    CloseHandle(handle_OUT_Rd);
-	    CloseHandle(handle_OUT_Wr);
-	    CloseHandle(handle_ERR_Rd);
-	    CloseHandle(handle_ERR_Wr);
-    }
-    __except(EXCEPTION_EXECUTE_HANDLER)
-    {
-      // print
-    }
+    CloseHandle(handle_IN_Rd);
+    CloseHandle(handle_IN_Wr);
+    CloseHandle(handle_OUT_Rd);
+    CloseHandle(handle_OUT_Wr);
+    CloseHandle(handle_ERR_Rd);
+    CloseHandle(handle_ERR_Wr);
 
 #else
 
@@ -469,13 +462,13 @@ bool Process::is_alive(int *status) {
 
 #ifdef WIN32
 
-	DWORD dwExitCode = STILL_ACTIVE;
+    DWORD dwExitCode = STILL_ACTIVE;
 
-	if (GetExitCodeProcess(piProcInfo.hProcess, &dwExitCode)) {
+    if (GetExitCodeProcess(piProcInfo.hProcess, &dwExitCode)) {
         if (status) *status = dwExitCode;
-		return dwExitCode == STILL_ACTIVE;
-	} else
-		return false;
+        return dwExitCode == STILL_ACTIVE;
+    } else
+        return false;
 
 #else
 
@@ -502,7 +495,7 @@ bool Process::is_alive(int *status) {
     if (WIFSTOPPED(childExitStatus)) {
         exit_status = WSTOPSIG(childExitStatus);
     }
-    
+
     if (status) *status = exit_status;
 
     cleanup();
@@ -519,7 +512,7 @@ int Process::get_handle() {
     if (!running) return 0;
 
 #ifdef WIN32
-	return (int) GetProcessId(piProcInfo.hProcess);
+    return (int) GetProcessId(piProcInfo.hProcess);
 #else
     return pid;
 #endif
@@ -543,37 +536,37 @@ void Process::copy_environment() {
 
 #ifdef WIN32
 
-	LPTSTR lpszVariable;
-	LPCH lpvEnv;
+    LPTSTR lpszVariable;
+    LPCH lpvEnv;
 
-	lpvEnv = GetEnvironmentStrings();
+    lpvEnv = GetEnvironmentStrings();
 
-	if (lpvEnv == NULL) return;
+    if (lpvEnv == NULL) return;
 
-	// Variable strings are separated by NULL byte, and the block is terminated by a NULL byte.
-	for (lpszVariable = (LPTSTR) lpvEnv; *lpszVariable; lpszVariable++) {
+    // Variable strings are separated by NULL byte, and the block is terminated by a NULL byte.
+    for (lpszVariable = (LPTSTR) lpvEnv; *lpszVariable; lpszVariable++) {
 
         LPCH ptr = strchr(lpszVariable, '=');
 
         if (!ptr) continue;
 
-        set_environment(string(lpszVariable, ptr-lpszVariable), string(ptr+1));
+        set_environment(string(lpszVariable, ptr - lpszVariable), string(ptr + 1));
 
-		lpszVariable += strlen(lpszVariable) ;
+        lpszVariable += strlen(lpszVariable) ;
 
-	}
+    }
 
-	FreeEnvironmentStrings(lpvEnv);
+    FreeEnvironmentStrings(lpvEnv);
 
 #else
 
-    for(char **current = environ; *current; current++) {
-    
+    for (char **current = environ; *current; current++) {
+
         char* var = *current;
         char* ptr = strchr(var, '=');
         if (!ptr) continue;
 
-        set_environment(string(var, ptr-var), string(ptr+1));
+        set_environment(string(var, ptr - var), string(ptr + 1));
 
     }
 
