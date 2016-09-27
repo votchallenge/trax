@@ -649,7 +649,7 @@ int write_buffer_escaped(message_stream* stream, const char* buf, int len, trax_
         // Handle special characters by writting the currenlty scanned part of
         // the buffer and inserting escape character.
         if (buf[i] == '"' || buf[i] == '\\' || buf[i] == '\n') {
-            if (write_buffer(stream, &(buf[j]), i - j, log) != -1)
+            if (write_buffer(stream, &(buf[j]), i - j, log) == -1)
                 return -1;
             j = i;
             if (write_buffer(stream, "\\", 1, log) != 1)
@@ -664,7 +664,7 @@ int write_buffer_escaped(message_stream* stream, const char* buf, int len, trax_
         }
         i++;
     }
-    if (write_buffer(stream, &(buf[j]), i - j, log) != -1)
+    if (write_buffer(stream, &(buf[j]), i - j, log) == -1)
         return -1;
 
     return 1;

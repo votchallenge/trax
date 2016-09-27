@@ -496,6 +496,8 @@ int main( int argc, char** argv) {
                     throw std::runtime_error("Tracker process not alive anymore.");
                 }
 
+                DEBUGMSG("Loading initialization image: %s\n", images[frame].c_str());
+
                 Region initialize = initialization[frame];
                 Image image = load_image(images[frame], tracker.image_formats());
 
@@ -564,6 +566,8 @@ int main( int argc, char** argv) {
                     frame++;
 
                     if (frame >= images.size()) break;
+
+                    DEBUGMSG("Loading image: %s\n", images[frame].c_str());
                     Image image = load_image(images[frame], tracker.image_formats());
 
                     // Start timing a frame

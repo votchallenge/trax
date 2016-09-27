@@ -411,12 +411,19 @@ void Process::cleanup() {
 	if (p_stderr)
 		close(p_stderr);
 
-	CloseHandle(handle_IN_Rd);
-	CloseHandle(handle_IN_Wr);
-	CloseHandle(handle_OUT_Rd);
-	CloseHandle(handle_OUT_Wr);
-	CloseHandle(handle_ERR_Rd);
-	CloseHandle(handle_ERR_Wr);
+    __try
+    {
+ 	    CloseHandle(handle_IN_Rd);
+	    CloseHandle(handle_IN_Wr);
+	    CloseHandle(handle_OUT_Rd);
+	    CloseHandle(handle_OUT_Wr);
+	    CloseHandle(handle_ERR_Rd);
+	    CloseHandle(handle_ERR_Wr);
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER)
+    {
+      // print
+    }
 
 #else
 
