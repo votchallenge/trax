@@ -490,6 +490,16 @@ Region
    :param region: A pointer to the region object
    :param format: One of the format type constants
    :return: A converted region object pointer
+
+.. c:function:: float trax_region_contains(const trax_region* region, float x, float y)
+
+   Calculates if the region contains a given point.
+
+   :param region: A pointer to the region object
+   :param x: X coordinate of the point
+   :param y: Y coordinate of the point
+   :return: Returns zero if the point is not in the region or one if it is
+
  
 .. c:function:: float trax_region_overlap(const trax_region* a, const trax_region* b, const trax_bounds bounds)
 

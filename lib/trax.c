@@ -1141,6 +1141,12 @@ trax_region* trax_region_get_bounds(const trax_region* region) {
 
 }
 
+int trax_region_contains(const trax_region* region, float x, float y) {
+
+    return region_contains_point(REGION(region), x, y);
+
+}
+
 int trax_region_get_type(const trax_region* region) {
 
     if (!region) return TRAX_REGION_EMPTY;

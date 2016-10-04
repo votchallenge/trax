@@ -413,6 +413,12 @@ Bounds Region::bounds() const {
 	return Bounds(trax_region_bounds(region));
 }
 
+bool Region::contains(float x, float y) const {
+	if (empty()) return false;
+
+	return trax_region_contains(region, x, y) != 0;
+}
+
 void Region::cleanup() {
 	trax_region_release(&region);
 }

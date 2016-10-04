@@ -365,6 +365,11 @@ __TRAX_EXPORT int trax_region_get_polygon_count(const trax_region* region);
 __TRAX_EXPORT trax_bounds trax_region_bounds(const trax_region* region);
 
 /**
+ * Calculates if the region contains a given point.
+ **/
+__TRAX_EXPORT int trax_region_contains(const trax_region* region, float x, float y);
+
+/**
  * Clones a region object.
  **/
 __TRAX_EXPORT trax_region* trax_region_clone(const trax_region* region);
@@ -781,6 +786,8 @@ public:
      * Computes bounds of a region.
      **/
     Bounds bounds() const;
+
+    bool contains(float x, float y) const;
 
     Region convert(int type) const;
 

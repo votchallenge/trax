@@ -107,6 +107,8 @@ __TRAX_EXPORT region_container* region_create_rectangle(float x, float y, float 
 
 __TRAX_EXPORT region_container* region_create_polygon(int count);
 
+__TRAX_EXPORT int region_contains_point(region_container* r, float x, float y);
+
 __TRAX_EXPORT void region_get_mask(region_container* r, char* mask, int width, int height);
 
 __TRAX_EXPORT void region_get_mask_offset(region_container* r, char* mask, int x, int y, int width, int height);
