@@ -50,10 +50,10 @@ cv::Rect region_to_rect(const Region& region) {
 
 	trect.get(&(x), &(y), &(width), &(height));
 
-	rect.x = x;
-	rect.y = y;
-	rect.width = width;
-	rect.height = height; 
+	rect.x = round(x);
+	rect.y = round(y);
+	rect.width = round(width);
+	rect.height = round(height); 
 
 	return rect;
 
