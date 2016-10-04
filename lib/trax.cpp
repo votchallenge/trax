@@ -384,8 +384,9 @@ void  Region::get(float* x, float* y, float* width, float* height) const {
 }
 
 void  Region::set_polygon_point(int index, float x, float y) {
-	if (claims() > 1)
-		wrap(trax_region_create_polygon(get_polygon_count()));
+	if (claims() > 1) {
+		wrap(trax_region_convert(region, TRAX_REGION_POLYGON));
+	}
 
 	trax_region_set_polygon_point(region, index, x, y);
 }
