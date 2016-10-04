@@ -100,12 +100,12 @@ void draw_region(cv::Mat& canvas, const Region& region, cv::Scalar color, int wi
             break;
         }
         case TRAX_REGION_POLYGON: {
-            std::vector<cv::Point> points;
+            std::vector<cv::Point> points(region.get_polygon_count());
 
             for (int i = 0; i < region.get_polygon_count(); i++) {
                 float x, y;
-                region.get_polygon_point(0, &x, &y);
-                points.push_back(cv::Point(x, y));
+                region.get_polygon_point(i, &x, &y);
+                points[i] = cv::Point(x, y);
             }
 
             const cv::Point* ppoints = &points[0];
