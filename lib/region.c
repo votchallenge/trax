@@ -61,13 +61,6 @@ int __is_valid_sequence(float* sequence, int len) {
 	return 1;
 }
 
-    for (i = 0; i < len; i++) {
-        if (isnan(sequence[i])) return 0;
-    }
-
-    return 1;
-}
-
 region_container* __create_region(region_type type) {
 
 	region_container* reg = (region_container*) malloc(sizeof(region_container));
