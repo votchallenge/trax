@@ -72,9 +72,7 @@ int create_server_socket(int port) {
     if((sid = (int) socket(AF_INET,SOCK_STREAM,0)) == -1) {
         return -1;
     }
-    setsockopt(sid,SOL_SOCKET,SO_REUSEADDR,
-                         (const char *)&one,sizeof(int));
-
+    
     memset(&sin,0,sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = inet_addr(hostname);
