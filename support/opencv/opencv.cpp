@@ -59,6 +59,22 @@ cv::Rect region_to_rect(const Region& region) {
 
 }
 
+std::vector<cv::Point2f> region_to_points(const Region& region) {
+
+    std::vector<cv::Point2f> points;
+
+    Region polygon = region.convert(TRAX_REGION_POLYGON);
+
+    for (int i = 0; i < polygon.get_polygon_count(); i++) {
+        cv::Point2f p;
+        polygon.get_polygon_point(i, &(p.x), &(p.y));
+        points.push_back(p);
+    }
+
+    return points;
+
+}
+
 Image mat_to_image(const cv::Mat& mat) {
 	
     int format = 0;
@@ -88,6 +104,19 @@ Region rect_to_region(const cv::Rect rect) {
 	return Region::create_rectangle(rect.x, rect.y, rect.width, rect.height);
 
 }
+
+Region points_to_region(const std::vector<cv::Point2f> points) {
+
+    Region polygon = Region::create_polygon(points.size());
+
+    for (ssize_t i = 0; i < points.size(); i++) {
+        polygon.set_polygon_point(i, points[i].x, points[i].y);
+    }
+
+    return polygon;
+
+}
+
 
 void draw_region(cv::Mat& canvas, const Region& region, cv::Scalar color, int width) {
 

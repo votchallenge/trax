@@ -36,6 +36,13 @@ The module is automatically built if the OpenCV library is found on the system, 
    :param image: Protocol region object
    :return: OpenCV rectangle structure
 
+.. cpp:function:: std::vector<cv::Point2f> region_to_points(const Region& region)
+
+   Converts a protocol region object to a list of OpenCV points.
+
+   :param image: Protocol region object
+   :return: List of points
+
 .. cpp:function:: Image mat_to_image(const cv::Mat& mat)
 
    Converts an OpenCV matrix to a new protocol image object.
@@ -49,6 +56,14 @@ The module is automatically built if the OpenCV library is found on the system, 
 
    :param rect: Rectangle structure
    :return: Protocol region object
+
+.. cpp:function:: Region points_to_region(const std::vector<cv::Point2f> points)
+
+   Converts a list of OpenCV points to a protocol region object of type polygon.
+
+   :param rect: List of points
+   :return: Protocol region object
+
 
 .. cpp:function:: void draw_region(cv::Mat& canvas, const Region& region, cv::Scalar color, int width = 1)
  
