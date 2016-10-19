@@ -65,6 +65,8 @@ std::vector<cv::Point2f> region_to_points(const Region& region) {
 
     Region polygon = region.convert(TRAX_REGION_POLYGON);
 
+    if (polygon.type() != TRAX_REGION_POLYGON) return points;
+
     for (int i = 0; i < polygon.get_polygon_count(); i++) {
         cv::Point2f p;
         polygon.get_polygon_point(i, &(p.x), &(p.y));
@@ -92,7 +94,7 @@ Image mat_to_image(const cv::Mat& mat) {
         throw std::runtime_error("Unsupported image depth");
     }
     Image image = Image::create_memory(mat.cols, mat.rows, format);
-    char* dst = image.write_memory_row( 0);
+    char* dst = image.write_memory_row(0);
     cv::Mat tmp(mat.size(), mat.type(), dst);
     cv::cvtColor(mat, tmp, CV_BGR2RGB);
 
