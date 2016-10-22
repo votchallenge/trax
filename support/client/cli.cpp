@@ -509,6 +509,8 @@ int main( int argc, char** argv) {
                     throw std::runtime_error("Unable to initialize tracker.");
                 }
 
+                bool initialized = true;
+
                 while (true) {
                     // Repeat while tracking the target.
 
@@ -544,10 +546,11 @@ int main( int argc, char** argv) {
                             break;
                         }
 
-                        if (tracker.tracking())
+                        if (!initialized)
                             output.push_back(status);
                         else {
                             output.push_back(Region::create_special(1));
+                            initialized = false;
                         }
 
                         timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
