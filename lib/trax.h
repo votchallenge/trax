@@ -452,6 +452,7 @@ __TRAX_EXPORT void trax_properties_enumerate(trax_properties* properties, trax_e
 }
 
 #include <string>
+#include <map>
 #include <algorithm>
 #include <iostream>
 
@@ -880,6 +881,10 @@ public:
      * to the callback.
      **/
     void enumerate(Enumerator enumerator, void* object);
+
+    void from_map(const std::map<std::string, std::string>& m);
+
+    void to_map(std::map<std::string, std::string>& m) const;
 
     Properties& operator=(Properties lhs) throw();
 

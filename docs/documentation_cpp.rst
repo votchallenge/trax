@@ -278,6 +278,15 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
       Iterate over the property set using a callback function. An optional pointer can be given and is forwarded to the callback.
 
+   .. cpp:function:: void from_map(const std::map<std::string, std::string>& m)
+
+      Adds values from a dictionary to the properties object.
+
+   .. cpp:function:: void to_map(std::map<std::string, std::string>& m)
+
+      Copies values in the properties object into the given dictionary.
+
+
 Integration tutorial
 --------------------
 

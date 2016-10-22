@@ -613,6 +613,12 @@ void print_enumerator(const char *key, const char *value, const void *obj) {
 
 }
 
+void map_enumerator(const char *key, const char *value, const void *obj) {
+
+	(*((std::map<std::string, std::string>*) obj))[std::string(key)] = std::string(value);
+
+}
+
 void Properties::ensure_unique() {
 
 	if (!properties) {
@@ -632,5 +638,19 @@ std::ostream& operator<< (std::ostream& output, const Properties& properties) {
 	return output;
 }
 
+void Properties::from_map(const std::map<std::string, std::string>& m) {
+	typedef std::map<std::string, std::string>::const_iterator it_type;
+	for(it_type iterator = m.begin(); iterator != m.end(); iterator++) {
+		set(iterator->first, iterator->second);
+	}
+}
+
+void Properties::to_map(std::map<std::string, std::string>& m) const {
+	
+	if (!properties) return;
+
+	trax_properties_enumerate(properties, map_enumerator, &m);
+
+}
 
 }
