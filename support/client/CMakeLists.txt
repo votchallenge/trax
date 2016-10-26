@@ -5,7 +5,9 @@ ADD_LIBRARY(trax_client SHARED client.cpp process.cpp threads.c)
 TARGET_LINK_LIBRARIES(trax_client trax)
 INSTALL(FILES "include/trax/client.hpp" DESTINATION include/trax)
 
-ADD_EXECUTABLE(traxclient getopt.c cli.cpp client.cpp process.cpp threads.c)
+# Temporarily avoiding linking with trax_client lib because of VOT toolkit
+# this has to be resolved in some other way someday
+ADD_EXECUTABLE(traxclient getopt.c cli.cpp client.cpp process.cpp threads.c timer.cpp)
 TARGET_LINK_LIBRARIES(traxclient traxstatic)
 IF (BUILD_OPENCV)
 	ADD_DEFINITIONS(-DTRAX_BUILD_OPENCV)
@@ -17,4 +19,6 @@ IF (WIN32 OR WIN64)
 ELSE ()
 	INSTALL(TARGETS traxclient RUNTIME DESTINATION bin)
 	INSTALL(TARGETS trax_client LIBRARY DESTINATION lib ARCHIVE DESTINATION lib)
+	ADD_EXECUTABLE(traxplayer player.cpp)
+	TARGET_LINK_LIBRARIES(traxplayer trax_opencv trax_client ${OpenCV_LIBS})
 ENDIF()
