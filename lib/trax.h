@@ -856,7 +856,9 @@ public:
     /**
      * Get a string property.
      **/
-    std::string get(const std::string key);
+    std::string get(const std::string key, const std::string& def = std::string());
+
+    std::string get(const std::string key, const char* def = NULL);
 
     /**
      * Get an integer property. A stored string value is converted to an integer. If this is not possible

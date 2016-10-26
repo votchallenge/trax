@@ -258,7 +258,7 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
       Set an floating point value property. The value will be encoded as a string.
 
-   .. cpp:function:: std::string get(const std::string key)
+   .. cpp:function:: std::string get(const std::string key, const std::string& def)
 
       Get a string property.
 

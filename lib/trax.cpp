@@ -559,9 +559,20 @@ void Properties::set(const std::string key, float value)  {
 	trax_properties_set_float(properties, key.c_str(), value);
 }
 
-std::string Properties::get(const std::string key)  {
-	if (!properties) return std::string();
-	return std::string(trax_properties_get(properties, key.c_str()));
+std::string Properties::get(const std::string key, const char* def)  {
+	return get(key, (def ? std::string(def) : std::string("")));
+}
+
+std::string Properties::get(const std::string key, const std::string& def)  {
+	if (!properties) return def;
+	char* str = trax_properties_get(properties, key.c_str());
+	if (str) {
+		std::string result(str);
+		free(str);
+		return result;
+	}
+	else
+		return def;
 }
 
 int Properties::get(const std::string key, int def)  {
