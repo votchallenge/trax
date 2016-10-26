@@ -70,6 +70,12 @@ int __TRAX_CLIENT_EXPORT load_trajectory(const std::string& file, std::vector<Re
 
 void __TRAX_CLIENT_EXPORT save_trajectory(const std::string& file, std::vector<Region>& trajectory);
 
+typedef unsigned long long timer_state;
+
+timer_state __TRAX_CLIENT_EXPORT timer_clock();
+
+double __TRAX_CLIENT_EXPORT timer_elapsed(timer_state begin);
+
 }
 
 #endif
