@@ -83,11 +83,11 @@ Wrapper::~Wrapper() {
 
 }
 
-void Wrapper::swap(Wrapper& lhs) throw() {
+void Wrapper::swap(Wrapper& lhs) {
 	std::swap(pn, lhs.pn);
 }
 
-long Wrapper::claims() throw() {
+long Wrapper::claims() const {
 	long count = 0;
 	if (NULL != pn)
 	{
@@ -103,7 +103,7 @@ void Wrapper::acquire() {
 		++(*pn);
 }
 
-void Wrapper::release() throw() {
+void Wrapper::release() {
 	if (NULL != pn) {
 		--(*pn);
 		if (0 == *pn) {
@@ -379,6 +379,7 @@ void  Region::set(float x, float y, float width, float height)  {
 }
 
 void  Region::get(float* x, float* y, float* width, float* height) const {
+	if (empty()) return;
 
 	trax_region_get_rectangle(region, x, y, width, height);
 }

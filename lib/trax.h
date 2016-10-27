@@ -495,9 +495,9 @@ protected:
     
     Wrapper(const Wrapper& count);
 
-    void swap(Wrapper& lhs) throw();
+    void swap(Wrapper& lhs);
 
-    long claims() throw();
+    long claims() const;
 
     /**
      * Call after the wrapped pointer has been created or copied to increase
@@ -509,7 +509,7 @@ protected:
      * Call instead of releasing memory to decrease reference count. If the 
      * reference count comes to zero then cleanup() is called.
     **/
-    void release() throw();
+    void release();
 
     virtual void cleanup() = 0;
 
