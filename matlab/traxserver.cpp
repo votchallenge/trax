@@ -371,7 +371,7 @@ int get_image_code(string str) {
         return TRAX_IMAGE_URL;
     }
 
-    if (str == "data") {
+    if (str == "buffer") {
         return TRAX_IMAGE_BUFFER;
     }
 
