@@ -586,6 +586,10 @@ float Properties::get(const std::string key, float def)  {
 	return trax_properties_get_float(properties, key.c_str(), def);
 }
 
+double Properties::get(const std::string key, double def)  {
+	return (double) get(key, (float) def);
+}
+
 bool Properties::get(const std::string key, bool def)  {
 	if (!properties) return def;
 	return trax_properties_get_int(properties, key.c_str(), def) != 0;
