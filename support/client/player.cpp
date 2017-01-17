@@ -4,10 +4,10 @@
 #include <fstream>
 #include <trax/client.hpp>
 #include <trax/opencv.hpp>
-#include <opencv2/core.hpp>
+#include <opencv2/core/core.hpp>
 
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 
 #ifndef M_PI
@@ -101,7 +101,7 @@ Region get_region_interactive(const string& window, Mat& image) {
 
         if (rc.dragging) {
             rectangle(buffer, rc.start, rc.current, Scalar(0, 255, 0), 3);
-        } 
+        }
 
         if (!rc.region.empty()) {
             draw_region(buffer, rc.region, Scalar(0, 255, 0), 1);
@@ -133,7 +133,7 @@ Region get_region_interactive(const string& window, Mat& image) {
 
 bool read_frame(VideoCapture& reader, int frame, Mat& image) {
 
-    int current = reader.get(CAP_PROP_POS_FRAMES);
+    int current = reader.get(CV_CAP_PROP_POS_FRAMES);
 
     if (frame < current) return false;
 
@@ -281,7 +281,7 @@ int main(int argc, char** argv) {
 
         Mat cvimage;
         VideoCapture reader(video_file);
-        int video_length = reader.get(CAP_PROP_FRAME_COUNT);
+        int video_length = reader.get(CV_CAP_PROP_FRAME_COUNT);
 
         DEBUGMSG("Video will be loaded from file %s.\n", video_file.c_str());
 
@@ -289,7 +289,7 @@ int main(int argc, char** argv) {
 
         DEBUGMSG("Sequence length: %d frames.\n", video_length);
 
-        int realtime_delta = (int) 1000.0 / reader.get(CAP_PROP_FPS);
+        int realtime_delta = (int) 1000.0 / reader.get(CV_CAP_PROP_FPS);
 
         TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
 
@@ -310,7 +310,7 @@ int main(int argc, char** argv) {
             if (!tracker.ready()) {
                 throw std::runtime_error("Tracker process not alive anymore.");
             }
-            
+
             Image image = convert_image(cvimage, tracker.image_formats());
 
             // Start timing a frame
