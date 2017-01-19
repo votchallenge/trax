@@ -1,19 +1,19 @@
 Matlab/Octave wrappers
 ======================
 
-Matlab is a multi-paradigm numerical computing environment and a programming language, very popular among computer vision researchers. Octave is its open-source counterpart that is sometimes used as a free alternative. Both environments are by themselves quite limiting in terms of low-lever operating system access required for the TraX protocol to work, but offer integration of C/C++ code in the scripting language, tipically via MEX mechanism (dynamic libraries with a predefined entry point). Using this mechanism a reference C implementation can be wrapped and used in a Matlab/Octave tracker. 
+Matlab is a multi-paradigm numerical computing environment and a programming language, very popular among computer vision researchers. Octave is its open-source counterpart that is sometimes used as a free alternative. Both environments are by themselves quite limiting in terms of low-lever operating system access required for the TraX protocol to work, but offer integration of C/C++ code in the scripting language, tipically via MEX mechanism (dynamic libraries with a predefined entry point). Using this mechanism a reference C implementation can be wrapped and used in a Matlab/Octave tracker.
 
 Requirements and building
 -------------------------
 
-To compile ``traxserver`` MEX function you need a MEX compiled configured correctly on your computer.
+To compile ``traxserver`` MEX function manually you need a MEX compiled configured correctly on your computer.
 
-Since the MEX function is only a wrapper for the C library, you first have to ensure that the C library is compiled and available in a subdirectory of the project. Then go to Matlab/Octave console, move to the ``matlab/`` subdirectory and execute ``compile_trax`` script. If the script finishes correcty you will have a MEX script (exension varies from platform to platform) available in the directory. If the location of the TraX library is not found automatically, you have to verfy that it exists and possibly enter the path to its location manually.
+Since the MEX function is only a wrapper for the C library, you first have to ensure that the C library is compiled and available in a subdirectory of the project. Then go to Matlab/Octave console, move to the ``support/matlab/`` subdirectory and execute ``compile_trax`` script. If the script finishes correcty you will have a MEX script (exension varies from platform to platform) available in the directory. If the location of the TraX library is not found automatically, you have to verfy that it exists and possibly enter the path to its location manually.
 
 Documentation
 -------------
 
-The ``traxserver`` MEX function is essentially used to send or receive a protocol message and parse it. It accepts several parameters, the first one is a string of a command that you want execute. 
+The ``traxserver`` MEX function is essentially used to send or receive a protocol message and parse it. It accepts several parameters, the first one is a string of a command that you want execute.
 
 .. code-block:: matlab
 
@@ -43,7 +43,7 @@ A call blocks until a protocol message is received from the client, parses it an
 
 A call sends a status message back to the client specifying the region for the current frame as well as the optional parameters. The two input arguments are:
 
- - **region**: Region data in requested format. 
+ - **region**: Region data in requested format.
 
  - **parameters** (optional): Arbitrary output parameters used for debugging or any other purposes. The parameters are provided either in a single-level structure (no nested structures, just numbers or strings for values) or a N x 2 cell matrix with string keys in the first column and values in the second. Note that the protocol restricts the characters used for parameter names and limits their length.
 
@@ -58,14 +58,14 @@ Sends a quit message to the client specifying that the algorithm wants to termin
 Image data
 ~~~~~~~~~~
 
-Image data is stored in a matrix. For file path and URL types this is a one-dimensional char sequence, for in-memory image this is a 3-dimensional matrix of type ``uint8`` with raw image data, ready for processing and for data type it is in a structure with fields ``format`` and ``data`` that contain encoding format (JPEG or PNG) and raw file data. 
+Image data is stored in a matrix. For file path and URL types this is a one-dimensional char sequence, for in-memory image this is a 3-dimensional matrix of type ``uint8`` with raw image data, ready for processing and for data type it is in a structure with fields ``format`` and ``data`` that contain encoding format (JPEG or PNG) and raw file data.
 
 Region data
 ~~~~~~~~~~~
 
-Region data for rectangle and polygon types is stored in a one-dimensional floating-point matrix. For rectangle the number of elements is 4, for polygon it is an even number, greater or equal than 6 (three points). In all cases the first coordinate is in the horizontal dimension (columns) and not the way Matlab/Octave usually addresses matrices. 
+Region data for rectangle and polygon types is stored in a one-dimensional floating-point matrix. For rectangle the number of elements is 4, for polygon it is an even number, greater or equal than 6 (three points). In all cases the first coordinate is in the horizontal dimension (columns) and not the way Matlab/Octave usually addresses matrices.
 
-.. In case of image mask the region is stored in a structure with fields ``offset`` and ``mask`` where the first field contains a two-value offset (first columns, then rows) of the mask and the second field contains a two-dimensional matrix of logical values. The mask is therefore composed out of a rectangle with explicitly defined per-pixel inclusion and the pixels outside this rectangle wthich by definition do not belong to the object.  
+.. In case of image mask the region is stored in a structure with fields ``offset`` and ``mask`` where the first field contains a two-value offset (first columns, then rows) of the mask and the second field contains a two-dimensional matrix of logical values. The mask is therefore composed out of a rectangle with explicitly defined per-pixel inclusion and the pixels outside this rectangle wthich by definition do not belong to the object.
 
 Internals
 ~~~~~~~~~
@@ -82,7 +82,7 @@ As with all tracker implementations it is important to identify a tracking loop.
 
 	% Initialize the tracker
 	region = read_bounding_box('init.txt');
-	image = imread('0001.jpg');	
+	image = imread('0001.jpg');
 	region = initialize_tracker(region, image);
 
 	result = {region};
@@ -96,7 +96,7 @@ As with all tracker implementations it is important to identify a tracking loop.
 		i = i + 1;
 
 		% Read the next image.
-		image = imread(sprintf('%04d.jpg', i));	
+		image = imread(sprintf('%04d.jpg', i));
 
 		% Run the update step
 		region = update_tracker(image);
@@ -108,7 +108,7 @@ As with all tracker implementations it is important to identify a tracking loop.
 	% Save the result
 	save_trajectory(result);
 
-To enable tracker to receive the images over the protocol you have to change a few lines. First, you have to initialize the protocol at the begining of the script and tell what kind of image and region formats the tracker supports. Then the initialization of a tracker has to be placed into a loop because the protocol  
+To enable tracker to receive the images over the protocol you have to change a few lines. First, you have to initialize the protocol at the begining of the script and tell what kind of image and region formats the tracker supports. Then the initialization of a tracker has to be placed into a loop because the protocol
 
 .. code-block:: matlab
     :linenos:

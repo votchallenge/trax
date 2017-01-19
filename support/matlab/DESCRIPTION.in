@@ -1,0 +1,13 @@
+Name: trax
+Version: ${BUILD_VERSION}
+Date: ${BUILD_DATE}
+Author: Luka Cehovin
+Maintainer: Luka Cehovin <luka.cehovin@fri.uni-lj.si>
+Title: TraX
+Description: Bindings for TraX protocol support in Octave.
+ The package also provides functions for TraX protocol support in
+ Octave, enabling trackers to be easily integrated into tools like
+ VOT toolkit.
+Depends: octave (>= 4.0.0)
+License: LGPLv3+
+Url: https://github.com/votchallenge/trax
