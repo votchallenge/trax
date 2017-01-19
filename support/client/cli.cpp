@@ -73,7 +73,7 @@ __inline void sleep(long time) {
 #else
 
 #ifdef _MAC_
-    
+
 #else
     #include <unistd.h>
 #endif
@@ -100,10 +100,14 @@ using namespace trax;
 #define MIN(a,b) ((a) < (b)) ? (a) : (b)
 #endif
 
+#ifndef TRAX_BUILD_DATE
+#define TRAX_BUILD_DATE __DATE__
+#endif
+
 void print_help() {
 
     cout << "TraX Client" << "\n\n";
-    cout << "Built on " << __DATE__ << " at " << __TIME__ << "\n";
+    cout << "Built on " << TRAX_BUILD_DATE << " at " << __TIME__ << "\n";
     cout << "Library version: " << trax_version() << "\n";
     cout << "Protocol version: " << TRAX_VERSION << "\n\n";
 
@@ -163,7 +167,7 @@ typedef struct image_size {
 
 // Based on the example from: http://www.wischik.com/lu/programmer/get-image-size.html
 // Retrieve image size from image header
-image_size image_get_size(Image image) { 
+image_size image_get_size(Image image) {
 
     image_size result;
     const string filename = image.get_path();
@@ -174,9 +178,9 @@ image_size image_get_size(Image image) {
     FILE *f=fopen(filename.c_str(),"rb");
     if ( f==0 ) return result;
 
-    fseek(f,0,SEEK_END); 
+    fseek(f,0,SEEK_END);
     long len=ftell(f);
-    fseek(f,0,SEEK_SET); 
+    fseek(f,0,SEEK_SET);
 
     if (len<24) {fclose(f); return result;}
 
@@ -196,14 +200,14 @@ image_size image_get_size(Image image) {
             if (buf[3]==0xC0 || buf[3]==0xC1 || buf[3]==0xC2 || buf[3]==0xC3 || buf[3]==0xC9 || buf[3]==0xCA || buf[3]==0xCB) break;
             pos += 2+(buf[4]<<8)+buf[5];
             if (pos+12>len) break;
-            fseek(f,pos,SEEK_SET); fread(buf+2,1,12,f);    
+            fseek(f,pos,SEEK_SET); fread(buf+2,1,12,f);
         }
     }
 
     fclose(f);
 
     // JPEG: (first two bytes of buf are first two bytes of the jpeg file; rest of buf is the DCT frame
-    if (buf[0]==0xFF && buf[1]==0xD8 && buf[2]==0xFF) { 
+    if (buf[0]==0xFF && buf[1]==0xD8 && buf[2]==0xFF) {
         result.height = (buf[7]<<8) + buf[8];
         result.width = (buf[9]<<8) + buf[10];
     }
@@ -239,7 +243,7 @@ void load_images(const string& file, vector<string>& list) {
         if (!input.good()) break;
         list.push_back(line);
     }
-    
+
     input.close();
 }
 
@@ -261,7 +265,7 @@ void save_timings(const string& file, vector<long>& timings) {
 
 Image load_image(string& path, int formats) {
 
-    int image_format = 0;                
+    int image_format = 0;
 
     if TRAX_SUPPORTS(formats, TRAX_IMAGE_PATH)
         image_format = TRAX_IMAGE_PATH;
@@ -287,7 +291,7 @@ Image load_image(string& path, int formats) {
         size_t size = t.tellg();
         std::string buffer(size, ' ');
         t.seekg(0);
-        t.read(&buffer[0], size); 
+        t.read(&buffer[0], size);
         return Image::create_buffer(buffer.size(), buffer.c_str());
         break;
     }
@@ -415,7 +419,7 @@ int main( int argc, char** argv) {
         if(getenv("TRAX_BOUNDED_OVERLAP")) {
             printf("TRAX_BOUNDED_OVERLAP: %s \n", getenv("TRAX_BOUNDED_OVERLAP"));
             overlap_bounded = strcmpi(getenv("TRAX_BOUNDED_OVERLAP"), "true") == 0;
-            if (overlap_bounded)      
+            if (overlap_bounded)
                 DEBUGMSG("Using bounded region overlap calculation\n");
         }
 
@@ -532,7 +536,7 @@ int main( int argc, char** argv) {
 
                         if (overlap_bounded) {
                             image_size is = image_get_size(image);
-                            DEBUGMSG("Bounds for overlap calculation %dx%d\n", is.width, is.height); 
+                            DEBUGMSG("Bounds for overlap calculation %dx%d\n", is.width, is.height);
                             bounds = Bounds(0, 0, is.width, is.height);
                         }
 

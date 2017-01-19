@@ -172,10 +172,14 @@ void configure_signals() {
 
 #define CMD_OPTIONS "hsdV:G:f:O:r:t:T:p:e:c:C:xXg"
 
+#ifndef TRAX_BUILD_DATE
+#define TRAX_BUILD_DATE __DATE__
+#endif
+
 void print_help() {
 
     cout << "OpenCV Video capture player client" << "\n\n";
-    cout << "Built on " << __DATE__ << " at " << __TIME__ << "\n";
+    cout << "Built on " << TRAX_BUILD_DATE << "\n";
     cout << "TraX library version: " << trax_version() << "\n";
     cout << "Protocol version: " << TRAX_VERSION << "\n\n";
 
