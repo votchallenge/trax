@@ -107,7 +107,7 @@ using namespace trax;
 void print_help() {
 
     cout << "TraX Client" << "\n\n";
-    cout << "Built on " << TRAX_BUILD_DATE << " at " << __TIME__ << "\n";
+    cout << "Built on " << TRAX_BUILD_DATE << "\n";
     cout << "Library version: " << trax_version() << "\n";
     cout << "Protocol version: " << TRAX_VERSION << "\n\n";
 
@@ -171,6 +171,7 @@ image_size image_get_size(Image image) {
 
     image_size result;
     const string filename = image.get_path();
+    int r;
 
     result.width = -1;
     result.height = -1;
@@ -190,7 +191,10 @@ image_size image_get_size(Image image) {
     // reading JPEG dimensions requires scanning through jpeg chunks
     // In all formats, the file is at least 24 bytes big, so we'll read that always
     unsigned char buf[24];
-    fread(buf,1,24,f);
+    r = fread(buf,1,24,f);
+    if (r == -1) {
+        return result;
+    }
 
     // For JPEGs, we need to read the first 12 bytes of each chunk.
     // We'll read those 12 bytes at buf+2...buf+14, i.e. overwriting the existing buf.
@@ -200,7 +204,9 @@ image_size image_get_size(Image image) {
             if (buf[3]==0xC0 || buf[3]==0xC1 || buf[3]==0xC2 || buf[3]==0xC3 || buf[3]==0xC9 || buf[3]==0xCA || buf[3]==0xCB) break;
             pos += 2+(buf[4]<<8)+buf[5];
             if (pos+12>len) break;
-            fseek(f,pos,SEEK_SET); fread(buf+2,1,12,f);
+            fseek(f,pos,SEEK_SET);
+            r = fread(buf+2,1,12,f);
+            if (r == -1) { return result; }
         }
     }
 
