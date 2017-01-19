@@ -367,7 +367,7 @@ Region
 
 ... c:macro::  TRAX_REGION_MASK
 
-..    Mask region type. A per-pixel binary mask. 
+..    Mask region type. A per-pixel binary mask.
 
 .. c:macro::  TRAX_REGION_ANY
 
@@ -472,7 +472,7 @@ Region
 .. c:function:: trax_bounds trax_region_bounds(const trax_region* region)
 
    Calculates a bounding box region that bounds the input region.
- 
+
    :param region: A pointer to the region object
    :return: A bounding box structure that contains values for left, top, right, and bottom
 
@@ -500,7 +500,7 @@ Region
    :param y: Y coordinate of the point
    :return: Returns zero if the point is not in the region or one if it is
 
- 
+
 .. c:function:: float trax_region_overlap(const trax_region* a, const trax_region* b, const trax_bounds bounds)
 
    Calculates the spatial Jaccard index for two regions (overlap).
@@ -522,7 +522,7 @@ Region
 
    :param region: A character array with textual representation of the region data
    :return: A pointer to the region object or ``NULL`` if string does not contain valid region data
- 
+
 
 Properties
 ~~~~~~~~~~
@@ -530,19 +530,19 @@ Properties
 .. c:function:: trax_properties* trax_properties_create()
 
    Create an empty properties dictionary.
- 
+
    :returns: A pointer to a properties object
 
 .. c:function:: void trax_properties_release(trax_properties** properties)
 
    Destroy a properties object and clean up the memory.
- 
+
    :param properties: A pointer to a properties object pointer
 
 .. c:function:: void trax_properties_clear(trax_properties* properties)
 
    Clears a properties dictionary making it empty.
- 
+
    :param properties: A pointer to a properties object
 
 .. c:function:: void trax_properties_set(trax_properties* properties, const char* key, const char* value)
@@ -572,7 +572,7 @@ Properties
 .. c:function:: char* trax_properties_get(const trax_properties* properties, const char* key)
 
    Get a string property. The resulting string is a clone of the one stored so it should be released when not needed anymore.
- 
+
    :param properties: A pointer to a properties object
    :param key: A key for the property
    :returns: The value for the property or ``NULL`` if there is no value associated with the key
@@ -580,7 +580,7 @@ Properties
 .. c:function:: int trax_properties_get_int(const trax_properties* properties, const char* key, int def)
 
     Get an integer property. A stored string value is converted to an integer. If this is not possible or the property does not exist a given default value is returned.
- 
+
    :param properties: A pointer to a properties object
    :param key: A key for the property
    :param def: Default value for the property
@@ -606,19 +606,19 @@ Properties
    :param enumerator: A pointer to the enumerator function that is called for every key-value pair
    :param object: A pointer to additional data for the enumerator function
 
-Integration tutorial
---------------------
+Integration example
+-------------------
 
 The library can be easily integrated into C and C++ code (although a C++ wrapper also exists) and can be also linked into other programming languages that enable linking of C libraries. Below is an sripped-down example of a C tracker skeleton with a typical tracking loop. Note that this is not a complete example and servers only as a demonstration of a typical tracker on a tracking-loop level.
 
 .. code-block:: c
   :linenos:
-  
+
   #include <stdio.h>
 
   int main( int argc, char** argv)
   {
-      int i; 
+      int i;
       FILE* out;
       rectangle_type region;
       image_type image;
@@ -626,14 +626,14 @@ The library can be easily integrated into C and C++ code (although a C++ wrapper
       out = fopen("trajectory.txt", "w");
 
       region = read_bounding_box();
-      image = read_image(1); 
+      image = read_image(1);
       region = initialize_tracker(region, image);
 
       write_frame(out, region);
 
       for (i = 2; ; i++)
       {
-        image = read_image(i); 
+        image = read_image(i);
         region = update_tracker(image);
         write_frame(out, region);
       }
@@ -654,7 +654,7 @@ The code above can be modified to use the TraX protocol by including the C libra
 
   int main( int argc, char** argv)
   {
-      int run = 1; 
+      int run = 1;
       trax_image* img = NULL;
       trax_region* reg = NULL;
 
@@ -670,7 +670,7 @@ The code above can be modified to use the TraX protocol by including the C libra
       {
           int tr = trax_server_wait(handle, &img, &reg, NULL);
 
-          // There are two important commands. The first one is 
+          // There are two important commands. The first one is
           // TRAX_INITIALIZE that tells the tracker how to initialize.
           if (tr == TRAX_INITIALIZE) {
 
@@ -685,7 +685,7 @@ The code above can be modified to use the TraX protocol by including the C libra
               rectangle_type region = update_tracker(load_image(img));
               trax_server_reply(handle, rectangle_to_region(region), NULL);
 
-          } 
+          }
           // Any other command is either TRAX_QUIT or illegal, so we exit.
           else {
               run = 0;

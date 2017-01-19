@@ -72,8 +72,8 @@ Internals
 
 Additionaly the function also looks for the ``TRAX_SOCKET`` environmental variable that is used to determine that the server has to be set up using TCP sockers and that a TCP server is opened (the port or IP address and port are proviede as the value of the variable) and waiting for connections from the tracker. This mechanism is important for Matlab on Microsoft Windows because the standard streams are closed at startup and cannot be used.
 
-Integration tutorial
---------------------
+Integration example
+-------------------
 
 As with all tracker implementations it is important to identify a tracking loop. Below is a very simple example of how a typical tracking loop looks in Matlab/Octave with all the tracker specific code removed and placed in self-explanatory functions.
 

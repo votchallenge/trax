@@ -31,8 +31,8 @@ Region module
 .. automodule:: trax.region
    :members:
 
-Integration tutorial
---------------------
+Integration example
+-------------------
 
 Below is a simple example of a Python code skeleton for a tracker, exposing its tracking loop but hidding all tracker-specific details to keep things clear.
 
@@ -56,7 +56,7 @@ Below is a simple example of a Python code skeleton for a tracker, exposing its 
     trajectory.append(rectangle)
 
   write_trajectory(trajectory)
- 
+
 To make the tracker work with the TraX protocol you have to modify the above code in the following way and also make sure that the ``trax`` module will be available at runtime.
 
 .. code-block:: python

@@ -17,7 +17,7 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
 .. cpp:class:: Configuration
 
-   A wrapper class for 
+   A wrapper class for
 
    .. cpp:function:: Configuration(trax_configuration config)
 
@@ -27,9 +27,9 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
    .. cpp:function:: ~Configuration()
 
-.. cpp:class:: Logging 
+.. cpp:class:: Logging
 
-   A wrapper class for 
+   A wrapper class for
 
    .. cpp:function:: Logging(trax_logging logging)
 
@@ -37,7 +37,7 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
    .. cpp:function:: ~Logging()
 
-.. cpp:class:: Bounds 
+.. cpp:class:: Bounds
 
    .. cpp:function:: Bounds()
 
@@ -120,7 +120,7 @@ The wrapper is composed of several classes, mostly following the underlying C fu
    .. cpp:function::  ~Image()
 
       Releases image structure, frees allocated memory.
-    
+
    .. cpp:function:: int type() const
 
       Returns a type of the image handle. See :c:func:`trax_image_get_type`.
@@ -287,14 +287,14 @@ The wrapper is composed of several classes, mostly following the underlying C fu
       Copies values in the properties object into the given dictionary.
 
 
-Integration tutorial
---------------------
+Integration example
+-------------------
 
 In C++ tracker implementations you can use either the C++ wrapper or basic C protocol implementation. The wrapper is more conveninent as it is object-oriented and provides automatic deallocation of resources via reference counting. Below is an sripped-down example of a C++ tracker skeleton with a typical tracking loop. Note that this is not a complete example and servers only as a demonstration of a typical tracker on a tracking-loop level.
 
 .. code-block:: c++
   :linenos:
-  
+
   #include <iostream>
   #include <fstream>
 
@@ -302,7 +302,7 @@ In C++ tracker implementations you can use either the C++ wrapper or basic C pro
 
   int main( int argc, char** argv)
   {
-      int i; 
+      int i;
       FILE* out;
       Rectangle region;
       Image image;
@@ -319,7 +319,7 @@ In C++ tracker implementations you can use either the C++ wrapper or basic C pro
 
       for (i = 2; ; i++)
       {
-        image = read_image(i); 
+        image = read_image(i);
         region = tracker.update(image);
         out << region << endl;
       }
@@ -342,7 +342,7 @@ The code above can be modified to use the TraX protocol by including the C/C++ l
 
   int main( int argc, char** argv)
   {
-      int run = 1; 
+      int run = 1;
       trax_image* img = NULL;
       trax_region* reg = NULL;
 
@@ -358,7 +358,7 @@ The code above can be modified to use the TraX protocol by including the C/C++ l
 
          int tr = handle.wait(image, region, properties);
 
-         // There are two important commands. The first one is 
+         // There are two important commands. The first one is
          // TRAX_INITIALIZE that tells the tracker how to initialize.
          if (tr == TRAX_INITIALIZE) {
 
