@@ -283,7 +283,7 @@ bool Process::start() {
                        (void *)envbuffer.str().c_str(),
                        curdir, &siStartInfo, &piProcInfo )) {
 
-        std::cout << "Error: " << GetLastError()  << std::endl;
+        std::cerr << "Error: " << GetLastError()  << std::endl;
         running = true;
         cleanup();
         return false;
@@ -311,9 +311,10 @@ bool Process::start() {
 
     if (pid) return false;
 
-    pipe(out);
-    pipe(in);
-    pipe(err);
+    if (pipe(out) == -1 || pipe(in) == -1 || pipe(err) == -1) {
+		std:cerr << "Error: unable to configure process streams" << std::endl;
+		return false;
+	}
 
     vector<string> vars;
 
@@ -348,18 +349,22 @@ bool Process::start() {
 
     string cwd = __getcwd();
 
+#define CHDIR_SOFT(D) { if (chdir((D).c_str()) == -1) { \
+	std::cerr << "Error: unable to switch to working directory" << std::endl; \
+	} }
+
     if (directory.size() > 0)
-        chdir(directory.c_str());
+		CHDIR_SOFT(directory);
 
     if (posix_spawnp(&pid, program, &action, NULL, arguments, vars_c.data())) {
         running = true;
         cleanup();
         pid = 0;
-        if (directory.size() > 0) chdir(cwd.c_str());
+        if (directory.size() > 0) CHDIR_SOFT(cwd);
         return false;
     }
 
-    if (directory.size() > 0) chdir(cwd.c_str());
+    if (directory.size() > 0) CHDIR_SOFT(cwd);
 
     p_stdin = out[1];
     p_stdout = in[0];
