@@ -6,6 +6,10 @@
 #include <vector>
 #include <stdexcept>
 
+#if defined (_MSC_VER) && _MSC_VER < 1800
+#define round(fp) (int)((fp) >= 0 ? (fp) + 0.5 : (fp) - 0.5)
+#endif
+
 namespace trax {
 
 cv::Mat image_to_mat(const Image& image) {
@@ -108,10 +112,10 @@ Region rect_to_region(const cv::Rect rect) {
 }
 
 Region points_to_region(const std::vector<cv::Point2f> points) {
-
+	size_t i;
     Region polygon = Region::create_polygon(points.size());
 
-    for (ssize_t i = 0; i < points.size(); i++) {
+    for (i = 0; i < points.size(); i++) {
         polygon.set_polygon_point(i, points[i].x, points[i].y);
     }
 

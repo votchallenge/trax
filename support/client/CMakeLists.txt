@@ -1,29 +1,32 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
-ADD_LIBRARY(trax_client SHARED client.cpp process.cpp threads.c)
+ADD_LIBRARY(trax_client SHARED client.cpp process.cpp threads.c timer.cpp)
 TARGET_LINK_LIBRARIES(trax_client trax)
 INSTALL(FILES "include/trax/client.hpp" DESTINATION include/trax)
 SET_TARGET_PROPERTIES(trax_client PROPERTIES VERSION 0.0.0 SOVERSION 0)
 
 # Temporarily avoiding linking with trax_client lib because of VOT toolkit
 # this has to be resolved in some other way someday
-ADD_EXECUTABLE(traxclient getopt.c cli.cpp timer.cpp)
+ADD_EXECUTABLE(traxclient cli.cpp getopt.c )
 TARGET_LINK_LIBRARIES(traxclient trax_client)
 
 IF (BUILD_OPENCV)
 	ADD_DEFINITIONS(-DTRAX_BUILD_OPENCV)
   	TARGET_LINK_LIBRARIES(traxclient trax_opencv ${OpenCV_LIBS})
-	ADD_EXECUTABLE(traxplayer player.cpp)
+	ADD_EXECUTABLE(traxplayer player.cpp getopt.c )
 	TARGET_LINK_LIBRARIES(traxplayer trax_opencv trax_client ${OpenCV_LIBS})
+	INSTALL(TARGETS traxplayer EXPORT client DESTINATION ${CMAKE_INSTALL_BINDIR})	
 ENDIF (BUILD_OPENCV)
 
 IF (WIN32 OR WIN64)
-	INSTALL(TARGETS trax_client traxclient traxplayer EXPORT client DESTINATION ${CMAKE_INSTALL_BINDIR})
+	INSTALL(TARGETS trax_client traxclient EXPORT client 
+		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 ELSE ()
-	INSTALL(TARGETS traxclient traxplayer EXPORT client DESTINATION ${CMAKE_INSTALL_BINDIR})
-	INSTALL(TARGETS trax_client EXPORT client DESTINATION ${CMAKE_INSTALL_LIBDIR})
+	INSTALL(TARGETS traxclient trax_client EXPORT client RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 ENDIF()
 
-INSTALL(EXPORT client DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/trax FILE trax-component-client.cmake)
+INSTALL(EXPORT client DESTINATION ${CONFIG_INSTALL_DIR} FILE trax-component-client.cmake)
 

@@ -26,8 +26,8 @@
 #if defined (_MSC_VER) && _MSC_VER < 1800
 #define INFINITY (DBL_MAX+DBL_MAX)
 #define NAN (INFINITY-INFINITY)
+#define round(fp) (int)((fp) >= 0 ? (fp) + 0.5 : (fp) - 0.5)
 #endif
-
 
 #define PRINT_BOUNDS(B) printf("[left: %.2f, top: %.2f, right: %.2f, bottom: %.2f]\n", B.left, B.top, B.right, B.bottom)
 
@@ -773,6 +773,8 @@ float compute_polygon_overlap(const region_polygon* p1, const region_polygon* p2
 	char* mask1 = NULL;
 	char* mask2 = NULL;
 	double a1, a2;
+	float x, y;
+	int width, height;
 	region_polygon *op1, *op2;
 	region_bounds b1, b2;
 
@@ -784,11 +786,11 @@ float compute_polygon_overlap(const region_polygon* p1, const region_polygon* p2
 		b2 = bounds_intersection(bounds_round(compute_bounds(p2)), bounds);
 	}
 
-	float x = MIN(b1.left, b2.left);
-	float y = MIN(b1.top, b2.top);
+	x = MIN(b1.left, b2.left);
+	y = MIN(b1.top, b2.top);
 
-	int width = (int) (MAX(b1.right, b2.right) - x) + 1;
-	int height = (int) (MAX(b1.bottom, b2.bottom) - y) + 1;
+	width = (int) (MAX(b1.right, b2.right) - x) + 1;
+	height = (int) (MAX(b1.bottom, b2.bottom) - y) + 1;
 
 	// Fixing crashes due to overflowed regions, a simple check if the ratio
 	// between the two bounding boxes is simply too big and the overlap would

@@ -1,6 +1,4 @@
 
-#include "trax/client.hpp"
-
 #include <stdio.h>
 #ifdef WIN32
 #include <windows.h>
@@ -12,6 +10,8 @@
 #elif HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
+
+#include "trax/client.hpp"
 
 #define TIMER_USEC_PER_SEC 1000000
 

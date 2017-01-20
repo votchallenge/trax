@@ -3,18 +3,28 @@
 #ifndef _REGION_H_
 #define _REGION_H_
 
-#ifndef __TRAX_EXPORT
-#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
-#if defined(_TRAX_BUILDING)
-    #define __TRAX_EXPORT __declspec(dllexport)
+#ifdef TRAX_STATIC_DEFINE
+#  define __TRAX_EXPORT
 #else
-	#define __TRAX_EXPORT 
-#endif
-#elif defined(_GCC)
-    #define __TRAX_EXPORT __attribute__((visibility("default")))
-#else
-    #define __TRAX_EXPORT
-#endif
+#  ifndef __TRAX_EXPORT
+#    if defined(_MSC_VER)
+#      ifdef trax_EXPORTS
+         /* We are building this library */
+#        define __TRAX_EXPORT __declspec(dllexport)
+#      else
+         /* We are using this library */
+#        define __TRAX_EXPORT __declspec(dllimport)
+#      endif
+#    elif defined(__GNUC__)
+#      ifdef trax_EXPORTS
+         /* We are building this library */
+#        define __TRAX_EXPORT __attribute__((visibility("default")))
+#      else
+         /* We are using this library */
+#        define __TRAX_EXPORT __attribute__((visibility("default")))
+#      endif
+#    endif
+#  endif
 #endif
 
 #ifndef MAX
