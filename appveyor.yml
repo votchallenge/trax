@@ -51,29 +51,20 @@ clone_depth: 1                      # clone entire repository history if not def
 # environment variables
 environment:
   matrix:
-    - GENERATOR: "Visual Studio 13"
-      CONFIG: Debug
-
-    - GENERATOR: "Visual Studio 15"
+    - GENERATOR: "Visual Studio 12 2013"
       CONFIG: Release
 
-    - GENERATOR: "Visual Studio 13 Win64"
-      CONFIG: Debug
+    - GENERATOR: "Visual Studio 14 2015"
+      CONFIG: Release
 
-    - GENERATOR: "Visual Studio 15 Win64"
+    - GENERATOR: "Visual Studio 12 2013 Win64"
+      CONFIG: Release
+
+    - GENERATOR: "Visual Studio 14 2015 Win64"
       CONFIG: Release
 
 # scripts that run after cloning repository
 install:
-
-# enable patching of AssemblyInfo.* files
-assembly_info:
-  patch: true
-  file: AssemblyInfo.*
-  assembly_version: "2.2.{build}"
-  assembly_file_version: "{version}"
-  assembly_informational_version: "{version}"
-
 
 # Automatically register private account and/or project AppVeyor NuGet feeds.
 nuget:
@@ -149,7 +140,7 @@ deploy:
     host: box.vicos.si
     username: appveyor
     password:
-      secure: eYKZKFkkEvFYWX6NfjZIVw==
+      secure: wjVh1vJoXkFXCoFm/KgsAg==
     folder: /vot/trax/
     application:
     active_mode: false
