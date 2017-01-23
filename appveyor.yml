@@ -123,15 +123,6 @@ after_build:
 # to run your custom scripts instead of automatic MSBuild
 build_script:
 
-test:
-  assemblies:
-    - asm1.dll
-    - asm2.dll
-
-  categories:
-    - UI
-    - E2E
-
 test: off
 
 #---------------------------------#
@@ -141,7 +132,7 @@ test: off
 artifacts:
 
   # pushing a single file
-  - path: trax-*.zip
+  - path: TraX-*.zip
 
   # pushing all *.nupkg files in build directory recursively
 #  - path: '**\*.nupkg'
