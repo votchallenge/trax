@@ -52,16 +52,16 @@ clone_depth: 1                      # clone entire repository history if not def
 environment:
   matrix:
     - GENERATOR: "Visual Studio 12 2013"
-      BUILD_SUFFIX: 32_vs12
+      BUILD_PLATFORM: 32_vs12
 
     - GENERATOR: "Visual Studio 14 2015"
-      BUILD_SUFFIX: 32_vs14
+      BUILD_PLATFORM: 32_vs14
 
     - GENERATOR: "Visual Studio 12 2013 Win64"
-      BUILD_SUFFIX: 64_vs12
+      BUILD_PLATFORM: 64_vs12
 
     - GENERATOR: "Visual Studio 14 2015 Win64"
-      BUILD_SUFFIX: 64_vs14
+      BUILD_PLATFORM: 64_vs14
 
 # scripts that run after cloning repository
 install:
@@ -101,16 +101,13 @@ build:
 before_build:
   - echo Running cmake...
   - cd c:\projects\trax
-  - cmake -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%P% -DBUILD_CLIENT=ON -DBUILD_VERSION=%APPVEYOR_BUILD_VERSION%
+  - cmake -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%P% -DBUILD_CLIENT=ON -DBUILD_VERSION=%APPVEYOR_BUILD_VERSION% -DBUILD_PLATFORM=%BUILD_PLATFORM%
 
 # scripts to run *after* solution is built and *before* automatic packaging occurs (web apps, NuGet packages, Azure Cloud Services)
 before_package:
 
 # scripts to run after build
 after_build:
-
-# to run your custom scripts instead of automatic MSBuild
-build_script:
 
 test: off
 
@@ -132,13 +129,12 @@ artifacts:
 #---------------------------------#
 deploy:
 
-    # FTP deployment provider settings
   - provider: FTP
-    protocol: ftp|ftps|sftp
+    protocol: ftp
     host: box.vicos.si
     username: appveyor
     password:
-      secure: wjVh1vJoXkFXCoFm/KgsAg==
+      secure: iUkFvVxZhfw9FG4FC7YqxQ==
     folder: /vot/trax/
     application:
     active_mode: false
@@ -165,6 +161,7 @@ deploy:
 
 # scripts to run before deployment
 before_deploy:
+  - cp TraX-*.zip TraX
 
 # scripts to run after deployment
 after_deploy:
