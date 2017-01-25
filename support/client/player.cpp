@@ -170,7 +170,7 @@ void configure_signals() {
 #define GROUNDTRUTH_COLOR Scalar(100, 255, 100)
 #define TRACKER_COLOR Scalar(100, 100, 255)
 
-#define CMD_OPTIONS "hsdV:G:f:O:r:t:T:p:e:c:C:xXg"
+#define CMD_OPTIONS "hdV:G:t:p:e:xXg"
 
 #ifndef TRAX_BUILD_DATE
 #define TRAX_BUILD_DATE __DATE__
@@ -183,8 +183,8 @@ void print_help() {
     cout << "TraX library version: " << trax_version() << "\n";
     cout << "Protocol version: " << TRAX_VERSION << "\n\n";
 
-    cout << "Usage: traxplayer [-h] [-d] [-V video_file] \n";
-    cout << "\t [-G groundtruth_file] [-e name=value] \n";
+    cout << "Usage: traxplayer [-h] [-d]  \n";
+    cout << "\t [-e name=value] [-V video_file]\n";
     cout << "\t [-p name=value] [-t timeout] [-x] [-X]\n";
     cout << "\t [-g] -- <command_part1> <command_part2> ...";
 

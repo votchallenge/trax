@@ -6,19 +6,21 @@ Besides protocol implementation the repository also contains supporting librarie
 Client utilities
 ----------------
 
-The client support library provides a C++ client class that uses C++ protocol API to communicate with the tracker process, besides communication the class also takes care of launching tracker process, handling timeouts, logging, and other things. The class also supports setting up communication over streams as well as over TCP sockets. To compile the module you have to enable ``BUILD_CLIENT`` flag in CMake build system. 
+The client support library provides a C++ client class that uses C++ protocol API to communicate with the tracker process, besides communication the class also takes care of launching tracker process, handling timeouts, logging, and other things. The class also supports setting up communication over streams as well as over TCP sockets. To compile the module you have to enable ``BUILD_CLIENT`` flag in CMake build system (check out the :doc:`tutorial on compiling the project </tutorial_compiling>` for more details).
 
 CLI interface
 ~~~~~~~~~~~~~
 
-Client support module also provides a simple CLI (command line interface) to the client that can be used for simple tracker execution and protocol testing. If the OpenCV support module (below) is also compiled then the CLI interface uses it for some extra conversions that are otherwise not supported (e.g. loading images and sending them in their raw form over the communication channel if the server requests it).
+Client support module also provides a `traxclient`, a simple CLI (command line interface) to the client that can be used for simple tracker execution as well as a `traxtest` utility that can be used for protocol support testing.
+
+If the OpenCV support module (below) is also compiled then the CLI interface uses it for some extra conversions that are otherwise not supported (e.g. loading images and sending them in their raw form over the communication channel if the server requests it) and a `traxplayer` utility that can be used to interactively test trackers with the data from video or camera stream.
 
 OpenCV conversions
 ------------------
 
-`OpenCV <http://opencv.org/>`_ is one of most frequently used C++ libraries in computer vision. This support library provides conversion functions so that protocol image and region objects can be quickly converted to corresponding OpenCV objects and vice-versa. 
+`OpenCV <http://opencv.org/>`_ is one of most frequently used C++ libraries in computer vision. This support library provides conversion functions so that protocol image and region objects can be quickly converted to corresponding OpenCV objects and vice-versa.
 
-The module is automatically built if the OpenCV library is found on the system, additionally you can also enable it by turning on the ``BUILD_OPENCV`` flag in CMake build system (but you may have to set the OpenCV location manually in this case).
+To compile the module you have to enable the ``BUILD_OPENCV`` flag in CMake build system (check out the :doc:`tutorial on compiling the project </tutorial_compiling>` for more details).
 
 .. cpp:namespace:: trax
 
@@ -66,7 +68,7 @@ The module is automatically built if the OpenCV library is found on the system, 
 
 
 .. cpp:function:: void draw_region(cv::Mat& canvas, const Region& region, cv::Scalar color, int width = 1)
- 
+
    Draws a given region to an OpenCV image with a given color and line width.
 
    :param canvas: Target OpenCV image to which the region is drawn
