@@ -8,12 +8,9 @@ The source code for the reference library is availabe on `GitHub <https://github
 
 .. toctree::
    :maxdepth: 2
-   
+
    protocol
-   documentation_c
-   documentation_cpp
-   documentation_python
-   documentation_matlab
+   api
    support
    development
    adoption

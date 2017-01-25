@@ -343,8 +343,6 @@ The code above can be modified to use the TraX protocol by including the C/C++ l
   int main( int argc, char** argv)
   {
       int run = 1;
-      trax_image* img = NULL;
-      trax_region* reg = NULL;
 
       // Initialize protocol
       trax::Server handle(trax::Configuration(TRAX_IMAGE_PATH,
@@ -362,17 +360,17 @@ The code above can be modified to use the TraX protocol by including the C/C++ l
          // TRAX_INITIALIZE that tells the tracker how to initialize.
          if (tr == TRAX_INITIALIZE) {
 
-            rectangle_type region = tracker.initialize(
-                 region_to_rectangle(region), load_image(image));
+            cv::Rect result = tracker.initialize(
+                 trax::region_to_rect(region), trax::image_to_mat(image));
 
-            handle.reply(rectangle_to_region(region), trax::Properties());
+            handle.reply(trax::rect_to_region(result), trax::Properties());
 
          } else
          // The second one is TRAX_FRAME that tells the tracker what to process next.
          if (tr == TRAX_FRAME) {
 
-            rectangle_type region = tracker.update(load_image(image));
-            handle.reply(rectangle_to_region(region), trax::Properties());
+            cv::Rect result = tracker.update(image_to_mat(image));
+            handle.reply(trax::rect_to_region(result), trax::Properties());
 
          }
          // Any other command is either TRAX_QUIT or illegal, so we exit.

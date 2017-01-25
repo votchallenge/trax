@@ -6,7 +6,7 @@ The TraX protocol can be implemented using the protocol specification, the proto
 Requirements and building
 -------------------------
 
-The library is built using `CMake <https://cmake.org/>`_ build tool which generates build instructions for a given platform. The code is written in C89 for maximum portability and the library has no external dependencies apart from the standard C library.
+The library is built using `CMake <https://cmake.org/>`_ build tool which generates build instructions for a given platform. The code is written in C89 for maximum portability and the library has no external dependencies apart from the standard C library. For more details on building check out the :doc:`tutorial on compiling the project </tutorial_compiling>`.
 
 Documentation
 -------------
