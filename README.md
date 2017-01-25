@@ -1,5 +1,8 @@
-About the TraX protocol
-===================
+Visual Tracking eXchange protocol
+=================================
+
+[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/e12tdjnekrv7qivl/branch/master?svg=true)](https://ci.appveyor.com/project/lukacu/trax/branch/master)
+[![Documentation Status](https://readthedocs.org/projects/trax/badge/?version=latest)](http://trax.readthedocs.io/en/latest/?badge=latest)
 
 What is TraX protocol?
 ----------------------
@@ -9,7 +12,7 @@ What is TraX protocol?
 Reference server and client implementation
 --------------------------------------------
 
-libtrax is a reference implementation of the Tracking eXchange protocol written in plain C. It enables researchers to quickly add support for the protocol in their C or C++ tracker (servers) as well as write new clients (evaluation, various tools). 
+libtrax is a reference implementation of the Tracking eXchange protocol written in plain C. It enables researchers to quickly add support for the protocol in their C or C++ tracker (servers) as well as write new clients (evaluation, various tools).
 
 Integration examples are provided in the `trackers` directory. A simple static tracker is available that explains the basic concept of the integration without too much tracker-specific details.
 
