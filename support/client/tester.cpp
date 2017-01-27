@@ -138,7 +138,7 @@ string get_temp_name(const string& file) {
 string result;
 char chars[MAX_PATH];
 if (GetTempPath(MAX_PATH, chars))
-    result = string(chars) + string("\\") + file;
+    return string(chars) + string("\\") + file;
 else
     return string("C:\\Temp");
 #else
@@ -270,10 +270,6 @@ int main(int argc, char** argv) {
                 throw std::runtime_error("Tracker process not alive anymore.");
             }
 
-            // Start timing a frame
-            clock_t timing_toc;
-            clock_t timing_tic = clock();
-
             if (!tracker.initialize(image, initialization_region, properties)) {
                 throw std::runtime_error("Unable to initialize tracker.");
             }
@@ -290,9 +286,6 @@ int main(int argc, char** argv) {
                 Properties additional;
 
                 bool result = tracker.wait(status, additional);
-
-                // Stop timing a frame
-                timing_toc = clock();
 
                 if (result) {
                     // Default option, the tracker returns a valid status.

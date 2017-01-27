@@ -7824,9 +7824,10 @@ int tester_copy_resource(const char* name, char** buffer, size_t* size)
     {
         if (strcmp(name, tester_resource_names[i]) == 0)
         {
+			rescue_copy_state state;
+
             *size = tester_resource_length_inflated[i];
             *buffer = (char*) malloc(sizeof(char) * (*size));
-			rescue_copy_state state;
 			state.buffer = *buffer;
 			state.position = 0;
 			state.size = *size;

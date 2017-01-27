@@ -107,6 +107,7 @@ IF (BUILD_PYTHON)
     ADD_CUSTOM_TARGET(traxpython ALL DEPENDS ${OUTPUT})
 
 	IF (WIN32 OR WIN64)
+	# commenting out untill we figure out how to correctly install on Windows
 	#SET(DISTUTILS_INSTALL_FLAGS --root="%DESTDIR%" ${DISTUTILS_INSTALL_FLAGS})
 	ELSE()
 	SET(DISTUTILS_INSTALL_FLAGS --root="$DESTDIR" ${DISTUTILS_INSTALL_FLAGS})
