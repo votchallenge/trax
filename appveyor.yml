@@ -10,7 +10,7 @@
 #---------------------------------#
 
 # version format
-version: 1.0.{build}
+version: 1.0.0-{build}
 
 # you can use {branch} name in version format too
 # version: 1.0.{build}-{branch}
@@ -65,6 +65,7 @@ environment:
 
 # scripts that run after cloning repository
 install:
+  - cmd: choco install OpenCV -y -version 2.4.9.20140518
 
 # Automatically register private account and/or project AppVeyor NuGet feeds.
 nuget:
@@ -99,9 +100,13 @@ build:
 
 # scripts to run before build
 before_build:
+  - IF EXIST c:\OpenCV* CD c:\OpenCV*
+  - SET OPENCV_DIR=%CD%\opencv\build
   - echo Running cmake...
   - cd c:\projects\trax
-  - cmake -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%P% -DBUILD_CLIENT=ON -DBUILD_VERSION=%APPVEYOR_BUILD_VERSION% -DBUILD_PLATFORM=%BUILD_PLATFORM%
+  - set /p BUILD_VERSION=< VERSION
+  - appveyor UpdateBuild -Version "%BUILD_VERSION%-{build}"
+  - cmake -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%P% -DBUILD_CLIENT=ON -DBUILD_OPENCV=ON -DOpenCV_Dir=%OPENCV_DIR% -DBUILD_PLATFORM=%BUILD_PLATFORM%
 
 # scripts to run *after* solution is built and *before* automatic packaging occurs (web apps, NuGet packages, Azure Cloud Services)
 before_package:
@@ -195,6 +200,6 @@ notifications:
     to:
       - luka.cehovin@gmail.com
     subject: 'TraX Build {{status}}'
-    message: "{{message}}, {{commitId}}, ..."
+    message: "TraX library Windows build status for {{commitId}} = {{status}}"
     on_build_status_changed: true
 
