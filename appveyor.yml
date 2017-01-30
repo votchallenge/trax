@@ -61,7 +61,7 @@ environment:
 
     - GENERATOR: "Visual Studio 14 2015 Win64"
       BUILD_PLATFORM: 64_vs14
-      OPENCV_VERSION: 2.4.13
+      OPENCV_VERSION: 3.1.0.20160701
 
 # Automatically register private account and/or project AppVeyor NuGet feeds.
 nuget:
