@@ -55,10 +55,6 @@ environment:
       BUILD_PLATFORM: 32_vs12
       OPENCV_VERSION: 2.4.13
 
-    - GENERATOR: "Visual Studio 14 2015"
-      BUILD_PLATFORM: 32_vs14
-      OPENCV_VERSION: 2.4.13
-
     - GENERATOR: "Visual Studio 12 2013 Win64"
       BUILD_PLATFORM: 64_vs12
       OPENCV_VERSION: 2.4.13
