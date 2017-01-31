@@ -50,6 +50,7 @@ clone_depth: 1                      # clone entire repository history if not def
 
 # environment variables
 environment:
+  - INSTALL_DIR: c:\projects\trax\install
   matrix:
     - GENERATOR: "Visual Studio 12 2013"
       BUILD_PLATFORM: 32_vs12
@@ -86,34 +87,18 @@ configuration:
 install:
   - cmd: choco install OpenCV -y -version %OPENCV_VERSION%
 
-build:
-  project: PACKAGE.vcxproj
-  publish_wap: true               # package Web Application Projects (WAP) for Web Deploy
-  publish_wap_xcopy: true         # package Web Application Projects (WAP) for XCopy deployment
-  publish_azure: true             # package Azure Cloud Service projects and push to artifacts
-  publish_nuget: true             # package projects with .nuspec files and push to artifacts
-  publish_nuget_symbols: true     # generate and publish NuGet symbol packages
-  include_nuget_references: true  # add -IncludeReferencedProjects option while packaging NuGet artifacts
-
-  # MSBuild verbosity level
-  verbosity: normal
-
-# scripts to run before build
-before_build:
+build_script:
   - IF EXIST c:\tools\opencv* CD c:\tools\opencv*
   - SET OPENCV_DIR=%CD%\build
   - echo Running cmake...
   - cd c:\projects\trax
   - set /p BUILD_VERSION=< VERSION
   - appveyor UpdateBuild -Version "%BUILD_VERSION%-%APPVEYOR_BUILD_NUMBER%"
-  - cmake -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%P% -DBUILD_CLIENT=ON -DBUILD_OPENCV=ON -DOpenCV_DIR=%OPENCV_DIR% -DBUILD_PLATFORM=%BUILD_PLATFORM%
-
-# scripts to run *after* solution is built and *before* automatic packaging occurs (web apps, NuGet packages, Azure Cloud Services)
-before_package:
-
-# scripts to run after build
-after_build:
-
+  - cmake -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR% -DBUILD_CLIENT=ON -DBUILD_OPENCV=ON -DOpenCV_DIR=%OPENCV_DIR% -DBUILD_PLATFORM=%BUILD_PLATFORM%
+  - msbuild INSTALL.vcxproj /p:Configuration=Debug /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+  - msbuild INSTALL.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+  - 7z a -tzip trax-%BUILD_VERSION%-%BUILD_PLATFORM%.zip install/*
+  
 test: off
 
 #---------------------------------#
@@ -123,7 +108,7 @@ test: off
 artifacts:
 
   # pushing a single file
-  - path: TraX-*.zip
+  - path: trax-*.zip
 
   # pushing all *.nupkg files in build directory recursively
 #  - path: '**\*.nupkg'
