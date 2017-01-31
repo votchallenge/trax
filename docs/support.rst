@@ -6,7 +6,24 @@ Besides protocol implementation the repository also contains supporting librarie
 Client utilities
 ----------------
 
-The client support library provides a C++ client class that uses C++ protocol API to communicate with the tracker process, besides communication the class also takes care of launching tracker process, handling timeouts, logging, and other things. The class also supports setting up communication over streams as well as over TCP sockets. To compile the module you have to enable ``BUILD_CLIENT`` flag in CMake build system (check out the :doc:`tutorial on compiling the project </tutorial_compiling>` for more details).
+The client support library provides a C++ client class that uses C++ protocol API to communicate with the tracker process, besides communication the class also takes care of launching tracker process, handling timeouts, logging, and other things. The class also supports setting up communication over streams as well as over TCP sockets. A detailed tutorial on how to use the client library is available :doc:`here </tutorial_client>`. To compile the module you have to enable ``BUILD_CLIENT`` flag in CMake build system (check out the :doc:`tutorial on compiling the project </tutorial_compiling>` for more details).
+
+.. cpp:namespace:: trax
+
+.. cpp:function:: int load_trajectory(const std::string& file, std::vector<Region>& trajectory)
+
+   Utility function to load a trajectory (a sequence of object states) form a text file.
+
+   :param file: Filename string
+   :param trajectory: Empty vector that will be populated with region states
+   :return: Number of read states
+
+.. cpp:function:: void save_trajectory(const std::string& file, std::vector<Region>& trajectory)
+
+   Utility function to save a trajectory (a sequence of object states) to a text file.
+
+   :param file: Filename string
+   :param trajectory: Vector that contains the trajectory
 
 CLI interface
 ~~~~~~~~~~~~~
@@ -14,6 +31,12 @@ CLI interface
 Client support module also provides a `traxclient`, a simple CLI (command line interface) to the client that can be used for simple tracker execution as well as a `traxtest` utility that can be used for protocol support testing.
 
 If the OpenCV support module (below) is also compiled then the CLI interface uses it for some extra conversions that are otherwise not supported (e.g. loading images and sending them in their raw form over the communication channel if the server requests it) and a `traxplayer` utility that can be used to interactively test trackers with the data from video or camera stream.
+
+The `traxclient` utility is in fact quite powerful and can be used to perform many batch experiments if run multiple times with different parameters. It is internally used by the `VOT toolkit <https://github.com/votchallenge/vot-toolkit>`_ and can be used to perform other batch experiments as well. If we assume that image sequence is stored in `images.txt` file (one absolute image path per line) and that groundtruth are stored in `groundtruth.txt` file (one region per line, corresponding to the images), we can run a tracker on this sequence by calling::
+
+    traxclient -g groundtruth.txt -I images.txt -o result.txt -- <tracker command>
+
+This command will load the groundtruth and use it to initialize the tracker, then it will monitor the tracker until the end of the sequence and storing the resulting trajectory to `result.txt`. More complex behavior can be achieved by adding other command-line flags (run :code:`traxclient -h` to get their list).
 
 OpenCV conversions
 ------------------
