@@ -50,7 +50,7 @@ clone_depth: 1                      # clone entire repository history if not def
 
 # environment variables
 environment:
-  INSTALL_DIR: c:\projects\trax\install
+  INSTALL_DIR: c:\projects\trax\trax
   matrix:
     - GENERATOR: "Visual Studio 12 2013"
       BUILD_PLATFORM: 32_vs12
@@ -97,7 +97,7 @@ build_script:
   - cmake -G "%GENERATOR%" -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR% -DBUILD_CLIENT=ON -DBUILD_OPENCV=ON -DOpenCV_DIR=%OPENCV_DIR% -DBUILD_PLATFORM=%BUILD_PLATFORM%
   - msbuild INSTALL.vcxproj /p:Configuration=Debug /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - msbuild INSTALL.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
-  - 7z a -tzip trax-%BUILD_VERSION%-%BUILD_PLATFORM%.zip install/*
+  - 7z a -tzip trax-%BUILD_VERSION%-%BUILD_PLATFORM%.zip trax/*
   
 test: off
 
