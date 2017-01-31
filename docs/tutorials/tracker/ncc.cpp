@@ -58,7 +58,7 @@ public:
 	*  It initializes the internal state of the tracker.
 	*/
 	void init(cv::Mat img, cv::Rect rect) {
-		p_window = MAX(rect.width, rect.height) * 2;
+		p_window = (float) MAX(rect.width, rect.height) * 2;
 
 		cv::Mat gray;
 		cv::cvtColor(img, gray, CV_BGR2GRAY);
@@ -76,7 +76,7 @@ public:
 		p_position.x = (float)rect.x + (float)rect.width / 2;
 		p_position.y = (float)rect.y + (float)rect.height / 2;
 
-		p_size = cv::Size2f(rect.width, rect.height);
+		p_size = cv::Size2f((float)rect.width, (float)rect.height);
 
 		// We can keep the same debug messages in the code even after
 		// integration of the TraX protocol.
@@ -103,10 +103,10 @@ public:
 		if (roi.width < p_template.cols || roi.height < p_template.rows) {
 			cv::Rect result;
 
-			result.x = p_position.x - p_size.width / 2;
-			result.y = p_position.y - p_size.height / 2;
-			result.width = p_size.width;
-			result.height = p_size.height;
+			result.x = (int) (p_position.x - p_size.width / 2);
+			result.y = (int)(p_position.y - p_size.height / 2);
+			result.width = (int)(p_size.width);
+			result.height = (int)(p_size.height);
 			return result;
 
 		}
@@ -124,8 +124,8 @@ public:
 		p_position.x = left + matchLoc.x + (float)p_size.width / 2;
 		p_position.y = top + matchLoc.y + (float)p_size.height / 2;
 
-		result.x = left + matchLoc.x;
-		result.y = top + matchLoc.y;
+		result.x = (int)(left + matchLoc.x);
+		result.y = (int)(top + matchLoc.y);
 		result.width = p_size.width;
 		result.height = p_size.height;
 
