@@ -12,6 +12,7 @@ The source code for the reference library is availabe on `GitHub <https://github
    protocol
    api
    support
+   tutorials
    development
    adoption
 
