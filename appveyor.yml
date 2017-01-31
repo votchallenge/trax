@@ -50,7 +50,7 @@ clone_depth: 1                      # clone entire repository history if not def
 
 # environment variables
 environment:
-  - INSTALL_DIR: c:\projects\trax\install
+  INSTALL_DIR: c:\projects\trax\install
   matrix:
     - GENERATOR: "Visual Studio 12 2013"
       BUILD_PLATFORM: 32_vs12
