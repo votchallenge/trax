@@ -11,7 +11,7 @@
 #else
 #  ifndef __TRAX_CLIENT_EXPORT
 #    if defined(_MSC_VER)
-#      ifdef trax_client_EXPORTS 
+#      ifdef trax_client_EXPORTS
          /* We are building this library */
 #        define __TRAX_CLIENT_EXPORT __declspec(dllexport)
 #      else
@@ -37,13 +37,13 @@ using namespace std;
 namespace trax {
 
 enum ConnectionMode {CONNECTION_DEFAULT, CONNECTION_EXPLICIT, CONNECTION_SOCKETS};
-	
+
 enum VerbosityMode {VERBOSITY_SILENT, VERBOSITY_DEFAULT, VERBOSITY_DEBUG};
 
 class __TRAX_CLIENT_EXPORT TrackerProcess {
 public:
 
-	TrackerProcess(const string& command, map<string, string> environment, int timeout = 10, 
+	TrackerProcess(const string& command, const map<string, string> environment = map<string, string>(), int timeout = 10,
 		ConnectionMode connection = CONNECTION_DEFAULT, VerbosityMode verbosity = VERBOSITY_DEFAULT);
 	~TrackerProcess();
 
@@ -53,9 +53,9 @@ public:
 	bool ready();
 	bool tracking();
 
-	bool initialize(Image& image, Region& region, Properties& properties);
+	bool initialize(const Image& image, const Region& region, const Properties& properties = Properties());
 	bool wait(Region& region, Properties& properties);
-	bool frame(Image& image, Properties& properties);
+	bool frame(const Image& image, const Properties& properties = Properties());
 
 	bool reset();
 

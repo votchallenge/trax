@@ -72,7 +72,7 @@ int create_server_socket(int port) {
     if((sid = (int) socket(AF_INET,SOCK_STREAM,0)) == -1) {
         return -1;
     }
-    
+
     memset(&sin,0,sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = inet_addr(hostname);
@@ -140,7 +140,7 @@ namespace trax {
 
 class TrackerProcess::State {
 public:
-	State(const string& command, map<std::string, std::string> environment, ConnectionMode connection, VerbosityMode verbosity, int timeout):
+	State(const string& command, const map<std::string, std::string> environment, ConnectionMode connection, VerbosityMode verbosity, int timeout):
 		command(command), environment(environment), socket_id(-1), socket_port(TRAX_DEFAULT_PORT),
 		connection(connection), verbosity(verbosity), timeout(timeout) {
 
@@ -232,8 +232,8 @@ public:
 	    	start_watchdog();
 
 	    	Logging logger = trax_no_log;
-			
-			if (verbosity != VERBOSITY_SILENT) 
+
+			if (verbosity != VERBOSITY_SILENT)
 				logger = Logging(client_logger, this, 0);
 
 	        if (connection == CONNECTION_SOCKETS) {
@@ -301,7 +301,7 @@ public:
 		        return false;
 		    }
 
-		} 
+		}
 
 		return true;
 
@@ -327,7 +327,7 @@ public:
 	void stop_watchdog() {
 
 		reset_watchdog(0);
-		
+
 	}
 
 	void reset_logger() {
@@ -362,7 +362,7 @@ public:
 	        if (state->process && state->watchdog_timeout > 0) {
 
 		        if (!state->process->is_alive()) {
-		            
+
 		            DEBUGMSG(state, "Remote process has terminated ...\n");
 		            state->watchdog_timeout = 0;
 
@@ -429,7 +429,7 @@ public:
 	            state->stderr_length++;
 
 	            if (state->stderr_length >= state->line_truncate && state->line_truncate > 0) {
-	                
+
 	                if (state->stderr_length == state->line_truncate)
 	                    state->stderr_buffer[state->stderr_position++] = '\n';
 
@@ -466,7 +466,7 @@ public:
 
 	static void client_logger(const char *string, int length, void* obj) {
 
-		State* state  = (State*) obj; 
+		State* state  = (State*) obj;
 
 	    if (!string) {
 
@@ -483,11 +483,11 @@ public:
 	    } else {
 
 	        for (int i = 0; i < length; i++) {
-	  
+
 	            state->stdout_length++;
 
 	            if (state->stdout_length >= state->line_truncate && state->line_truncate > 0) {
-	                
+
 	                if (state->stdout_length == state->line_truncate)
 	                    state->stdout_buffer[state->stdout_position++] = '\n';
 
@@ -551,7 +551,7 @@ public:
 
 };
 
-TrackerProcess::TrackerProcess(const string& command, map<string, string> environment, int timeout, ConnectionMode connection, VerbosityMode verbosity) {
+TrackerProcess::TrackerProcess(const string& command, const map<string, string> environment, int timeout, ConnectionMode connection, VerbosityMode verbosity) {
 
 	state = new State(command, environment, connection, verbosity, timeout);
 
@@ -563,7 +563,7 @@ TrackerProcess::~TrackerProcess() {
 
 }
 
-bool TrackerProcess::initialize(Image& image, Region& region, Properties& properties) {
+bool TrackerProcess::initialize(const Image& image, const Region& region, const Properties& properties) {
 
 	if (!ready()) throw std::runtime_error("Tracker process not alive");
 
@@ -609,7 +609,7 @@ bool TrackerProcess::wait(Region& region, Properties& properties) {
 
 }
 
-bool TrackerProcess::frame(Image& image, Properties& properties) {
+bool TrackerProcess::frame(const Image& image, const Properties& properties) {
 
 	if (!ready()) throw std::runtime_error("Tracker process not alive");
 

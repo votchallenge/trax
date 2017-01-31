@@ -8,7 +8,6 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <iostream>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

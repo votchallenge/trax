@@ -3,7 +3,7 @@ Compiling TraX library
 
 The TraX library and supporting modules are built using `CMake <https://cmake.org/>`_ build tool. If you have not used CMake before the best way to familiarize with it is by going through the `official tutorial <https://cmake.org/cmake-tutorial/>`_. CMake does not build the code by itself but generates build instructions for a given platform, e.g. Make on Unix systems, Visual Studio on Windows, and Xcode on OSX.
 
-.. note:: In addition to CMake you will also have to install Python distutil if you want to build a Python package (although you do not have to do this to use the Python implementation) and Octave development packages if you want to build Octave-compatible MEX file (this can also be done from within the Octave console).
+.. note:: In addition to CMake you will also have to install Python distutil if you want to build a Python package (although you do not have to do this to use the Python implementation) and Octave development packages if you want to build Octave-compatible MEX file (this can also be done from :doc:`within the Octave or Matlab console </tutorial_matlab>`).
 
 If you want to build optional OpenCV support, you will have to install OpenCV library (together with development header files). Depending on your OpenCV installation location you may have to tell the CMake where to find the library.
 

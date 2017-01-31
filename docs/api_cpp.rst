@@ -17,7 +17,7 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
 .. cpp:class:: Configuration
 
-   A wrapper class for
+   A wrapper class for protocol configuration structure
 
    .. cpp:function:: Configuration(trax_configuration config)
 
@@ -29,7 +29,7 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
 .. cpp:class:: Logging
 
-   A wrapper class for
+   A wrapper class for logging configuration structure
 
    .. cpp:function:: Logging(trax_logging logging)
 
