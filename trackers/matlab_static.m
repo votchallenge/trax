@@ -21,3 +21,4 @@ while 1
 	traxserver('status', memory);
 end
 
+traxserver('quit');

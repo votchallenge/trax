@@ -10,4 +10,5 @@ This is a list of official tutorials on TraX, covering a wide set of topics form
    tutorial_compiling
    tutorial_linux
    tutorial_windows
+   tutorial_matlab
    tutorial_client
