@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
     opterr = 0;
     int result = 0;
     ConnectionMode connection = CONNECTION_DEFAULT;
-    VerbosityMode verbosity = VERBOSITY_DEFAULT;
+    VerbosityMode verbosity = VERBOSITY_SILENT;
     int timeout = 30;
 
     string tracker_command;
