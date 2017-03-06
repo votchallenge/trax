@@ -51,15 +51,12 @@ If you are using TraX protocol in your research, please cite the [following publ
 
 ```
 @article{cehovin2017trax,
-author = {{\v{C}}ehovin, Luka},
-doi = {http://dx.doi.org/10.1016/j.neucom.2017.02.036},
-issn = {0925-2312},
-journal = {Neurocomputing},
-keywords = {Algorithm analysis,Communication protocol,
-            Computer vision,Performance evaluation,
-            Software library,Visual tracking},
-title = {{TraX: The visual Tracking eXchange Protocol and Library}},
-year = {2017}
+    author = {{\v{C}}ehovin, Luka},
+    doi = {http://dx.doi.org/10.1016/j.neucom.2017.02.036},
+    issn = {0925-2312},
+    journal = {Neurocomputing},
+    title = {{TraX: The visual Tracking eXchange Protocol and Library}},
+    year = {2017}
 }
 ```
 
