@@ -5,6 +5,28 @@ Welcome to TraX reference library documentation. TraX stands for visual Tracking
 
 The source code for the reference library is availabe on `GitHub <https://github.com/votchallenge/trax/>`_ under `Lesser GPL v3.0 <https://www.gnu.org/licenses/lgpl-3.0.en.html>`_ license.
 
+Citing
+------
+
+If you are using TraX protocol in your research, please cite the `following publication <http://dx.doi.org/10.1016/j.neucom.2017.02.036>`_ that describes the protocol and the library.
+
+.. code-block:: tex
+
+	@article{cehovin2017trax,
+		author = {{\v{C}}ehovin, Luka},
+		doi = {http://dx.doi.org/10.1016/j.neucom.2017.02.036},
+		issn = {0925-2312},
+		journal = {Neurocomputing},
+		keywords = {Algorithm analysis,Communication protocol,
+			        Computer vision,Performance evaluation,
+			        Software library,Visual tracking},
+		title = {{TraX: The visual Tracking eXchange Protocol and Library}},
+		year = {2017}
+	}
+
+
+Index
+-----
 
 .. toctree::
    :maxdepth: 2
