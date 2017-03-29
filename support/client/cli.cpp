@@ -253,13 +253,13 @@ void load_images(const string& file, vector<string>& list) {
     input.close();
 }
 
-void save_timings(const string& file, vector<long>& timings) {
+void save_timings(const string& file, vector<double>& timings) {
 
     std::ofstream output;
 
     output.open(file.c_str(), std::ofstream::out);
 
-    for (vector<long>::iterator it = timings.begin(); it != timings.end(); it++) {
+    for (vector<double>::iterator it = timings.begin(); it != timings.end(); it++) {
 
         output << *it << endl;
 
@@ -462,7 +462,7 @@ int main( int argc, char** argv) {
             vector<Region> groundtruth;
             vector<Region> initialization;
             vector<Region> output;
-            vector<long> timings;
+            vector<double> timings;
 
             load_images(images_file, images);
             load_trajectory(groundtruth_file, groundtruth);
@@ -512,8 +512,8 @@ int main( int argc, char** argv) {
                 Image image = load_image(images[frame], tracker.image_formats());
 
                 // Start timing a frame
-                clock_t timing_toc;
-                clock_t timing_tic = clock();
+                double timing_elapsed;
+                timer_state timing_start = timer_clock();
 
                 if (!tracker.initialize(image, initialize, properties)) {
                     throw std::runtime_error("Unable to initialize tracker.");
@@ -532,7 +532,7 @@ int main( int argc, char** argv) {
                     bool result = tracker.wait(status, additional);
 
                     // Stop timing a frame
-                    timing_toc = clock();
+                    timing_elapsed = timer_elapsed(timing_start);
 
                     if (result) {
                         // Default option, the tracker returns a valid status.
@@ -563,7 +563,8 @@ int main( int argc, char** argv) {
                             initialized = false;
                         }
 
-                        timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
+                        //timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
+                        timings.push_back(timing_elapsed);
 
                     } else {
                         if (tracker.ready()) {
@@ -584,7 +585,7 @@ int main( int argc, char** argv) {
                     Image image = load_image(images[frame], tracker.image_formats());
 
                     // Start timing a frame
-                    timing_tic = clock();
+                    timing_start = timer_clock();
 
                     Properties no_properties;
                     if (!tracker.frame(image, no_properties))

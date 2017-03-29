@@ -108,6 +108,49 @@ void destroy_server_socket(int server) {
 
 }
 
+typedef struct line_buffer {
+
+    char buffer[LOGGER_BUFFER_SIZE];
+    int position;
+    int length;
+
+} line_buffer;
+
+#define RESET_LINE_BUFFER(B) {B.position = 0; B.length = 0;}
+
+bool line_buffer_push(line_buffer& buffer, char chr, int truncate = -1) {
+
+    buffer.length++;
+
+    if (buffer.length >= truncate && truncate > 0) {
+
+        if (buffer.length == truncate)
+            buffer.buffer[buffer.position++] = '\n';
+
+    } else buffer.buffer[buffer.position++] = chr;
+
+    bool flush = buffer.position == (LOGGER_BUFFER_SIZE-1) || chr == '\n';
+
+    if (chr == '\n') buffer.length = 0;
+
+    return flush;
+
+}
+
+bool line_buffer_flush(line_buffer& buffer, FILE* out = NULL) {
+
+    buffer.buffer[buffer.position] = 0;
+
+    if (out != NULL) {
+        fputs(buffer.buffer, out);
+        fflush(out);
+    }
+
+    buffer.position = 0;
+
+}
+
+
 int read_stream(int fd, char* buffer, int len) {
 
     fd_set readfds,writefds,exceptfds;
@@ -160,6 +203,7 @@ public:
 
         MUTEX_INIT(watchdog_mutex);
         MUTEX_INIT(logger_mutex);
+        CONDITION_INIT(flush_condition);
 
         client = NULL;
         process = NULL;
@@ -185,9 +229,6 @@ public:
 
 		stop_process();
 
-	    stop_watchdog();
-	    reset_logger();
-
 	    DEBUGMSG(this, "Cleaning up.\n");
 
 	    if (connection == CONNECTION_SOCKETS) {
@@ -208,7 +249,10 @@ public:
 
 		DEBUGMSG(this, "Starting process %s\n", command.c_str());
 
+		MUTEX_LOCK(watchdog_mutex);
 	    process = new Process(command, connection == CONNECTION_EXPLICIT);
+	    MUTEX_UNLOCK(watchdog_mutex);
+
 	    process->copy_environment();
 
 	    std::map<std::string, std::string>::const_iterator iter;
@@ -224,7 +268,12 @@ public:
 
 	    reset_logger();
 
-	    if (!process->start()) {
+	    bool started = false;
+	    MUTEX_LOCK(watchdog_mutex);
+	    started = process->start();
+	    MUTEX_UNLOCK(watchdog_mutex);
+
+	    if (!started) {
 	    	DEBUGMSG(this, "Unable to start process\n");
 	        throw new std::runtime_error("Unable to start the tracker process");
 	    } else {
@@ -244,16 +293,11 @@ public:
 	            client = new Client(process->get_output(), process->get_input(), logger);
 	        }
 	        // TODO: check tracker exit state
-	        if (!(*client)) throw std::runtime_error("Unable to establish connection.");
+	        if (!(*client)) {
+				throw std::runtime_error("Unable to establish connection.");
+	        } 
 
 			stop_watchdog();
-
-		    int exit_status;
-		    if (!process->is_alive(&exit_status)) {
-		    	std::stringstream sstm;
-				sstm << "Tracker exited with exit code " << exit_status;
-		    	throw std::runtime_error(sstm.str());
-		    }
 
 		    DEBUGMSG(this, "Tracker process ID: %d \n", process->get_handle());
 
@@ -275,7 +319,6 @@ public:
 	bool stop_process() {
 
 		stop_watchdog();
-		reset_logger();
 
         sleep(0);
 
@@ -289,9 +332,21 @@ public:
 		if (process) {
 		    int exit_status;
 
-		    process->stop();
+		    DEBUGMSG(this, "Stopping.\n");
+
+			MUTEX_LOCK(watchdog_mutex);
+
+		    process->stop(false);
+			flush_streams();
+			process->stop(true);
+
 		    process->is_alive(&exit_status);
+
+		    delete process;
 		    process = NULL;
+			MUTEX_UNLOCK(watchdog_mutex);
+
+		    reset_logger();
 
 		    if (exit_status == 0) {
 		        DEBUGMSG(this, "Tracker exited normally.\n");
@@ -300,7 +355,6 @@ public:
 		        fprintf(stderr, "Tracker exited (exit code %d)\n", exit_status);
 		        return false;
 		    }
-
 		}
 
 		return true;
@@ -334,14 +388,34 @@ public:
 
 	    MUTEX_LOCK(logger_mutex);
 
-	    stderr_position = 0;
-	    stdout_position = 0;
-	    stderr_length = 0;
-	    stdout_length = 0;
+		RESET_LINE_BUFFER(stderr_buffer);
+		RESET_LINE_BUFFER(stdout_buffer);
+
 	    logger_stream = stdout;
 	    line_truncate = 256;
 
 		MUTEX_UNLOCK(logger_mutex);
+
+	}
+
+	void flush_streams() {
+
+	    char buffer[LOGGER_BUFFER_SIZE];
+	    bool flush = false;
+	   
+        while (true) {
+
+			int read = read_stream(process->get_error(), buffer, LOGGER_BUFFER_SIZE);
+
+			if (read <= 0) break;
+
+			client_logger(buffer, read, this);
+
+        }
+
+		MUTEX_LOCK(logger_mutex);
+        CONDITION_TIMEDWAIT(flush_condition, logger_mutex, 1000);
+        MUTEX_UNLOCK(logger_mutex);
 
 	}
 
@@ -365,7 +439,9 @@ public:
 
 		            DEBUGMSG(state, "Remote process has terminated ...\n");
 		            state->watchdog_timeout = 0;
-
+		            MUTEX_UNLOCK(state->watchdog_mutex);
+					state->stop_process(); // Do not close socket so that any leftover data can be read
+					MUTEX_LOCK(state->watchdog_mutex);
 		        } else {
 
 					state->watchdog_timeout--;
@@ -400,15 +476,17 @@ public:
 
 	            run = state->logger_active;
 
-	            MUTEX_LOCK(state->logger_mutex);
+	            MUTEX_LOCK(state->watchdog_mutex);
 
 	            if (state->process && state->process->is_alive()) {
 
 	                err = state->process->get_error();
 
+	            } else {
+	            	CONDITION_SIGNAL(state->flush_condition);
 	            }
 
-	            MUTEX_UNLOCK(state->logger_mutex);
+	            MUTEX_UNLOCK(state->watchdog_mutex);
 
 	            if (err == -1) {
 	                sleep(0);
@@ -419,42 +497,29 @@ public:
 
 	        char chr;
 	        bool flush = false;
-	        if (read_stream(err, &chr, 1) != 1) {
+	        int read = read_stream(err, &chr, 1);
+	        if (read != 1) {
 
-	            err = -1;
+				MUTEX_LOCK(state->watchdog_mutex);
+	            if (!state->process || !state->process->is_alive()) err =  -1;
+	            MUTEX_UNLOCK(state->watchdog_mutex);
 	            flush = true;
 
 	        } else {
 
-	            state->stderr_length++;
-
-	            if (state->stderr_length >= state->line_truncate && state->line_truncate > 0) {
-
-	                if (state->stderr_length == state->line_truncate)
-	                    state->stderr_buffer[state->stderr_position++] = '\n';
-
-	            } else state->stderr_buffer[state->stderr_position++] = chr;
-
-	            flush = state->stderr_position == (LOGGER_BUFFER_SIZE-1) || chr == '\n';
-
-	            if (chr == '\n') state->stderr_length = 0;
+				flush = line_buffer_push(state->stderr_buffer, chr, state->line_truncate);
 
 	        }
 
 	        if (flush) {
 
-	            state->stderr_buffer[state->stderr_position] = 0;
-
 	            MUTEX_LOCK(state->logger_mutex);
 
-	            if (state->verbosity != VERBOSITY_SILENT) {
-	                fputs(state->stderr_buffer, state->logger_stream);
-	                fflush(state->logger_stream);
-	            }
-
-	            state->stderr_position = 0;
+	            line_buffer_flush(state->stderr_buffer, state->verbosity != VERBOSITY_SILENT ? state->logger_stream : NULL);	            
 
 	            MUTEX_UNLOCK(state->logger_mutex);
+
+				if (err == -1) CONDITION_SIGNAL(state->flush_condition);
 
 	        }
 
@@ -470,44 +535,25 @@ public:
 
 	    if (!string) {
 
-	        state->stdout_buffer[state->stdout_position] = 0;
+            MUTEX_LOCK(state->logger_mutex);
 
-	        MUTEX_LOCK(state->logger_mutex);
+            line_buffer_flush(state->stdout_buffer, state->logger_stream);
 
-	        fputs(state->stdout_buffer, state->logger_stream);
-	        state->stdout_position = 0;
-	        fflush(state->logger_stream);
-
-	        MUTEX_UNLOCK(state->logger_mutex);
+            MUTEX_UNLOCK(state->logger_mutex);
 
 	    } else {
 
 	        for (int i = 0; i < length; i++) {
 
-	            state->stdout_length++;
+	        	if (line_buffer_push(state->stdout_buffer, string[i], state->line_truncate)) {
 
-	            if (state->stdout_length >= state->line_truncate && state->line_truncate > 0) {
+		            MUTEX_LOCK(state->logger_mutex);
 
-	                if (state->stdout_length == state->line_truncate)
-	                    state->stdout_buffer[state->stdout_position++] = '\n';
+		            line_buffer_flush(state->stdout_buffer, state->logger_stream);
 
-	            } else state->stdout_buffer[state->stdout_position++] = string[i];
+		            MUTEX_UNLOCK(state->logger_mutex);
 
-	            if (state->stdout_position == (LOGGER_BUFFER_SIZE-1) || string[i] == '\n') {
-
-	                state->stdout_buffer[state->stdout_position] = 0;
-
-	                MUTEX_LOCK(state->logger_mutex);
-
-	                fputs(state->stdout_buffer, state->logger_stream);
-	                state->stdout_position = 0;
-	                fflush(state->logger_stream);
-
-	                MUTEX_UNLOCK(state->logger_mutex);
-
-	                if (string[i] == '\n') state->stdout_length = 0;
-
-	            }
+	        	}
 
 	        }
 
@@ -534,13 +580,10 @@ public:
 	int watchdog_timeout;
 
     bool logger_active;
-    char stdout_buffer[LOGGER_BUFFER_SIZE];
-    int stdout_position;
-    char stderr_buffer[LOGGER_BUFFER_SIZE];
-    int stderr_position;
+    line_buffer stdout_buffer;
+    line_buffer stderr_buffer;
     int line_truncate;
-    int stderr_length;
-    int stdout_length;
+
     FILE* logger_stream;
 
 	THREAD logger_thread;
@@ -548,6 +591,8 @@ public:
 
 	THREAD watchdog_thread;
 	THREAD_MUTEX watchdog_mutex;
+
+	THREAD_COND flush_condition;
 
 };
 

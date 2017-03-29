@@ -180,7 +180,9 @@ Process::~Process() {
 
 bool Process::start() {
 
-#ifdef WIN32
+    exit_status = -1;
+
+#if defined(WIN32)
 
     handle_IN_Rd = NULL;
     handle_IN_Wr = NULL;
@@ -378,31 +380,30 @@ bool Process::start() {
 
 }
 
-bool Process::stop() {
+bool Process::stop(bool docleanup) {
 
-    if (!running) return false;
+    bool result = true;
+
+    if (running) {
 
 #ifdef WIN32
 
-    bool result = TerminateProcess(piProcInfo.hProcess, 0);
+    result = TerminateProcess(piProcInfo.hProcess, 0);
 
-    cleanup();
-
-    return result;
 #else
 
     kill(pid, SIGTERM);
 
-    cleanup();
-
 #endif
 
-    return true;
+    }
+
+    if (docleanup) cleanup();
+
+    return result;
 }
 //GetExitCodeProcess
 void Process::cleanup() {
-
-    if (!running) return;
 
 #ifdef WIN32
 
@@ -425,12 +426,12 @@ void Process::cleanup() {
 
 #else
 
-    close(out[0]);
-    close(err[0]);
-    close(in[1]);
-    close(out[1]);
-    close(err[1]);
-    close(in[0]);
+    if (out[0] != -1) {close(out[0]); out[0] = -1; };
+    if (err[0] != -1) {close(err[0]); err[0] = -1; };
+    if (in[1] != -1) {close(in[1]); in[1] = -1; };
+    if (out[1] != -1) {close(out[1]); out[1] = -1; };
+    if (err[1] != -1) {close(err[1]); err[1] = -1; };
+    if (in[0] != -1) {close(in[0]); in[0] = -1; };
 
     posix_spawn_file_actions_destroy(&action);
 
@@ -465,23 +466,25 @@ int Process::get_error() {
 
 bool Process::is_alive(int *status) {
 
+    if (status) *status = 0;
+
 #ifdef WIN32
 
     DWORD dwExitCode = STILL_ACTIVE;
 
     if (GetExitCodeProcess(piProcInfo.hProcess, &dwExitCode)) {
         if (status) *status = dwExitCode;
-        return dwExitCode == STILL_ACTIVE;
+        running = dwExitCode == STILL_ACTIVE;
+        return running;
     } else
         return false;
 
 #else
 
-    if (pid == 0) {
+    if (!running) {
         if (status) *status = exit_status;
         return false;
     }
-
 
     int childExitStatus;
     int result = waitpid(pid, &childExitStatus, WNOHANG);
@@ -491,23 +494,17 @@ bool Process::is_alive(int *status) {
 
     if (WIFEXITED(childExitStatus)) {
         exit_status = WEXITSTATUS(childExitStatus);
-    }
-
-    if (WIFSIGNALED(childExitStatus)) {
+        running = false;
+    } else if (WIFSIGNALED(childExitStatus)) {
         exit_status = WTERMSIG(childExitStatus);
-    }
-
-    if (WIFSTOPPED(childExitStatus)) {
-        exit_status = WSTOPSIG(childExitStatus);
-    }
+        running = false;
+    } else {
+		return true;
+	}
 
     if (status) *status = exit_status;
 
-    cleanup();
-
-    pid = 0;
-
-    return true;
+    return false;
 #endif
 
 }
