@@ -244,7 +244,7 @@ public:
 	            client = new Client(process->get_output(), process->get_input(), logger);
 	        }
 	        // TODO: check tracker exit state
-	        if (!client) throw std::runtime_error("Unable to establish connection.");
+	        if (!(*client)) throw std::runtime_error("Unable to establish connection.");
 
 			stop_watchdog();
 

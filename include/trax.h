@@ -490,6 +490,10 @@ class __TRAX_EXPORT Wrapper {
 public:
     virtual ~Wrapper();
 
+    operator bool() const {
+       return pn != NULL;
+    }
+
 protected:
     Wrapper();
     
