@@ -45,7 +45,7 @@ typedef struct string_list {
 		(B).position += required; \
   }
 
-#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER) 
+#ifdef _MSC_VER
 
 #define BUFFER_APPEND(B, ...) { \
 		int required = _scprintf(__VA_ARGS__); \
