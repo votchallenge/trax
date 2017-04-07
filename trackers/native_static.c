@@ -88,7 +88,7 @@ int main( int argc, char** argv)
         // tracker how to initialize.
         if (tr == TRAX_INITIALIZE) {
 
-            wait = trax_properties_get_int(prop, "time.wait", 0);
+            wait = trax_properties_get_int(prop, "wait", 0);
 
             // Artificial wait period that can be used for testing
             if (wait > 0) sleep(wait);
