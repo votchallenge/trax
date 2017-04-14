@@ -6,6 +6,7 @@
 #define TRAX_STREAM_FILES 1
 #define TRAX_STREAM_SOCKET 2
 #define TRAX_STREAM_SOCKET_LISTEN 8
+#define TRAX_STREAM_ASYNC 16
 
 #define TRAX_BUFFER_SIZE 4096
 
@@ -24,6 +25,20 @@ typedef struct files_data {
     int output;
 } files_data;
 
+typedef struct input_cache {
+    int message_type;
+    int complete;
+    int state;
+    string_buffer key_buffer, value_buffer;
+} input_cache;
+
+typedef struct output_cache {
+    int complete;
+    int state;
+    string_buffer key_buffer, value_buffer;
+} output_cache;
+
+
 typedef struct message_stream {
     int flags;
     union {
@@ -33,6 +48,8 @@ typedef struct message_stream {
     char buffer[TRAX_BUFFER_SIZE];
     int buffer_position;
     int buffer_length;
+    input_cache input;
+    output_cache output;
 } message_stream;
 
 message_stream* create_message_stream_file(int input, int output);
