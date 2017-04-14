@@ -40,20 +40,23 @@
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
 #  include <windows.h>
-void sleep(long time) {
-	Sleep(time);
+void _sleep(float seconds) {
+	Sleep((long) (seconds * 1000.0));
 }
 #else
-#  ifndef _MAC_
-#  include <unistd.h>
-#  endif
+//#  ifndef _MAC_
+#include <unistd.h>
+//#  endif
+void _sleep(float seconds) {
+    usleep((long) (seconds * 1000000.0));
+}
 #endif
 
 int main( int argc, char** argv)
 {
     FILE* log;
     int run;
-    int wait = 0;    
+    float wait = 0;    
     trax_image* img = NULL;
     trax_region* reg = NULL;
     trax_region* mem = NULL;
@@ -77,7 +80,6 @@ int main( int argc, char** argv)
 
         trax_properties* prop = trax_properties_create();
 
-
         // The main idea of Trax interface is to leave the control to the master program
         // and just follow the instructions that the tracker gets. 
         // The main function for this is trax_wait that actually listens for commands.
@@ -88,10 +90,10 @@ int main( int argc, char** argv)
         // tracker how to initialize.
         if (tr == TRAX_INITIALIZE) {
 
-            wait = trax_properties_get_int(prop, "wait", 0);
+            wait = trax_properties_get_float(prop, "wait", 0);
 
             // Artificial wait period that can be used for testing
-            if (wait > 0) sleep(wait);
+            if (wait > 0) _sleep(wait);
 
             if (mem) trax_region_release(&mem);
             mem = trax_region_clone(reg);
@@ -103,7 +105,7 @@ int main( int argc, char** argv)
         if (tr == TRAX_FRAME) {
 
             // Artificial wait period that can be used for testing
-            if (wait > 0) sleep(wait);
+            if (wait > 0) _sleep(wait);
 
             // Note that the tracker also has an option of sending additional data
             // back to the main program in a form of key-value pairs. We do not use
