@@ -90,7 +90,7 @@ void print_help() {
     cout << "Library version: " << trax_version() << "\n";
     cout << "Protocol version: " << TRAX_VERSION << "\n\n";
 
-    cout << "Usage: traxplayer [-h] [-d] \n";
+    cout << "Usage: traxtest [-h] [-d] \n";
     cout << "\t [-e name=value] [-p name=value]\n";
     cout << "\t [-t timeout] [-x] [-X]\n";
     cout << "\t -- <command_part1> <command_part2> ...";
