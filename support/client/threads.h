@@ -31,6 +31,8 @@ extern "C" {
 #define JOIN_THREAD(T) simple_threads_join_thread(T)
 
 #define THREAD_CALLBACK(NAME, ARGUMENT) DWORD WINAPI NAME(void* ARGUMENT)
+#define THREAD_IDENTIFIER DWORD
+#define THREAD_GET_IDENTIFIER() GetCurrentThreadId()
 #define THREAD HANDLE
 #define THREAD_MUTEX HANDLE
 #define THREAD_COND HANDLE
@@ -65,6 +67,8 @@ typedef struct pthread_wrapper {
 #define JOIN_THREAD(T) simple_threads_join_thread(T)
 
 #define THREAD_CALLBACK(NAME, ARGUMENT) void* NAME(void* ARGUMENT)
+#define THREAD_IDENTIFIER pthread_t
+#define THREAD_GET_IDENTIFIER() pthread_self()
 #define THREAD pthread_wrapper
 #define THREAD_MUTEX pthread_mutex_t
 #define THREAD_COND pthread_cond_t
@@ -95,6 +99,188 @@ void* simple_threads_join_thread(THREAD t);
 
 #ifdef __cplusplus
 }
+
+#include <algorithm>
+
+template <class T>
+class Base {
+public:
+	virtual ~Base()  {
+
+	}
+
+	operator bool() const {
+		return pn != NULL;
+	}
+
+protected:
+	Base() : pn(NULL) {
+
+	}
+
+	Base(const Base& copy) : pn(copy.pn), data(copy.data) {
+
+	}
+
+	void swap(Base& lhs) {
+		std::swap(pn, lhs.pn);
+		std::swap(data, lhs.data);
+	}
+
+	long claims() const {
+		long count = 0;
+		if (NULL != pn)
+		{
+			count = *pn;
+		}
+		return count;
+	}
+
+	void increase_reference_counter() {
+		if (NULL == pn) {
+			pn = new long(1); // may throw std::bad_alloc
+			data = create();
+		} else
+			++(*pn);
+	}
+
+
+	void decrease_reference_counter() {
+		if (NULL != pn) {
+			--(*pn);
+			if (0 == *pn) {
+				destroy(data);
+				data = NULL;
+				delete pn;
+			}
+			pn = NULL;
+		}
+	}
+
+	virtual void destroy(T* data) = 0;
+
+	virtual T* create() = 0;
+
+	T* data;
+
+private:
+
+	long* pn;
+
+};
+
+class Synchronized;
+
+class MutexState;
+
+class Mutex : public Base<MutexState> {
+public:
+
+	Mutex();
+
+	Mutex(const Mutex& m);
+
+	virtual ~Mutex();
+
+	void acquire();
+
+	void release();
+
+protected:
+
+	virtual void destroy(MutexState* data);
+
+	virtual MutexState* create();
+
+private:
+
+	Mutex& operator=(Mutex& p) throw();
+
+
+};
+
+class RecursiveMutex : public Mutex {
+public:
+
+	RecursiveMutex();
+
+	RecursiveMutex(const RecursiveMutex& m);
+
+	virtual ~RecursiveMutex();
+
+private:
+
+	RecursiveMutex& operator=(RecursiveMutex& p) throw();
+
+	class State;
+	State* state;
+
+};
+
+class Lock {
+public:
+
+	Lock(Mutex& mutex);
+
+	Lock(Synchronized& mutex);
+
+	~Lock();
+
+	//report the state of locking when used as a boolean
+	operator bool () const;
+
+	void lock();
+
+	void unlock();
+
+	void operator=(Lock &) = delete;
+
+private:
+
+	Mutex mutex;
+
+	bool locked;
+
+};
+
+class Signal {
+
+public:
+
+	Signal();
+
+	~Signal();
+
+	void wait(long timeout = -1);
+
+	void notify();
+
+private:
+
+	THREAD_COND condition;
+
+	THREAD_MUTEX mutex;
+
+};
+
+class Synchronized {
+	friend Lock;
+public:
+
+	Synchronized();
+	virtual ~Synchronized();
+
+protected:
+
+	RecursiveMutex object_mutex;
+
+};
+
+#define SYNCHRONIZED for(Lock M##_lock(object_mutex); M##_lock; M##_lock.unlock())
+
+#define SYNCHRONIZE(mutex) for(Lock M##_lock(mutex); M##_lock; M##_lock.unlock())
+
+
 #endif
 
 #endif

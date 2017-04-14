@@ -3,8 +3,26 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <iomanip>
 
 #include <trax/client.hpp>
+
+class null_out_buf : public std::streambuf {
+    public:
+        virtual std::streamsize xsputn (const char * s, std::streamsize n) {
+            return n;
+        }
+        virtual int overflow (int c) {
+            return 1;
+        }
+};
+
+class null_out_stream : public std::ostream {
+    public:
+        null_out_stream() : std::ostream (&buf) {}
+    private:
+        null_out_buf buf;
+};
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <ctype.h>
@@ -55,7 +73,7 @@ static void initialize_sockets(void) {}
 #include "process.h"
 #include "threads.h"
 
-#define DEBUGMSG(state, ...) if (state->verbosity == VERBOSITY_DEBUG) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
+#define DEBUGMSG(state, ...) if (state->verbosity == VERBOSITY_DEBUG) { printf("CLIENT: "); printf(__VA_ARGS__); }
 
 #define LOGGER_BUFFER_SIZE 1024
 
@@ -137,14 +155,14 @@ bool line_buffer_push(line_buffer& buffer, char chr, int truncate = -1) {
 
 }
 
-bool line_buffer_flush(line_buffer& buffer, FILE* out = NULL) {
+bool line_buffer_flush(line_buffer& buffer, ostream* out) {
 
     buffer.buffer[buffer.position] = 0;
 
     if (out != NULL) {
-        fputs(buffer.buffer, out);
-        fflush(out);
-    }
+	    out->write(buffer.buffer, buffer.position);
+    	out->flush();
+	}
 
     buffer.position = 0;
 
@@ -181,7 +199,7 @@ int read_stream(int fd, char* buffer, int len) {
 
 namespace trax {
 
-class TrackerProcess::State {
+class TrackerProcess::State : public Synchronized {
 public:
 	State(const string& command, const map<std::string, std::string> environment, ConnectionMode connection, VerbosityMode verbosity, int timeout):
 		command(command), environment(environment), socket_id(-1), socket_port(TRAX_DEFAULT_PORT),
@@ -201,9 +219,7 @@ public:
 
         }
 
-        MUTEX_INIT(watchdog_mutex);
-        MUTEX_INIT(logger_mutex);
-        CONDITION_INIT(flush_condition);
+        logger_stream = &cout;
 
         client = NULL;
         process = NULL;
@@ -213,13 +229,10 @@ public:
         stop_watchdog();
         reset_logger();
 
-        if (timeout > 0)
-            CREATE_THREAD(watchdog_thread, watchdog_loop, this);
-
+        CREATE_THREAD(watchdog_thread, watchdog_loop, this);
         CREATE_THREAD(logger_thread, logger_loop, this);
 
         start_process();
-
 	}
 
 	~State() {
@@ -229,29 +242,32 @@ public:
 
 		stop_process();
 
+	    RELEASE_THREAD(watchdog_thread);
+	    RELEASE_THREAD(logger_thread);
+
+
 	    DEBUGMSG(this, "Cleaning up.\n");
 
 	    if (connection == CONNECTION_SOCKETS) {
 	        destroy_server_socket(socket_id);
 	    }
 
-	    RELEASE_THREAD(watchdog_thread);
-	    RELEASE_THREAD(logger_thread);
+	}
 
-	    MUTEX_DESTROY(watchdog_mutex);
-	    MUTEX_DESTROY(logger_mutex);
-
+	bool process_running() {
+		Lock lock(process_state_mutex);
+		return process && process->is_alive();
 	}
 
 	bool start_process() {
 
-		if (process) return false;
+		if (process && process) return false;
 
 		DEBUGMSG(this, "Starting process %s\n", command.c_str());
 
-		MUTEX_LOCK(watchdog_mutex);
+		process_state_mutex.acquire();
 	    process = new Process(command, connection == CONNECTION_EXPLICIT);
-	    MUTEX_UNLOCK(watchdog_mutex);
+	    process_state_mutex.release();
 
 	    process->copy_environment();
 
@@ -269,9 +285,7 @@ public:
 	    reset_logger();
 
 	    bool started = false;
-	    MUTEX_LOCK(watchdog_mutex);
 	    started = process->start();
-	    MUTEX_UNLOCK(watchdog_mutex);
 
 	    if (!started) {
 	    	DEBUGMSG(this, "Unable to start process\n");
@@ -300,7 +314,6 @@ public:
 			stop_watchdog();
 
 		    DEBUGMSG(this, "Tracker process ID: %d \n", process->get_handle());
-
 		    int server_version = 0;
 
 		    client->get_parameter(TRAX_PARAMETER_VERSION, &server_version);
@@ -329,12 +342,12 @@ public:
 
         sleep(0);
 
+        Lock lock(process_state_mutex);
+
 		if (process) {
 		    int exit_status;
 
 		    DEBUGMSG(this, "Stopping.\n");
-
-			MUTEX_LOCK(watchdog_mutex);
 
 		    process->stop(false);
 			flush_streams();
@@ -344,7 +357,6 @@ public:
 
 		    delete process;
 		    process = NULL;
-			MUTEX_UNLOCK(watchdog_mutex);
 
 		    reset_logger();
 
@@ -352,7 +364,7 @@ public:
 		        DEBUGMSG(this, "Tracker exited normally.\n");
 		        return true;
 		    } else {
-		        fprintf(stderr, "Tracker exited (exit code %d)\n", exit_status);
+		        DEBUGMSG(this, "Tracker exited (exit code %d)\n", exit_status);
 		        return false;
 		    }
 		}
@@ -363,11 +375,7 @@ public:
 
 	void reset_watchdog(int timeout) {
 
-	    MUTEX_LOCK(watchdog_mutex);
-
 	    watchdog_timeout = timeout;
-
-	    MUTEX_UNLOCK(watchdog_mutex);
 
 	}
 
@@ -386,15 +394,12 @@ public:
 
 	void reset_logger() {
 
-	    MUTEX_LOCK(logger_mutex);
+	    Lock lock(logger_mutex);
 
 		RESET_LINE_BUFFER(stderr_buffer);
 		RESET_LINE_BUFFER(stdout_buffer);
 
-	    logger_stream = stdout;
 	    line_truncate = 256;
-
-		MUTEX_UNLOCK(logger_mutex);
 
 	}
 
@@ -413,9 +418,7 @@ public:
 
         }
 
-		MUTEX_LOCK(logger_mutex);
-        CONDITION_TIMEDWAIT(flush_condition, logger_mutex, 1000);
-        MUTEX_UNLOCK(logger_mutex);
+        flush_condition.wait(1000);
 
 	}
 
@@ -429,35 +432,51 @@ public:
 
 	        sleep(1);
 
-	        MUTEX_LOCK(state->watchdog_mutex);
+	        state->watchdog_mutex.acquire();
 
 	        run = state->watchdog_active;
 
-	        if (state->process && state->watchdog_timeout > 0) {
+	        if (state->process) {
 
 		        if (!state->process->is_alive()) {
 
 		            DEBUGMSG(state, "Remote process has terminated ...\n");
-		            state->watchdog_timeout = 0;
-		            MUTEX_UNLOCK(state->watchdog_mutex);
 					state->stop_process(); // Do not close socket so that any leftover data can be read
-					MUTEX_LOCK(state->watchdog_mutex);
+
 		        } else {
 
-					state->watchdog_timeout--;
 
-		            if (state->watchdog_timeout == 0) {
-	                    DEBUGMSG(state, "Timeout reached. Stopping tracker process ...\n");
-	                    state->process->stop();
+			        bool terminate = false;
+
+			        for (vector<WatchdogCallback*>::iterator c = state->callbacks.begin(); c != state->callbacks.end(); c++) {
+			        	terminate |= (*c)();
+			        }
+
+			        if (terminate) {
+	                    DEBUGMSG(state, "Termination requested externally ...\n");
+	                    state->stop_process();
+			        }
+
+			        if (state->watchdog_timeout > 0) {
+
+						state->watchdog_timeout--;
+
+			            if (state->watchdog_timeout == 0) {
+		                    DEBUGMSG(state, "Timeout reached. Stopping tracker process ...\n");
+		                    state->stop_process();
+			            }
+
 		            }
 
 		        }
 
 			}
 
-	        MUTEX_UNLOCK(state->watchdog_mutex);
+	        state->watchdog_mutex.release();
 
 	    }
+
+		DEBUGMSG(state, "Stopping watchdog thread\n");
 
 	    return 0;
 
@@ -472,21 +491,19 @@ public:
 
 	    while (run) {
 
+			run = state->logger_active;
+
 	        if (err == -1) {
-
-	            run = state->logger_active;
-
-	            MUTEX_LOCK(state->watchdog_mutex);
-
-	            if (state->process && state->process->is_alive()) {
+ 
+	            if (state->process_running()) {
 
 	                err = state->process->get_error();
 
 	            } else {
-	            	CONDITION_SIGNAL(state->flush_condition);
-	            }
 
-	            MUTEX_UNLOCK(state->watchdog_mutex);
+	            	state->flush_condition.notify();
+
+	            }
 
 	            if (err == -1) {
 	                sleep(0);
@@ -500,9 +517,7 @@ public:
 	        int read = read_stream(err, &chr, 1);
 	        if (read != 1) {
 
-				MUTEX_LOCK(state->watchdog_mutex);
-	            if (!state->process || !state->process->is_alive()) err =  -1;
-	            MUTEX_UNLOCK(state->watchdog_mutex);
+	            if (state->process_running()) err =  -1;
 	            flush = true;
 
 	        } else {
@@ -513,17 +528,19 @@ public:
 
 	        if (flush) {
 
-	            MUTEX_LOCK(state->logger_mutex);
+	            SYNCHRONIZE(state->logger_mutex) {
 
-	            line_buffer_flush(state->stderr_buffer, state->verbosity != VERBOSITY_SILENT ? state->logger_stream : NULL);	            
+	            	line_buffer_flush(state->stderr_buffer, state->verbosity != VERBOSITY_SILENT ? state->logger_stream : NULL);	            
 
-	            MUTEX_UNLOCK(state->logger_mutex);
+	            }
 
-				if (err == -1) CONDITION_SIGNAL(state->flush_condition);
+				if (err == -1) state->flush_condition.notify();
 
 	        }
 
 	    }
+
+	    DEBUGMSG(state, "Stopping logger thread\n");
 
 	    return 0;
 
@@ -535,11 +552,11 @@ public:
 
 	    if (!string) {
 
-            MUTEX_LOCK(state->logger_mutex);
+            SYNCHRONIZE(state->logger_mutex) {
 
-            line_buffer_flush(state->stdout_buffer, state->logger_stream);
+            	line_buffer_flush(state->stdout_buffer, state->logger_stream);
 
-            MUTEX_UNLOCK(state->logger_mutex);
+            }
 
 	    } else {
 
@@ -547,11 +564,11 @@ public:
 
 	        	if (line_buffer_push(state->stdout_buffer, string[i], state->line_truncate)) {
 
-		            MUTEX_LOCK(state->logger_mutex);
+		            SYNCHRONIZE(state->logger_mutex) {
 
-		            line_buffer_flush(state->stdout_buffer, state->logger_stream);
+		            	line_buffer_flush(state->stdout_buffer, state->logger_stream);
 
-		            MUTEX_UNLOCK(state->logger_mutex);
+		            }
 
 	        	}
 
@@ -561,6 +578,27 @@ public:
 
 	}
 
+	void register_callback(WatchdogCallback* callback) {
+		Lock lock(watchdog_mutex);
+
+		callbacks.push_back(callback);
+
+	}
+
+	void set_log(ostream *stream) {
+
+		SYNCHRONIZE(logger_mutex) {
+
+			logger_stream = stream;
+
+		}
+
+		reset_logger();
+
+	}
+
+
+	vector<WatchdogCallback*> callbacks;
 	map<string, string> environment;
 	string command;
 
@@ -584,15 +622,17 @@ public:
     line_buffer stderr_buffer;
     int line_truncate;
 
-    FILE* logger_stream;
+    ostream* logger_stream;
+
+	Mutex logger_mutex;
+	Mutex watchdog_mutex;
+
+	Mutex process_state_mutex;
 
 	THREAD logger_thread;
-	THREAD_MUTEX logger_mutex;
 
 	THREAD watchdog_thread;
-	THREAD_MUTEX watchdog_mutex;
-
-	THREAD_COND flush_condition;
+	Signal flush_condition;
 
 };
 
@@ -711,6 +751,19 @@ int TrackerProcess::region_formats() {
 	return state->client->configuration().format_region;
 
 }
+
+void TrackerProcess::register_watchdog(WatchdogCallback* callback) {
+
+	state->register_callback(callback);
+
+}
+
+void TrackerProcess::set_log(ostream *stream) {
+
+	state->set_log(stream);
+
+}
+
 
 int load_trajectory(const std::string& file, std::vector<Region>& trajectory) {
 

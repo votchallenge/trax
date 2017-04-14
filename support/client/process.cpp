@@ -180,344 +180,378 @@ Process::~Process() {
 
 bool Process::start() {
 
-    exit_status = -1;
+    SYNCHRONIZED {
+
+        if (running) return false;
+
+        exit_status = -1;
 
 #if defined(WIN32)
 
-    handle_IN_Rd = NULL;
-    handle_IN_Wr = NULL;
-    handle_OUT_Rd = NULL;
-    handle_OUT_Wr = NULL;
-    handle_ERR_Rd = NULL;
-    handle_ERR_Wr = NULL;
+        handle_IN_Rd = NULL;
+        handle_IN_Wr = NULL;
+        handle_OUT_Rd = NULL;
+        handle_OUT_Wr = NULL;
+        handle_ERR_Rd = NULL;
+        handle_ERR_Wr = NULL;
 
-    p_stdin = -1;
-    p_stdout = -1;
-    p_stderr = -1;
+        p_stdin = -1;
+        p_stdout = -1;
+        p_stderr = -1;
 
-    SECURITY_ATTRIBUTES saAttr;
+        SECURITY_ATTRIBUTES saAttr;
 
-    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-    saAttr.bInheritHandle = TRUE;
-    saAttr.lpSecurityDescriptor = NULL;
+        saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+        saAttr.bInheritHandle = TRUE;
+        saAttr.lpSecurityDescriptor = NULL;
 
-    // Create a pipe for the child process's STDOUT.
-    if ( ! CreatePipe(&handle_OUT_Rd, &handle_OUT_Wr, &saAttr, 0) )
-        return false;
-
-    // Create a pipe for the child process's STDERR.
-    if ( ! CreatePipe(&handle_ERR_Rd, &handle_ERR_Wr, &saAttr, 0) )
-        return false;
-
-    // Create a pipe for the child process's STDIN.
-    if (! CreatePipe(&handle_IN_Rd, &handle_IN_Wr, &saAttr, 0))
-        return false;
-
-    if (explicit_mode) {
-
-        if ( ! SetHandleInformation(handle_IN_Rd, HANDLE_FLAG_INHERIT, 1) )
+        // Create a pipe for the child process's STDOUT.
+        if ( ! CreatePipe(&handle_OUT_Rd, &handle_OUT_Wr, &saAttr, 0) )
             return false;
 
-        if ( ! SetHandleInformation(handle_OUT_Wr, HANDLE_FLAG_INHERIT, 1) )
+        // Create a pipe for the child process's STDERR.
+        if ( ! CreatePipe(&handle_ERR_Rd, &handle_ERR_Wr, &saAttr, 0) )
             return false;
 
-    }
+        // Create a pipe for the child process's STDIN.
+        if (! CreatePipe(&handle_IN_Rd, &handle_IN_Wr, &saAttr, 0))
+            return false;
 
-    // Ensure the write handle to the pipe for STDIN is not inherited.
-    if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
-        return false;
+        if (explicit_mode) {
 
-    // Ensure the read handle to the pipe for STDOUT is not inherited.
-    if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
-        return false;
+            if ( ! SetHandleInformation(handle_IN_Rd, HANDLE_FLAG_INHERIT, 1) )
+                return false;
 
-    // Ensure the read handle to the pipe for STDERR is not inherited.
-    if ( ! SetHandleInformation(handle_ERR_Rd, HANDLE_FLAG_INHERIT, 0) )
-        return false;
+            if ( ! SetHandleInformation(handle_OUT_Wr, HANDLE_FLAG_INHERIT, 1) )
+                return false;
 
+        }
 
-    STARTUPINFO siStartInfo;
-    BOOL bSuccess = FALSE;
+        // Ensure the write handle to the pipe for STDIN is not inherited.
+        if ( ! SetHandleInformation(handle_IN_Wr, HANDLE_FLAG_INHERIT, 0) )
+            return false;
 
-    // Set up members of the PROCESS_INFORMATION structure.
+        // Ensure the read handle to the pipe for STDOUT is not inherited.
+        if ( ! SetHandleInformation(handle_OUT_Rd, HANDLE_FLAG_INHERIT, 0) )
+            return false;
 
-    ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
-
-
-    stringstream cmdbuffer;
-    int curargument = 0;
-    while (arguments[curargument]) {
-        cmdbuffer << "\"" << arguments[curargument] << "\" ";
-        curargument++;
-    }
+        // Ensure the read handle to the pipe for STDERR is not inherited.
+        if ( ! SetHandleInformation(handle_ERR_Rd, HANDLE_FLAG_INHERIT, 0) )
+            return false;
 
 
-    stringstream envbuffer;
-    map<string, string>::iterator iter;
-    for (iter = env.begin(); iter != env.end(); ++iter) {
-        envbuffer << iter->first << string("=") << iter->second << '\0';
-    }
+        STARTUPINFO siStartInfo;
+        BOOL bSuccess = FALSE;
 
-    // Set up members of the STARTUPINFO structure.
-    // This structure specifies the STDIN and STDOUT handles for redirection.
-    ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
-    siStartInfo.cb = sizeof(STARTUPINFO);
-    if (!explicit_mode) {
-        siStartInfo.hStdError = handle_ERR_Wr;
-        siStartInfo.hStdOutput = handle_OUT_Wr;
-        siStartInfo.hStdInput = handle_IN_Rd;
-        siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
-    } else {
-        siStartInfo.hStdError = handle_ERR_Wr;
-        HANDLE pHandle = GetCurrentProcess();
-        HANDLE handle_IN_Rd2, handle_OUT_Wr2;
-        DuplicateHandle(pHandle, handle_IN_Rd, pHandle, &handle_IN_Rd2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
-        DuplicateHandle(pHandle, handle_OUT_Wr, pHandle, &handle_OUT_Wr2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
-        envbuffer << string("TRAX_IN=") << handle_IN_Rd2 << '\0';
-        envbuffer << string("TRAX_OUT=") << handle_OUT_Wr2 << '\0';
-    }
+        // Set up members of the PROCESS_INFORMATION structure.
 
-    envbuffer << '\0';
+        ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 
-    LPCSTR curdir = directory.empty() ? NULL : directory.c_str();
 
-    if (!CreateProcess(NULL, (char *) cmdbuffer.str().c_str(), NULL, NULL, true, 0,
-                       (void *)envbuffer.str().c_str(),
-                       curdir, &siStartInfo, &piProcInfo )) {
+        stringstream cmdbuffer;
+        int curargument = 0;
+        while (arguments[curargument]) {
+            cmdbuffer << "\"" << arguments[curargument] << "\" ";
+            curargument++;
+        }
 
-        std::cerr << "Error: " << GetLastError()  << std::endl;
-        running = true;
-        cleanup();
-        return false;
-    }
 
-    int wrfd = _open_osfhandle((intptr_t)handle_IN_Wr, 0);
-    int rdfd = _open_osfhandle((intptr_t)handle_OUT_Rd, _O_RDONLY);
-    int erfd = _open_osfhandle((intptr_t)handle_ERR_Rd, _O_RDONLY);
+        stringstream envbuffer;
+        map<string, string>::iterator iter;
+        for (iter = env.begin(); iter != env.end(); ++iter) {
+            envbuffer << iter->first << string("=") << iter->second << '\0';
+        }
 
-    if (wrfd == -1 || rdfd == -1) {
-        stop();
-        return false;
-    }
+        // Set up members of the STARTUPINFO structure.
+        // This structure specifies the STDIN and STDOUT handles for redirection.
+        ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
+        siStartInfo.cb = sizeof(STARTUPINFO);
+        if (!explicit_mode) {
+            siStartInfo.hStdError = handle_ERR_Wr;
+            siStartInfo.hStdOutput = handle_OUT_Wr;
+            siStartInfo.hStdInput = handle_IN_Rd;
+            siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+        } else {
+            siStartInfo.hStdError = handle_ERR_Wr;
+            HANDLE pHandle = GetCurrentProcess();
+            HANDLE handle_IN_Rd2, handle_OUT_Wr2;
+            DuplicateHandle(pHandle, handle_IN_Rd, pHandle, &handle_IN_Rd2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
+            DuplicateHandle(pHandle, handle_OUT_Wr, pHandle, &handle_OUT_Wr2, DUPLICATE_SAME_ACCESS, true, DUPLICATE_SAME_ACCESS);
+            envbuffer << string("TRAX_IN=") << handle_IN_Rd2 << '\0';
+            envbuffer << string("TRAX_OUT=") << handle_OUT_Wr2 << '\0';
+        }
 
-    p_stdin = wrfd;
-    p_stdout = rdfd;
-    p_stderr = erfd;
+        envbuffer << '\0';
 
-    if (!p_stdin || !p_stdout) {
-        stop();
-        return false;
-    }
+        LPCSTR curdir = directory.empty() ? NULL : directory.c_str();
+
+        if (!CreateProcess(NULL, (char *) cmdbuffer.str().c_str(), NULL, NULL, true, 0,
+        (void *)envbuffer.str().c_str(),
+        curdir, &siStartInfo, &piProcInfo )) {
+
+            std::cerr << "Error: " << GetLastError()  << std::endl;
+            running = true;
+            cleanup();
+            return false;
+        }
+
+        int wrfd = _open_osfhandle((intptr_t)handle_IN_Wr, 0);
+        int rdfd = _open_osfhandle((intptr_t)handle_OUT_Rd, _O_RDONLY);
+        int erfd = _open_osfhandle((intptr_t)handle_ERR_Rd, _O_RDONLY);
+
+        if (wrfd == -1 || rdfd == -1) {
+            stop();
+            return false;
+        }
+
+        p_stdin = wrfd;
+        p_stdout = rdfd;
+        p_stderr = erfd;
+
+        if (!p_stdin || !p_stdout) {
+            stop();
+            return false;
+        }
 
 #else
 
-    if (pid) return false;
+        if (pid) return false;
 
-    if (pipe(out) == -1 || pipe(in) == -1 || pipe(err) == -1) {
-		std:cerr << "Error: unable to configure process streams" << std::endl;
-		return false;
-	}
+        if (pipe(out) == -1 || pipe(in) == -1 || pipe(err) == -1) {
+            std::cerr << "Error: unable to configure process streams" << std::endl;
+            return false;
+        }
 
-    vector<string> vars;
+        vector<string> vars;
 
-    map<string, string>::iterator iter;
-    for (iter = env.begin(); iter != env.end(); ++iter) {
-        // if (iter->first == "PWD") continue;
-        vars.push_back(iter->first + string("=") + iter->second);
-    }
+        map<string, string>::iterator iter;
+        for (iter = env.begin(); iter != env.end(); ++iter) {
+            // if (iter->first == "PWD") continue;
+            vars.push_back(iter->first + string("=") + iter->second);
+        }
 
-    posix_spawn_file_actions_init(&action);
-    posix_spawn_file_actions_addclose(&action, out[1]);
-    posix_spawn_file_actions_addclose(&action, in[0]);
-    posix_spawn_file_actions_addclose(&action, err[0]);
+        posix_spawn_file_actions_init(&action);
+        posix_spawn_file_actions_addclose(&action, out[1]);
+        posix_spawn_file_actions_addclose(&action, in[0]);
+        posix_spawn_file_actions_addclose(&action, err[0]);
 
-    if (!explicit_mode) {
-        posix_spawn_file_actions_adddup2(&action, out[0], 0);
-        posix_spawn_file_actions_adddup2(&action, in[1], 1);
-        posix_spawn_file_actions_adddup2(&action, err[1], 2);
-    } else {
-        posix_spawn_file_actions_adddup2(&action, err[1], 2);
-        vars.push_back(string("TRAX_OUT=") + int_to_string(in[1]));
-        vars.push_back(string("TRAX_IN=") + int_to_string(out[0]));
-    }
+        if (!explicit_mode) {
+            posix_spawn_file_actions_adddup2(&action, out[0], 0);
+            posix_spawn_file_actions_adddup2(&action, in[1], 1);
+            posix_spawn_file_actions_adddup2(&action, err[1], 2);
+        } else {
+            posix_spawn_file_actions_adddup2(&action, err[1], 2);
+            vars.push_back(string("TRAX_OUT=") + int_to_string(in[1]));
+            vars.push_back(string("TRAX_IN=") + int_to_string(out[0]));
+        }
 
-    std::vector<char *> vars_c(vars.size() + 1);
+        std::vector<char *> vars_c(vars.size() + 1);
 
-    for (std::size_t i = 0; i != vars.size(); ++i) {
-        vars_c[i] = &vars[i][0];
-    }
+        for (std::size_t i = 0; i != vars.size(); ++i) {
+            vars_c[i] = &vars[i][0];
+        }
 
-    vars_c[vars.size()] = NULL;
+        vars_c[vars.size()] = NULL;
 
-    string cwd = __getcwd();
+        string cwd = __getcwd();
 
 #define CHDIR_SOFT(D) { if (chdir((D).c_str()) == -1) { \
-	std::cerr << "Error: unable to switch to working directory" << std::endl; \
-	} }
+    std::cerr << "Error: unable to switch to working directory" << std::endl; \
+    } }
 
-    if (directory.size() > 0)
-		CHDIR_SOFT(directory);
+        if (directory.size() > 0)
+            CHDIR_SOFT(directory);
 
-    if (posix_spawnp(&pid, program, &action, NULL, arguments, vars_c.data())) {
-        running = true;
-        cleanup();
-        pid = 0;
+        if (posix_spawnp(&pid, program, &action, NULL, arguments, vars_c.data())) {
+            running = true;
+            cleanup();
+            pid = 0;
+            if (directory.size() > 0) CHDIR_SOFT(cwd);
+            return false;
+        }
+
         if (directory.size() > 0) CHDIR_SOFT(cwd);
-        return false;
-    }
 
-    if (directory.size() > 0) CHDIR_SOFT(cwd);
-
-    p_stdin = out[1];
-    p_stdout = in[0];
-    p_stderr = err[0];
+        p_stdin = out[1];
+        p_stdout = in[0];
+        p_stderr = err[0];
 
 #endif
 
-    running = true;
+        running = true;
 
-    return true;
+        return true;
+
+    }
 
 }
 
 bool Process::stop(bool docleanup) {
 
-    bool result = true;
+    SYNCHRONIZED {
 
-    if (running) {
+        bool result = true;
+
+        if (running) {
 
 #ifdef WIN32
 
-    result = TerminateProcess(piProcInfo.hProcess, 0);
+            result = TerminateProcess(piProcInfo.hProcess, 0);
 
 #else
 
-    kill(pid, SIGTERM);
+            kill(pid, SIGTERM);
 
 #endif
 
+        }
+
+        if (docleanup) cleanup();
+
+        return result;
+
     }
-
-    if (docleanup) cleanup();
-
-    return result;
 }
 //GetExitCodeProcess
 void Process::cleanup() {
 
+    SYNCHRONIZED {
+
 #ifdef WIN32
 
-    CloseHandle(piProcInfo.hProcess);
-    CloseHandle(piProcInfo.hThread);
+        CloseHandle(piProcInfo.hProcess);
+        CloseHandle(piProcInfo.hThread);
 
-    if (p_stdin)
-        close(p_stdin);
-    if (p_stdout)
-        close(p_stdout);
-    if (p_stderr)
-        close(p_stderr);
+        if (p_stdin)
+            close(p_stdin);
+        if (p_stdout)
+            close(p_stdout);
+        if (p_stderr)
+            close(p_stderr);
 
-    CloseHandle(handle_IN_Rd);
-    CloseHandle(handle_IN_Wr);
-    CloseHandle(handle_OUT_Rd);
-    CloseHandle(handle_OUT_Wr);
-    CloseHandle(handle_ERR_Rd);
-    CloseHandle(handle_ERR_Wr);
+        CloseHandle(handle_IN_Rd);
+        CloseHandle(handle_IN_Wr);
+        CloseHandle(handle_OUT_Rd);
+        CloseHandle(handle_OUT_Wr);
+        CloseHandle(handle_ERR_Rd);
+        CloseHandle(handle_ERR_Wr);
 
 #else
 
-    if (out[0] != -1) {close(out[0]); out[0] = -1; };
-    if (err[0] != -1) {close(err[0]); err[0] = -1; };
-    if (in[1] != -1) {close(in[1]); in[1] = -1; };
-    if (out[1] != -1) {close(out[1]); out[1] = -1; };
-    if (err[1] != -1) {close(err[1]); err[1] = -1; };
-    if (in[0] != -1) {close(in[0]); in[0] = -1; };
+        if (out[0] != -1) {close(out[0]); out[0] = -1; };
+        if (err[0] != -1) {close(err[0]); err[0] = -1; };
+        if (in[1] != -1) {close(in[1]); in[1] = -1; };
+        if (out[1] != -1) {close(out[1]); out[1] = -1; };
+        if (err[1] != -1) {close(err[1]); err[1] = -1; };
+        if (in[0] != -1) {close(in[0]); in[0] = -1; };
 
-    posix_spawn_file_actions_destroy(&action);
+        posix_spawn_file_actions_destroy(&action);
 
 #endif
 
-    running = false;
+        running = false;
+
+    }
 }
 
 int Process::get_input() {
 
-    if (!running) return -1;
+    SYNCHRONIZED {
 
-    return p_stdin;
+        if (!running) return -1;
+
+        return p_stdin;
+
+    }
 
 }
 
 int Process::get_output() {
 
-    if (!running) return -1;
+    SYNCHRONIZED {
 
-    return p_stdout;
+        if (!running) return -1;
+
+        return p_stdout;
+
+    }
 
 }
 
 int Process::get_error() {
 
-    if (!running) return -1;
+    SYNCHRONIZED {
 
-    return p_stderr;
+        if (!running) return -1;
+
+        return p_stderr;
+
+    }
 
 }
 
 bool Process::is_alive(int *status) {
 
-    if (status) *status = 0;
+    SYNCHRONIZED {
+
+        if (status) *status = 0;
 
 #ifdef WIN32
 
-    DWORD dwExitCode = STILL_ACTIVE;
+        DWORD dwExitCode = STILL_ACTIVE;
 
-    if (GetExitCodeProcess(piProcInfo.hProcess, &dwExitCode)) {
-        if (status) *status = dwExitCode;
-        running = dwExitCode == STILL_ACTIVE;
-        return running;
-    } else
-        return false;
+        if (GetExitCodeProcess(piProcInfo.hProcess, &dwExitCode)) {
+            if (status) *status = dwExitCode;
+            running = dwExitCode == STILL_ACTIVE;
+            return running;
+        } else
+            return false;
 
 #else
 
-    if (!running) {
+        if (!running) {
+            if (status) *status = exit_status;
+            return false;
+        }
+
+        int childExitStatus;
+        int result = waitpid(pid, &childExitStatus, WNOHANG);
+        if (result <= 0) {
+            return result == 0;
+        }
+
+        if (WIFEXITED(childExitStatus)) {
+            exit_status = WEXITSTATUS(childExitStatus);
+            running = false;
+        } else if (WIFSIGNALED(childExitStatus)) {
+            exit_status = WTERMSIG(childExitStatus);
+            running = false;
+        } else {
+            return true;
+        }
+
         if (status) *status = exit_status;
+
         return false;
-    }
-
-    int childExitStatus;
-    int result = waitpid(pid, &childExitStatus, WNOHANG);
-    if (result <= 0) {
-        return result == 0;
-    }
-
-    if (WIFEXITED(childExitStatus)) {
-        exit_status = WEXITSTATUS(childExitStatus);
-        running = false;
-    } else if (WIFSIGNALED(childExitStatus)) {
-        exit_status = WTERMSIG(childExitStatus);
-        running = false;
-    } else {
-		return true;
-	}
-
-    if (status) *status = exit_status;
-
-    return false;
 #endif
+
+    }
 
 }
 
 int Process::get_handle() {
 
-    if (!running) return 0;
+    SYNCHRONIZED {
+
+        if (!running) return 0;
 
 #ifdef WIN32
-    return (int) GetProcessId(piProcInfo.hProcess);
+        return (int) GetProcessId(piProcInfo.hProcess);
 #else
-    return pid;
+        return pid;
 #endif
+
+    }
 
 }
 

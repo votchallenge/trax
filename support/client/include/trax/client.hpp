@@ -40,6 +40,8 @@ enum ConnectionMode {CONNECTION_DEFAULT, CONNECTION_EXPLICIT, CONNECTION_SOCKETS
 
 enum VerbosityMode {VERBOSITY_SILENT, VERBOSITY_DEFAULT, VERBOSITY_DEBUG};
 
+typedef bool (WatchdogCallback)();
+
 class __TRAX_CLIENT_EXPORT TrackerProcess {
 public:
 
@@ -58,6 +60,10 @@ public:
 	bool frame(const Image& image, const Properties& properties = Properties());
 
 	bool reset();
+
+	void register_watchdog(WatchdogCallback* callback);
+
+	void set_log(ostream *output);
 
 private:
 

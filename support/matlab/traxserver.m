@@ -1,4 +1,4 @@
-%% TRAXSERVER - bindings for TraX protocol
+%% TRAXSERVER - MEX bindings for TraX protocol
 %
 % This function provides server side TraX protocol bindings.
 % It can be used in various modes to set-up tracking session,

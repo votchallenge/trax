@@ -10,6 +10,10 @@ else
     lib_path = find_file_recursive(trax_path, 'libtraxstatic.a');
 end;
 
+if isempty(lib_path)
+    error('TraX library not found. Stopping.');
+end;
+
 try
     OCTAVE_VERSION;
     isoctave = true;
@@ -17,23 +21,54 @@ catch
     isoctave = false;
 end
 
-if isempty(lib_path)
-    error('TraX library not found. Stopping.');
-end;
-
-disp('Building MEX file ...');
-arguments = {['-I', fullfile(trax_path, 'include')], fullfile(trax_path, 'support', 'matlab', 'traxserver.cpp'), '-ltraxstatic', ['-L', lib_path]};
+disp('Building traxserver MEX file ...');
+arguments = {['-I', fullfile(trax_path, 'include')], ...
+    fullfile(trax_path, 'support', 'matlab', 'traxserver.cpp'), ...
+    fullfile(trax_path, 'support', 'matlab', 'helpers.cpp'), ...
+    '-ltraxstatic', ['-L', lib_path]};
 
 if isoctave
-    [out, status] = mkoctfile('-mex', arguments{:});
-    if status
-        print_text('ERROR: Unable to compile MEX function.');
-        success = false;
-        return;
-    end;
+   arguments{end+1} = '-DOCTAVE';
 else
-    mex(arguments{:});
+   arguments{end+1} = '-lut';
 end
+
+build_mex(arguments, isoctave);
+
+disp('Building traxclient MEX file ...');
+arguments = {['-I', fullfile(trax_path, 'include')], ['-I', fullfile(trax_path, 'support', 'client', 'include')], ...
+    fullfile(trax_path, 'support', 'matlab', 'traxclient.cpp'), ...
+    fullfile(trax_path, 'support', 'matlab', 'helpers.cpp'), ...
+    fullfile(trax_path, 'support', 'client', 'client.cpp'), ...
+    fullfile(trax_path, 'support', 'client', 'process.cpp'), ...
+    fullfile(trax_path, 'support', 'client', 'timer.cpp'), ...
+    fullfile(trax_path, 'support', 'client', 'threads.cpp'), ...
+    '-ltraxstatic', ['-L', lib_path], '-g'};
+
+if isoctave
+   arguments{end+1} = '-DOCTAVE';
+else
+   arguments{end+1} = '-lut';
+end
+
+build_mex(arguments, isoctave);
+
+end
+
+function success = build_mex(arguments, isoctave)
+
+	if isoctave
+		[out, status] = mkoctfile('-mex', arguments{:});
+		if status
+            disp(out);
+            disp(status);
+		    error('Unable to compile MEX function.');
+		    success = false;
+		    return;
+		end;
+	else
+		mex(arguments{:});
+	end
 
 end
 

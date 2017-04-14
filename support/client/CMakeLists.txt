@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
-ADD_LIBRARY(trax_client SHARED client.cpp process.cpp threads.c timer.cpp)
+ADD_LIBRARY(trax_client SHARED client.cpp process.cpp threads.cpp timer.cpp)
 TARGET_LINK_LIBRARIES(trax_client trax)
 INSTALL(FILES "include/trax/client.hpp" DESTINATION include/trax)
 SET_TARGET_PROPERTIES(trax_client PROPERTIES VERSION 0.0.0 SOVERSION 0)

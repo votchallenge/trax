@@ -25,9 +25,11 @@
 #include <map>
 #include <vector>
 
+#include "threads.h"
+
 using namespace std;
 
-class Process {
+class Process : public Synchronized {
 public:
 
     Process(string command, bool explicit_mode = false);
