@@ -1313,7 +1313,7 @@ int trax_properties_get_int(const trax_properties* properties, const char* key, 
     if (value == NULL) return def;
 
     if (value[0]!='\0') {
-        ret = strtol(value, &end, 10);
+        ret = (int) strtod(value, &end);
         ret = (*end=='\0' && end!=value) ? ret : def;
     }
 
@@ -1332,7 +1332,7 @@ float trax_properties_get_float(const trax_properties* properties, const char* k
     if (value == NULL) return def;
 
     if (value[0]!='\0') {
-        ret = strtod(value,&end);
+        ret = (float) strtod(value, &end);
         ret = (*end=='\0' && end!=value) ? ret : def;
     }
 
