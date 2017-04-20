@@ -38,7 +38,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 LINK_LIBRARIES(${LIBRARIES})
 ADD_DEFINITIONS(-DTRAX_BUILD_VERSION="${BUILD_VERSION}" -DTRAX_BUILD_DATE="${BUILD_DATE}")
-SET(TRAX_SOURCE src/trax.c src/region.c src/strmap.c src/message.c src/base64.c src/trax.cpp)
+SET(TRAX_SOURCE src/trax.c src/region.c src/strmap.c src/message.c src/base64.c src/traxpp.cpp)
 #ADD_LIBRARY(traxobj OBJECT ${TRAX_SOURCE})
 #SET_PROPERTY(TARGET traxobj PROPERTY POSITION_INDEPENDENT_CODE 1)
 #ADD_LIBRARY(trax SHARED $<TARGET_OBJECTS:traxobj>)
