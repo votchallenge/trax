@@ -448,7 +448,7 @@ int main( int argc, char** argv) {
             // In the future we can also output some basic data about the tracker.
 
             TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
-            if (tracker.ready()) {
+            if (tracker.query()) {
                 result = 0;
             } else {
                 result = -1;
@@ -490,6 +490,8 @@ int main( int argc, char** argv) {
             DEBUGMSG("Sequence length: %d frames.\n", (int) images.size());
 
             TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
+
+            tracker.query();
 
             int frame = 0;
             while (frame < images.size()) {
@@ -607,7 +609,10 @@ int main( int argc, char** argv) {
                         }
                         frame = j;
 
-                        if (frame < images.size()) tracker.reset();
+                        if (frame < images.size()) {
+                            tracker.reset();
+                            tracker.query();
+                        }
 
                     } else {
                         // ... otherwise just fill the remaining part of sequence with empty frames.

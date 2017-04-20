@@ -46,7 +46,8 @@ class __TRAX_CLIENT_EXPORT TrackerProcess {
 public:
 
 	TrackerProcess(const string& command, const map<string, string> environment = map<string, string>(), int timeout = 10,
-		ConnectionMode connection = CONNECTION_DEFAULT, VerbosityMode verbosity = VERBOSITY_DEFAULT);
+		ConnectionMode connection = CONNECTION_DEFAULT, VerbosityMode verbosity = VERBOSITY_DEFAULT,
+		string directory = string(), ostream *log = NULL);
 	~TrackerProcess();
 
 	int image_formats();
@@ -55,6 +56,8 @@ public:
 	bool ready();
 	bool tracking();
 
+	bool query();
+
 	bool initialize(const Image& image, const Region& region, const Properties& properties = Properties());
 	bool wait(Region& region, Properties& properties);
 	bool frame(const Image& image, const Properties& properties = Properties());
@@ -62,8 +65,6 @@ public:
 	bool reset();
 
 	void register_watchdog(WatchdogCallback* callback);
-
-	void set_log(ostream *output);
 
 private:
 

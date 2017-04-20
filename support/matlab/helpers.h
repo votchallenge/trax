@@ -31,6 +31,8 @@ using namespace trax;
 #define ARGUMENT_ENVIRONMENT 6
 #define ARGUMENT_STATEOBJECT 7
 #define ARGUMENT_CONNECTION 8
+#define ARGUMENT_DIRECTORY 9
+#define ARGUMENT_LOG 10
 
 string get_string(const mxArray *arg);
 

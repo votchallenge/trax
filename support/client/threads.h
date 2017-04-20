@@ -100,85 +100,12 @@ void* simple_threads_join_thread(THREAD t);
 #ifdef __cplusplus
 }
 
-#include <algorithm>
-
-template <class T>
-class Base {
-public:
-	virtual ~Base()  {
-
-	}
-
-	operator bool() const {
-		return pn != NULL;
-	}
-
-protected:
-	Base() : pn(NULL) {
-
-	}
-
-	Base(const Base& copy) : pn(copy.pn), data(copy.data) {
-
-	}
-
-	void swap(Base& lhs) {
-		std::swap(pn, lhs.pn);
-		std::swap(data, lhs.data);
-	}
-
-	long claims() const {
-		long count = 0;
-		if (NULL != pn)
-		{
-			count = *pn;
-		}
-		return count;
-	}
-
-	void increase_reference_counter() {
-		if (NULL == pn) {
-			pn = new long(1); // may throw std::bad_alloc
-			data = create();
-		} else
-			++(*pn);
-	}
-
-
-	void decrease_reference_counter() {
-		if (NULL != pn) {
-			--(*pn);
-			if (0 == *pn) {
-				destroy(data);
-				data = NULL;
-				delete pn;
-			}
-			pn = NULL;
-		}
-	}
-
-	virtual void destroy(T* data) = 0;
-
-	virtual T* create() = 0;
-
-	T* data;
-
-private:
-
-	long* pn;
-
-};
-
 class Synchronized;
 
-class MutexState;
-
-class Mutex : public Base<MutexState> {
+class Mutex {
 public:
 
 	Mutex();
-
-	Mutex(const Mutex& m);
 
 	virtual ~Mutex();
 
@@ -188,14 +115,18 @@ public:
 
 protected:
 
-	virtual void destroy(MutexState* data);
+	THREAD_MUTEX mutex;
 
-	virtual MutexState* create();
+	THREAD_IDENTIFIER owner;
+
+	int counter;
+
+	bool recursive;
 
 private:
 
 	Mutex& operator=(Mutex& p) throw();
-
+    const Mutex& operator=(const Mutex&);
 
 };
 
@@ -211,9 +142,7 @@ public:
 private:
 
 	RecursiveMutex& operator=(RecursiveMutex& p) throw();
-
-	class State;
-	State* state;
+    const RecursiveMutex& operator=(const RecursiveMutex&);
 
 };
 
@@ -233,9 +162,10 @@ public:
 
 	void unlock();
 
-	void operator=(Lock &) = delete;
-
 private:
+
+	Lock& operator=(Lock& p) throw();
+	const Lock& operator=(const Lock&);
 
 	Mutex mutex;
 

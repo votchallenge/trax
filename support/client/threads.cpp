@@ -105,101 +105,52 @@ void* simple_threads_join_thread(THREAD t) {
 
 #endif
 
-class MutexState {
-public:
+Mutex::Mutex() {
+	MUTEX_INIT(mutex);
 
-	MutexState() {
+	owner = -1;
 
-		MUTEX_INIT(mutex);
+	counter = 0;
 
-		owner = -1;
-
-		counter = 0;
-
-		recursive = false;
-
-	}
-
-	~MutexState() {
-
-		MUTEX_DESTROY(mutex);
-
-	}
-
-
-	THREAD_MUTEX mutex;
-
-	THREAD_IDENTIFIER owner;
-
-	int counter;
-
-	bool recursive;
-
-};
-
-
-MutexState* Mutex::create() {
-
-	return new MutexState();
-
-}
-
-void Mutex::destroy(MutexState* data) {
-
-	delete data;
-
-}
-
-Mutex::Mutex() : Base() {
-	increase_reference_counter();
-}
-
-Mutex::Mutex(const Mutex& m) : Base(m) {
-	increase_reference_counter();
+	recursive = false;
 }
 
 Mutex::~Mutex() {
-	decrease_reference_counter();
-}
-
-Mutex& Mutex::operator=(Mutex& lhs) throw() {
-	swap(lhs);
-	return *this;
+	MUTEX_DESTROY(mutex);
 }
 
 void Mutex::acquire() {
 
-	if (!data->recursive) {
-    	MUTEX_LOCK(data->mutex);		
+	if (!recursive) {
+    	MUTEX_LOCK(mutex);		
 	} else {
 		THREAD_IDENTIFIER tid = THREAD_GET_IDENTIFIER();
 
-	    if (tid != data->owner) {
-	    	MUTEX_LOCK(data->mutex);
-	    	data->owner = tid;
-	    	data->counter = 0;
+	    if (tid != owner) {
+	    	MUTEX_LOCK(mutex);
+	    	owner = tid;
+	    	counter = 0;
 	    }
 
-	    data->counter++;
-
+	    counter++;
 	}
 
 }
 
 void Mutex::release() {
 
-	if (!data->recursive) {
-    	MUTEX_UNLOCK(data->mutex);
+	if (!recursive) {
+    	MUTEX_UNLOCK(mutex);
 	} else {
 
 		THREAD_IDENTIFIER tid = THREAD_GET_IDENTIFIER();
 
-		if (tid == data->owner) {
-			data->counter--;
+		if (tid == owner) {
+			counter--;
 
-			if (data->counter < 1) {
-				data->owner = -1;
-	    		MUTEX_UNLOCK(data->mutex);
+			if (counter < 1) {
+				owner = -1;
+	    		MUTEX_UNLOCK(mutex);
 	    	}
 	    }
 	}
@@ -208,20 +159,11 @@ void Mutex::release() {
 }
 
 RecursiveMutex::RecursiveMutex() : Mutex() {
-	data->recursive = true;
-}
-
-RecursiveMutex::RecursiveMutex(const RecursiveMutex& m) : Mutex(m) {
-
+	recursive = true;
 }
 
 RecursiveMutex::~RecursiveMutex() {
 
-}
-
-RecursiveMutex& RecursiveMutex::operator=(RecursiveMutex& lhs) throw() {
-	swap(lhs);
-	return *this;
 }
 
 Lock::Lock(Mutex& mutex) : mutex(mutex), locked(false)
@@ -229,7 +171,9 @@ Lock::Lock(Mutex& mutex) : mutex(mutex), locked(false)
 	lock();
 }
 
-Lock::Lock(Synchronized& mutex) : Lock(mutex.object_mutex) {
+Lock::Lock(Synchronized& mutex) : mutex(mutex.object_mutex), locked(false) {
+	
+	lock();
 
 }
 

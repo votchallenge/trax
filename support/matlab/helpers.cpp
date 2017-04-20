@@ -380,7 +380,7 @@ Image array_to_image(const mxArray* arr) {
 	const mwSize* dims = mxGetDimensions(arr);
 
 	if (mxIsChar(arr)) {
-		if (ndims > 2 || (ndims == 2 && dims[1] != 1))
+		if (ndims > 2 || (ndims == 2 && dims[0] != 1))
 			MEX_ERROR("Illegal image format, not a valid path or URL");
 
 		string pth = get_string(arr);
@@ -494,6 +494,14 @@ int get_argument_code(string str) {
 
     if (str == "connection") {
         return ARGUMENT_CONNECTION;
+    }
+
+    if (str == "directory") {
+        return ARGUMENT_DIRECTORY;
+    }
+
+    if (str == "log") {
+        return ARGUMENT_LOG;
     }
 
     MEX_ERROR("Illegal argument name");

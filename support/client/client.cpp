@@ -41,6 +41,10 @@ static void initialize_sockets(void) {
     return;
 }
 
+__inline void sleepf(float seconds) {
+	Sleep((long) (seconds * 1000.0));
+}
+
 __inline void sleep(long time) {
     Sleep(time * 1000);
 }
@@ -59,6 +63,10 @@ __inline void sleep(long time) {
     #include <arpa/inet.h>
     #define closesocket close
 #endif
+
+void sleepf(float seconds) {
+    usleep((long) (seconds * 1000000.0));
+}
 
 #include <signal.h>
 
@@ -201,7 +209,7 @@ namespace trax {
 
 class TrackerProcess::State : public Synchronized {
 public:
-	State(const string& command, const map<std::string, std::string> environment, ConnectionMode connection, VerbosityMode verbosity, int timeout):
+	State(const string& command, const map<std::string, std::string> environment, ConnectionMode connection, VerbosityMode verbosity, int timeout, string directory, ostream *log):
 		command(command), environment(environment), socket_id(-1), socket_port(TRAX_DEFAULT_PORT),
 		connection(connection), verbosity(verbosity), timeout(timeout) {
 
@@ -219,7 +227,10 @@ public:
 
         }
 
-        logger_stream = &cout;
+        if (log)
+        	logger_stream = log;
+        else
+        	logger_stream = &cout;
 
         client = NULL;
         process = NULL;
@@ -232,7 +243,6 @@ public:
         CREATE_THREAD(watchdog_thread, watchdog_loop, this);
         CREATE_THREAD(logger_thread, logger_loop, this);
 
-        start_process();
 	}
 
 	~State() {
@@ -261,12 +271,13 @@ public:
 
 	bool start_process() {
 
-		if (process && process) return false;
+		if (process_running()) return false;
 
 		DEBUGMSG(this, "Starting process %s\n", command.c_str());
 
 		process_state_mutex.acquire();
 	    process = new Process(command, connection == CONNECTION_EXPLICIT);
+	    if (!directory.empty()) process->set_directory(directory);
 	    process_state_mutex.release();
 
 	    process->copy_environment();
@@ -331,6 +342,8 @@ public:
 
 	bool stop_process() {
 
+		if (!process_running()) return false;
+
 		stop_watchdog();
 
         sleep(0);
@@ -375,7 +388,7 @@ public:
 
 	void reset_watchdog(int timeout) {
 
-	    watchdog_timeout = timeout;
+	    watchdog_timeout = timeout * 10;
 
 	}
 
@@ -430,47 +443,33 @@ public:
 
 	    while (run) {
 
-	        sleep(1);
+	        sleepf(0.1);
 
 	        state->watchdog_mutex.acquire();
 
 	        run = state->watchdog_active;
 
-	        if (state->process) {
+	        bool terminate = false;
 
-		        if (!state->process->is_alive()) {
+	        for (vector<WatchdogCallback*>::iterator c = state->callbacks.begin(); c != state->callbacks.end(); c++) {
+	        	terminate |= (*c)();
+	        }
 
-		            DEBUGMSG(state, "Remote process has terminated ...\n");
-					state->stop_process(); // Do not close socket so that any leftover data can be read
+	        if (terminate) {
+                DEBUGMSG(state, "Termination requested externally ...\n");
+                state->stop_process();
+	        }
 
-		        } else {
+	        if (state->watchdog_timeout > 0) {
 
+				state->watchdog_timeout--;
 
-			        bool terminate = false;
+	            if (state->watchdog_timeout == 0) {
+                    DEBUGMSG(state, "Timeout reached. Stopping tracker process ...\n");
+                    state->stop_process();
+	            }
 
-			        for (vector<WatchdogCallback*>::iterator c = state->callbacks.begin(); c != state->callbacks.end(); c++) {
-			        	terminate |= (*c)();
-			        }
-
-			        if (terminate) {
-	                    DEBUGMSG(state, "Termination requested externally ...\n");
-	                    state->stop_process();
-			        }
-
-			        if (state->watchdog_timeout > 0) {
-
-						state->watchdog_timeout--;
-
-			            if (state->watchdog_timeout == 0) {
-		                    DEBUGMSG(state, "Timeout reached. Stopping tracker process ...\n");
-		                    state->stop_process();
-			            }
-
-		            }
-
-		        }
-
-			}
+            }
 
 	        state->watchdog_mutex.release();
 
@@ -585,19 +584,6 @@ public:
 
 	}
 
-	void set_log(ostream *stream) {
-
-		SYNCHRONIZE(logger_mutex) {
-
-			logger_stream = stream;
-
-		}
-
-		reset_logger();
-
-	}
-
-
 	vector<WatchdogCallback*> callbacks;
 	map<string, string> environment;
 	string command;
@@ -634,11 +620,14 @@ public:
 	THREAD watchdog_thread;
 	Signal flush_condition;
 
+	string directory;
+
 };
 
-TrackerProcess::TrackerProcess(const string& command, const map<string, string> environment, int timeout, ConnectionMode connection, VerbosityMode verbosity) {
+TrackerProcess::TrackerProcess(const string& command, const map<string, string> environment, int timeout,
+	ConnectionMode connection, VerbosityMode verbosity, string directory, ostream *log) {
 
-	state = new State(command, environment, connection, verbosity, timeout);
+	state = new State(command, environment, connection, verbosity, timeout, directory, log);
 
 }
 
@@ -648,7 +637,15 @@ TrackerProcess::~TrackerProcess() {
 
 }
 
+bool TrackerProcess::query() {
+
+	return state->start_process();
+
+}
+
 bool TrackerProcess::initialize(const Image& image, const Region& region, const Properties& properties) {
+
+	query();
 
 	if (!ready()) throw std::runtime_error("Tracker process not alive");
 
@@ -718,7 +715,7 @@ bool TrackerProcess::frame(const Image& image, const Properties& properties) {
 
 bool TrackerProcess::ready() {
 
-	if (!state->process || !state->client) return false;
+	if (!state->process_running()) return false;
 
 	return true;
 
@@ -732,6 +729,8 @@ bool TrackerProcess::tracking() {
 }
 
 bool TrackerProcess::reset() {
+
+	DEBUGMSG(state, "Resetting program.\n");
 
 	state->stop_process();
 	return state->start_process();
@@ -757,13 +756,6 @@ void TrackerProcess::register_watchdog(WatchdogCallback* callback) {
 	state->register_callback(callback);
 
 }
-
-void TrackerProcess::set_log(ostream *stream) {
-
-	state->set_log(stream);
-
-}
-
 
 int load_trajectory(const std::string& file, std::vector<Region>& trajectory) {
 
