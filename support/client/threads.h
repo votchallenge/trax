@@ -167,7 +167,7 @@ private:
 	Lock& operator=(Lock& p) throw();
 	const Lock& operator=(const Lock&);
 
-	Mutex mutex;
+	Mutex& mutex;
 
 	bool locked;
 
