@@ -314,7 +314,9 @@ int main(int argc, char** argv) {
                 throw std::runtime_error("Tracker process not alive anymore.");
             }
 
-            Image image = convert_image(cvimage, tracker.image_formats());
+            Metadata metadata = tracker.metadata();
+
+            Image image = convert_image(cvimage, metadata.image_formats());
 
             // Start timing a frame
             clock_t timing_toc;
@@ -368,7 +370,7 @@ int main(int argc, char** argv) {
                     break;
                 }
 
-                image = convert_image(cvimage, tracker.image_formats());
+                image = convert_image(cvimage, metadata.image_formats());
 
                 // Start timing a frame
                 timing_tic = clock();

@@ -25,7 +25,7 @@ using namespace trax;
 #define ARGUMENT_PROPSTRUCT 0
 #define ARGUMENT_TRACKERNAME 1
 #define ARGUMENT_TRACKERFAMILY 2
-#define ARGUMENT_TRACKERVERSION 3
+#define ARGUMENT_TRACKERDESCRIPTION 3
 #define ARGUMENT_DEBUG 4
 #define ARGUMENT_TIMEOUT 5
 #define ARGUMENT_ENVIRONMENT 6
@@ -63,6 +63,10 @@ int get_image_code(string str);
 typedef int(*code_parser)(string name);
 
 int get_flags(const mxArray* input, code_parser parser);
+
+mxArray* decode_region(int formats);
+
+mxArray* decode_image(int formats);
 
 #endif
 

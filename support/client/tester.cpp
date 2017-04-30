@@ -231,7 +231,7 @@ int main(int argc, char** argv) {
 
         Image image;
 
-        int image_formats = tracker.image_formats();
+        int image_formats = tracker.metadata().image_formats();
 
         if TRAX_SUPPORTS(image_formats, TRAX_IMAGE_BUFFER) {
             size_t length;

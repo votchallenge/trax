@@ -15,17 +15,35 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
 .. cpp:namespace:: trax
 
-.. cpp:class:: Configuration
+.. cpp:class:: Metadata
 
-   A wrapper class for protocol configuration structure
+   A wrapper class for tracker metadata structure
 
-   .. cpp:function:: Configuration(trax_configuration config)
+   .. cpp:function:: Metadata(int region_formats, int image_formats, std::string tracker_name, std::string tracker_description, std::string tracker_family)
 
+      Creates a new metadata object.
 
-   .. cpp:function:: Configuration(int image_formats, int region_formats)
+   .. cpp:function:: ~Metadata()
 
+   .. cpp:function::  int image_formats()
 
-   .. cpp:function:: ~Configuration()
+      Returns supported image formats as a bit field.
+
+   .. cpp:function::  int region_formats()
+
+      Returns supported region formats as a bit field.
+
+   .. cpp:function::  std::string tracker_name()
+
+      Returns tracker name string or empty string.
+
+   .. cpp:function::  std::string tracker_description()
+
+      Returns tracker description string or empty string.
+
+   .. cpp:function::  std::string tracker_family()
+
+      Returns tracker family string or empty string.
 
 .. cpp:class:: Logging
 
@@ -345,7 +363,7 @@ The code above can be modified to use the TraX protocol by including the C/C++ l
       int run = 1;
 
       // Initialize protocol
-      trax::Server handle(trax::Configuration(TRAX_IMAGE_PATH,
+      trax::Server handle(trax::Metadata(TRAX_IMAGE_PATH,
             TRAX_REGION_RECTANGLE), trax_no_log);
 
       while(run)

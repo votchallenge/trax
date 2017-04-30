@@ -3,22 +3,6 @@
 
 namespace trax {
 
-Configuration::Configuration(int image_formats, int region_formats) {
-
-	this->format_image = image_formats;
-	this->format_region = region_formats;
-}
-
-Configuration::Configuration(trax_configuration config) {
-
-	this->format_image = config.format_image;
-	this->format_region = config.format_region;
-}
-
-Configuration::~Configuration() {
-
-}
-
 Logging::Logging(trax_logging logging) {
 
 	this->callback = logging.callback;
@@ -114,6 +98,82 @@ void Wrapper::release() {
 	}
 }
 
+Metadata::Metadata(const Metadata& original) : Wrapper(original) {
+	if (original.metadata) acquire();
+	metadata = original.metadata;
+}
+
+Metadata::Metadata(int region_formats, int image_formats, std::string tracker_name,
+	std::string tracker_description, std::string tracker_family) {
+
+	wrap(trax_metadata_create(region_formats, image_formats, 
+		(tracker_name.empty()) ? NULL : tracker_name.c_str(),
+		(tracker_description.empty()) ? NULL : tracker_description.c_str(),
+		(tracker_family.empty()) ? NULL : tracker_family.c_str()
+		));
+
+}
+
+Metadata::Metadata(trax_metadata* metadata) {
+
+	wrap(trax_metadata_create(metadata->format_region, metadata->format_image, 
+		metadata->tracker_name, metadata->tracker_description, metadata->tracker_family));
+
+}
+
+Metadata::~Metadata() {
+	release();
+}
+
+
+int Metadata::image_formats() const {
+
+	return metadata->format_image;
+
+}
+
+int Metadata::region_formats() const {
+
+	return metadata->format_region;
+
+}
+
+std::string Metadata::tracker_name() const {
+
+	return (metadata->tracker_name) ? std::string(metadata->tracker_name) : std::string();
+
+}
+
+std::string Metadata::tracker_description() const {
+
+	return (metadata->tracker_description) ? std::string(metadata->tracker_description) : std::string();
+}
+
+std::string Metadata::tracker_family() const {
+
+	return (metadata->tracker_family) ? std::string(metadata->tracker_family) : std::string();
+}
+
+void Metadata::cleanup() {
+
+	trax_metadata_release(&metadata);
+
+}
+
+void Metadata::wrap(trax_metadata* obj) {
+	release();
+	if (obj) acquire();
+	metadata = obj;
+}
+
+Metadata& Metadata::operator=(Metadata lhs) throw() {
+
+	std::swap(metadata, lhs.metadata);
+	swap(lhs);
+	return *this;
+
+}
+
 Handle::Handle() {
 	handle = NULL;
 }
@@ -143,6 +203,12 @@ void Handle::wrap(trax_handle* obj) {
 	release();
 	if (obj) acquire();
 	handle = obj;
+}
+
+const Metadata Handle::metadata() {
+
+	return Metadata(handle->metadata);
+
 }
 
 Client::Client(int input, int output, Logging log) {
@@ -184,15 +250,9 @@ int Client::frame(const Image& image, const Properties& properties) {
 
 }
 
-const Configuration Client::configuration() {
+Server::Server(Metadata metadata, Logging log) {
 
-	return Configuration(handle->config);
-
-}
-
-Server::Server(Configuration configuration, Logging log) {
-
-	wrap(trax_server_setup(configuration, log));
+	wrap(trax_server_setup(metadata.metadata, log));
 
 }
 
@@ -221,12 +281,6 @@ int Server::wait(Image& image, Region& region, Properties& properties) {
 int Server::reply(const Region& region, const Properties& properties) {
 
 	return trax_server_reply(handle, region.region, properties.properties);
-
-}
-
-const Configuration Server::configuration() {
-
-	return Configuration(handle->config);
 
 }
 

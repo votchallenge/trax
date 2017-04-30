@@ -66,12 +66,13 @@ int main( int argc, char** argv)
     // *****************************************
 
     trax_handle* trax;
-    trax_configuration config;
-    config.format_region = TRAX_REGION_ANY;
-    config.format_image = TRAX_IMAGE_ANY;
+    trax_metadata* metadata = trax_metadata_create(TRAX_REGION_ANY, TRAX_IMAGE_ANY, 
+        "Static", "Static demo tracker", "Demo");
 
     log = argc > 1 ? fopen(argv[1], "w") : NULL;
-    trax = trax_server_setup(config, log ? trax_logger_setup_file(log) : trax_no_log);
+    trax = trax_server_setup(metadata, log ? trax_logger_setup_file(log) : trax_no_log);
+
+    trax_metadata_release(&metadata);
 
     run = 1;
 

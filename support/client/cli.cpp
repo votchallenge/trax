@@ -449,6 +449,13 @@ int main( int argc, char** argv) {
 
             TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
             if (tracker.query()) {
+
+                Metadata metadata = tracker.metadata();
+
+                cout << "Tracker name: " << metadata.tracker_name() << endl;
+                cout << "Tracker description: " << metadata.tracker_description() << endl;
+                cout << "Tracker family: " << metadata.tracker_family() << endl;
+
                 result = 0;
             } else {
                 result = -1;
@@ -510,8 +517,10 @@ int main( int argc, char** argv) {
 
                 DEBUGMSG("Loading initialization image: %s\n", images[frame].c_str());
 
+                Metadata metadata = tracker.metadata();
+
                 Region initialize = initialization[frame];
-                Image image = load_image(images[frame], tracker.image_formats());
+                Image image = load_image(images[frame], metadata.image_formats());
 
                 // Start timing a frame
                 double timing_elapsed;
@@ -584,7 +593,7 @@ int main( int argc, char** argv) {
                     if (frame >= images.size()) break;
 
                     DEBUGMSG("Loading image: %s\n", images[frame].c_str());
-                    Image image = load_image(images[frame], tracker.image_formats());
+                    Image image = load_image(images[frame], metadata.image_formats());
 
                     // Start timing a frame
                     timing_start = timer_clock();

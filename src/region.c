@@ -61,6 +61,42 @@ int __is_valid_sequence(float* sequence, int len) {
 	return 1;
 }
 
+double round(double number) {
+
+	return number < 0.0 ? ceil(number - 0.5) : floor(number + 0.5);
+
+}
+
+#define MAX_URI_SCHEME 16
+
+const char* __parse_uri_prefix(const char* buffer, region_type* type) {
+
+	int i = 0;
+
+	*type = EMPTY;
+
+	for (; i < MAX_URI_SCHEME; i++) {
+		if ((buffer[i] >= 'a' && buffer[i] <= 'z') || buffer[i] == '+' || buffer[i] == '.' || buffer[i] == '-') continue;
+
+		if (buffer[i] == ':') {
+			if (strncmp(buffer, "rect", i - 1) == 0)
+				*type = RECTANGLE;
+			else if (strncmp(buffer, "poly", i - 1) == 0)
+				*type = POLYGON;
+			else if (strncmp(buffer, "mask", i - 1) == 0)
+				*type = MASK;
+			else if (strncmp(buffer, "special", i - 1) == 0)
+				*type = SPECIAL;
+			return &(buffer[i + 1]);
+		}
+
+		return buffer;
+	}
+
+	return buffer;
+
+}
+
 region_container* __create_region(region_type type) {
 
 	region_container* reg = (region_container*) malloc(sizeof(region_container));
@@ -84,47 +120,48 @@ static inline const char* _str_find(const char* in, const char delimiter) {
 
 int _parse_sequence(const char* buffer, float** data) {
 
-    int i;
+	int i;
 
-    float* numbers = (float*) malloc(sizeof(float) * (strlen(buffer) / 2));
+	float* numbers = (float*) malloc(sizeof(float) * (strlen(buffer) / 2));
 
 	const char* pch = buffer;
-    for (i = 0; ; i++) {
-        
-        if (pch) {
-            #if defined (_MSC_VER)
-            if(tolower(pch[0]) == 'n' && tolower(pch[1]) == 'a' && tolower(pch[2]) == 'n'){    
-               numbers[i] = NAN;
-            } else {
-               numbers[i] = (float) atof(pch);
-            }
-            #else
-            numbers[i] = (float) atof(pch);
-            #endif 
-        } else 
-            break;
+	for (i = 0; ; i++) {
+
+		if (pch) {
+#if defined (_MSC_VER)
+			if (tolower(pch[0]) == 'n' && tolower(pch[1]) == 'a' && tolower(pch[2]) == 'n') {
+				numbers[i] = NAN;
+			} else {
+				numbers[i] = (float) atof(pch);
+			}
+#else
+			numbers[i] = (float) atof(pch);
+#endif
+		} else
+			break;
 
 		pch = _str_find(pch, ',');
-    }
+	}
 
 	if (i > 0) {
 		int j;
 		*data = (float*) malloc(sizeof(float) * i);
-		for (j = 0; j < i; j++) { (*data)[j] = numbers[j]; } 
+		for (j = 0; j < i; j++) { (*data)[j] = numbers[j]; }
 		free(numbers);
 	} else {
 		*data = NULL;
 		free(numbers);
 	}
 
-    return i;
+	return i;
 }
 
 int region_parse(const char* buffer, region_container** region) {
 
-    float* data = NULL;
-    int num;
-    
+	float* data = NULL;
+	const char* strdata = NULL;
+	int num;
+
 	const char* tmp = buffer;
 
 	(*region) = NULL;
@@ -133,36 +170,47 @@ int region_parse(const char* buffer, region_container** region) {
 		return 1;
 	}
 
-	if (buffer[0] == 'M') {
-		/* TODO: mask */
-		return 0;
+	region_type prefix_type;
+
+	strdata = __parse_uri_prefix(buffer, &prefix_type);
+
+	num = _parse_sequence(strdata, &data);
+
+	// If at least one of the elements is NaN, then the region cannot be parsed
+	// We return special region with a default code.
+	if (!__is_valid_sequence(data, num) || num == 0) {
+		// Preserve legacy support: if four values are given and the fourth one is a number
+		// then this number is taken as a code.
+		if (num == 4 && !isnan(data[3])) {
+			(*region) = region_create_special(-(int) data[3]);
+		} else {
+			(*region) = region_create_special(TRAX_DEFAULT_CODE);
+		}
+		free(data);
+		return 1;
 	}
 
-	num = _parse_sequence(buffer, &data);
-    // If at least one of the elements is NaN, then the region cannot be parsed
-    // We return special region with a default code.
-    if (!__is_valid_sequence(data, num) || num == 0) {
-        // Preserve legacy support: if four values are given and the fourth one is a number
-        // then this number is taken as a code.
-        if (num == 4 && !isnan(data[3])) {
-            (*region) = region_create_special(-(int) data[3]);
-        } else {
-            (*region) = region_create_special(TRAX_DEFAULT_CODE);
-        }
-        free(data);
-		return 1; 
-    }
+	if (prefix_type == EMPTY && num > 0) {
+		if (num == 1)
+			prefix_type = SPECIAL;
+		else if (num == 4)
+			prefix_type = RECTANGLE;
+		else if (num >= 6 && num % 2 == 0)
+			prefix_type = POLYGON;
+	}
 
-    if (num == 1) {
+	switch (prefix_type) {
+	case SPECIAL: {
+		assert(num == 1);
 		(*region) = (region_container*) malloc(sizeof(region_container));
 		(*region)->type = SPECIAL;
 		(*region)->data.special = (int) data[0];
 		free(data);
 		return 1;
 
-	} 
-    if (num == 4) {
-
+	}
+	case RECTANGLE: {
+		assert(num == 4);
 		(*region) = (region_container*) malloc(sizeof(region_container));
 		(*region)->type = RECTANGLE;
 
@@ -174,31 +222,64 @@ int region_parse(const char* buffer, region_container** region) {
 		free(data);
 		return 1;
 
-    }
-    if (num >= 6 && num % 2 == 0) {
-
+	}
+	case POLYGON: {
 		int j;
+
+		assert(num >= 6 && num % 2 == 0);
 
 		(*region) = (region_container*) malloc(sizeof(region_container));
 		(*region)->type = POLYGON;
 
-        (*region)->data.polygon.count = num / 2;
-	    (*region)->data.polygon.x = (float*) malloc(sizeof(float) * (*region)->data.polygon.count);
-	    (*region)->data.polygon.y = (float*) malloc(sizeof(float) * (*region)->data.polygon.count);
+		(*region)->data.polygon.count = num / 2;
+		(*region)->data.polygon.x = (float*) malloc(sizeof(float) * (*region)->data.polygon.count);
+		(*region)->data.polygon.y = (float*) malloc(sizeof(float) * (*region)->data.polygon.count);
 
-        for (j = 0; j < (*region)->data.polygon.count; j++) {
-            (*region)->data.polygon.x[j] = data[j * 2];
-            (*region)->data.polygon.y[j] = data[j * 2 + 1];
-        }
+		for (j = 0; j < (*region)->data.polygon.count; j++) {
+			(*region)->data.polygon.x[j] = data[j * 2];
+			(*region)->data.polygon.y[j] = data[j * 2 + 1];
+		}
 
 		free(data);
 		return 1;
+	}
+		/*	    case MASK: {
 
-    }
+			    	int i;
+			    	int position;
+			    	int value;
+
+			    	assert(num > 4);
+
+					(*region) = (region_container*) malloc(sizeof(region_container));
+					(*region)->type = MASK;
+
+			    	(*region)->data.mask.x = (int) data[0];
+			    	(*region)->data.mask.y = (int) data[1];
+			    	(*region)->data.mask.width = (int) data[2];
+			    	(*region)->data.mask.height = (int) data[3];
+
+			    	(*region)->data.mask.data = (char*) malloc(sizeof(char) * (*region)->data.mask.width * (*region)->data.mask.height);
+
+			    	value = 0;
+			    	position = 0;
+
+			    	for (i = 4; i < num; i++) {
+
+			    		int count =
+
+
+
+
+			    	}
+
+
+			    }*/
+	}
 
 	if (data) free(data);
 
-    return 0;
+	return 0;
 }
 
 char* region_string(region_container* region) {
@@ -249,7 +330,6 @@ void region_print(FILE* out, region_container* region) {
 region_container* region_convert(const region_container* region, region_type type) {
 
 	region_container* reg = NULL;
-
 	switch (type) {
 
 	case RECTANGLE: {

@@ -41,11 +41,29 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     if (operation == "setup") {
 
-        if ( nrhs != 3 ) { MEX_ERROR("Three parameters required."); return; }
+        if ( nrhs < 3 ) { MEX_ERROR("At least three parameters required."); return; }
 
         if ( nlhs > 1 ) { MEX_ERROR("At most one output argument supported."); return; }
 
-        Configuration config(get_flags(prhs[2], get_image_code), get_flags(prhs[1], get_region_code));
+        std::string tracker_name, tracker_description, tracker_family;
+
+        if ( nrhs > 3 ) {
+
+            for (int i = 3; i < std::floor((float)nrhs/2) * 2; i+=2) {
+                switch (get_argument_code(get_string(prhs[i]))) {
+                case ARGUMENT_TRACKERNAME: tracker_name = get_string(prhs[i+1]); break;
+                case ARGUMENT_TRACKERDESCRIPTION: tracker_description = get_string(prhs[i+1]); break;
+                case ARGUMENT_TRACKERFAMILY: tracker_family = get_string(prhs[i+1]); break;
+                default:
+                    MEX_ERROR("Illegal argument.");
+                    return;
+                }
+            }
+
+        }
+
+        Metadata metadata(get_flags(prhs[2], get_image_code), get_flags(prhs[1], get_region_code),
+            tracker_name, tracker_description, tracker_family);
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 
@@ -56,7 +74,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 #endif
 
-        handle = new Server(config, trax_no_log);
+        handle = new Server(metadata, trax_no_log);
 
         if (nlhs == 1)
             plhs[0] = mxCreateLogicalScalar(handle > 0);

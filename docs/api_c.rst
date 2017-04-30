@@ -80,12 +80,23 @@ Communication
 
    A logger callback function type. Functions with this signature can be used for logging protocol data. Everytime a function is called it is given a character buffer of a specified length that has to be handled by the logger. The optional pointer to additional data may be passed to the callback to access additional data.
 
-
 .. c:function:: const char* trax_version()
 
    Returns a string version of the library for debugging purposes. If possible, this version is defined during compilation time and corresponds to Git hash for the current revision.
 
    :return: Version string as a constant character array
+
+.. c:function:: trax_metadata* trax_metadata_create(int region_formats, int image_formats, const char* tracker_name, const char* tracker_description, const char* tracker_family)
+
+   Create a tracker metadata structure returning its pointer
+
+   :return: A pointer to a metadata structure that can be released using :c:func:`trax_metadata_release`.
+
+.. c:function:: void trax_metadata_release(trax_metadata** metadata)
+
+   Releases a given metadata structure, clearing its memory. 
+
+   :param metadata: Pointer of a pointer of tracker metadata structure.
 
 .. c:function:: trax_logging trax_logger_setup(trax_logger callback, void* data, int flags)
 
@@ -139,7 +150,6 @@ Communication
    :param properties: Additional properties object
    :return: Integer value indicating status, can be either :c:macro:`TRAX_OK` or :c:macro:`TRAX_ERROR`
 
-
 .. c:function:: int trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties)
 
     Sends a frame message to server.
@@ -149,19 +159,19 @@ Communication
    :param properties: Additional properties
    :return: Integer value indicating status, can be either :c:macro:`TRAX_OK` or :c:macro:`TRAX_ERROR`
 
-.. c:function:: trax_handle* trax_server_setup(trax_configuration config, trax_logging log)
+.. c:function:: trax_handle* trax_server_setup(trax_metadata* metadata, trax_logging log)
 
    Setups the protocol for the server side and returns a handle object.
 
-   :param config: Configuration structure
+   :param metadata: Tracker metadata
    :param log: Logging structure
    :return: A handle object used for further communication or ``NULL`` if initialization was unsuccessful
 
-.. c:function:: trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, trax_logging log)
+.. c:function:: trax_handle* trax_server_setup_file(trax_metadata* metadata, int input, int output, trax_logging log)
 
    Setups the protocol for the server side based on input and output stream and returns a handle object.
 
-   :param config: Configuration structure
+   :param metadata: Tracker metadata
    :param input: Stream identifier, opened for reading, used to read client output
    :param output: Stream identifier, opened for writing, used to write messages
    :param log: Logging structure
@@ -660,11 +670,11 @@ The code above can be modified to use the TraX protocol by including the C libra
 
       // Call trax_server_setup at the beginning
       trax_handle* handle;
-      trax_configuration config;
-      config.format_region = TRAX_REGION_RECTANGLE;
-      config.format_image = TRAX_IMAGE_PATH;
+      trax_metadata* meta = trax_metadata_create(TRAX_REGION_RECTANGLE, TRAX_IMAGE_PATH, "Name", NULL, NULL);
 
-      handle = trax_server_setup(config, trax_no_log);
+      handle = trax_server_setup(meta, trax_no_log);
+
+      trax_metadata_release(&meta);
 
       while(run)
       {

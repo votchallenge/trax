@@ -61,7 +61,7 @@ To modify the source code to use the TraX protocol we have to remove explicit lo
 
     NCCTracker tracker;
 
-    trax::Server handle(trax::Configuration(TRAX_IMAGE_PATH | TRAX_IMAGE_MEMORY |
+    trax::Server handle(trax::Metadata(TRAX_IMAGE_PATH | TRAX_IMAGE_MEMORY |
                            TRAX_IMAGE_BUFFER, TRAX_REGION_RECTANGLE), trax_no_log);
 
     while (true) {

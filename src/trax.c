@@ -444,7 +444,8 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     trax_properties* tmp_properties;
     string_list arguments;
     int version = 1;
-    char* tmp;
+    char *tmp, *tracker_name, *tracker_description, *tracker_family;
+    int region_formats, image_formats;
 
     trax_handle* client = (trax_handle*) malloc(sizeof(trax_handle));
 
@@ -452,7 +453,6 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
 
     client->logging = log;
     client->stream = stream;
-    client->properties = NULL;
 
     tmp_properties = trax_properties_create();
     LIST_CREATE(arguments, 8);
@@ -467,14 +467,19 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     client->version = trax_properties_get_int(tmp_properties, "trax.version", 1);
 
     tmp = trax_properties_get(tmp_properties, "trax.region");
-    client->config.format_region = region_formats_decode(tmp);
+    region_formats = region_formats_decode(tmp);
     free(tmp);
 
     tmp = trax_properties_get(tmp_properties, "trax.image");
-    client->config.format_image = image_formats_decode(tmp);
+    image_formats = image_formats_decode(tmp);
     free(tmp);
 
-    // TODO: tracker name, identifier
+    tracker_name = trax_properties_get(tmp_properties, "trax.name");
+    tracker_description = trax_properties_get(tmp_properties, "trax.description");
+    tracker_family = trax_properties_get(tmp_properties, "trax.family");
+
+    client->metadata = trax_metadata_create(region_formats, image_formats, tracker_name, tracker_description,
+        tracker_family);
 
     trax_properties_release(&tmp_properties);
     LIST_DESTROY(arguments);
@@ -490,7 +495,7 @@ failure:
 
 }
 
-trax_handle* server_setup(trax_configuration config, message_stream* stream, const trax_logging log) {
+trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const trax_logging log) {
 
     trax_properties* properties;
     trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
@@ -501,19 +506,30 @@ trax_handle* server_setup(trax_configuration config, message_stream* stream, con
     server->logging = log;
 
     server->stream = stream;
-    server->properties = NULL;
 
     properties = trax_properties_create();
 
+    server->version = TRAX_VERSION;
     trax_properties_set_int(properties, "trax.version", TRAX_VERSION);
 
-    region_formats_encode(config.format_region, tmp);
+    region_formats_encode(metadata->format_region, tmp);
     trax_properties_set(properties, "trax.region", tmp);
 
-    image_formats_encode(config.format_image, tmp);
+    image_formats_encode(metadata->format_image, tmp);
     trax_properties_set(properties, "trax.image", tmp);
 
-    server->config = config;
+    if (metadata->tracker_name)
+        trax_properties_set(properties, "trax.name", metadata->tracker_name);
+
+    if (metadata->tracker_description)
+        trax_properties_set(properties, "trax.description", metadata->tracker_description);
+
+    if (metadata->tracker_family)
+        trax_properties_set(properties, "trax.family", metadata->tracker_family);
+
+
+    server->metadata = trax_metadata_create(metadata->format_region, metadata->format_image,
+        metadata->tracker_name, metadata->tracker_description, metadata->tracker_family);
    
     LIST_CREATE(arguments, 1);
 
@@ -524,6 +540,36 @@ trax_handle* server_setup(trax_configuration config, message_stream* stream, con
     LIST_DESTROY(arguments);
 
     return server;
+
+}
+
+trax_metadata* trax_metadata_create(int region_formats, int image_formats,
+    const char* tracker_name, const char* tracker_description, const char* tracker_family) {
+
+    trax_metadata* metadata = (trax_metadata*) malloc(sizeof(trax_metadata));
+
+    metadata->format_region = region_formats;
+    metadata->format_image = image_formats;
+
+    metadata->tracker_name = (tracker_name) ? strdup(tracker_name) : NULL;
+    metadata->tracker_description = (tracker_description) ? strdup(tracker_description) : NULL;
+    metadata->tracker_family = (tracker_family) ? strdup(tracker_family) : NULL;
+
+    return metadata;
+
+}
+
+void trax_metadata_release(trax_metadata** metadata) {
+
+    if (!*metadata) return;
+
+    if ((*metadata)->tracker_name) free((*metadata)->tracker_name);
+    if ((*metadata)->tracker_description) free((*metadata)->tracker_description);
+    if ((*metadata)->tracker_family) free((*metadata)->tracker_family);
+
+    free(*metadata);
+
+    *metadata = NULL;
 
 }
 
@@ -623,20 +669,20 @@ int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* 
 
     LIST_CREATE(arguments, 2);
 
-    if (TRAX_SUPPORTS(client->config.format_image, image->type)) {
+    if (TRAX_SUPPORTS(client->metadata->format_image, image->type)) {
         char* buffer = image_encode(image);
         LIST_APPEND_DIRECT(arguments, buffer);
     } else goto failure;
 
-    if (!TRAX_SUPPORTS(client->config.format_region, REGION_TYPE(region))) {
+    if (!TRAX_SUPPORTS(client->metadata->format_region, REGION_TYPE(region))) {
 
         trax_region* converted = NULL;
 
-        if TRAX_SUPPORTS(client->config.format_region, TRAX_REGION_MASK)
+        if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_MASK)
             converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_MASK));
-        else if TRAX_SUPPORTS(client->config.format_region, TRAX_REGION_POLYGON)
+        else if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_POLYGON)
             converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_POLYGON));
-        else if TRAX_SUPPORTS(client->config.format_region, TRAX_REGION_RECTANGLE)
+        else if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_RECTANGLE)
             converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_RECTANGLE));
 
         assert(converted);
@@ -670,11 +716,11 @@ int trax_client_frame(trax_handle* client, trax_image* image, trax_properties* p
     VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
 
-    assert(TRAX_SUPPORTS(client->config.format_image, image->type));
+    assert(TRAX_SUPPORTS(client->metadata->format_image, image->type));
 
     LIST_CREATE(arguments, 2);
 
-    if (TRAX_SUPPORTS(client->config.format_image, image->type)) {
+    if (TRAX_SUPPORTS(client->metadata->format_image, image->type)) {
         char* buffer = image_encode(image);
         LIST_APPEND_DIRECT(arguments, buffer);
     } else goto failure;
@@ -691,10 +737,9 @@ failure:
 
 }
 
-trax_handle* trax_server_setup(trax_configuration config, const trax_logging log) {
+trax_handle* trax_server_setup(trax_metadata *metadata, const trax_logging log) {
 
     message_stream* stream;
-
 
     char* env_socket = getenv("TRAX_SOCKET");
 
@@ -722,15 +767,15 @@ trax_handle* trax_server_setup(trax_configuration config, const trax_logging log
 
     }
 
-    return server_setup(config, stream, log);
+    return server_setup(metadata, stream, log);
 
 }
 
-trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, const trax_logging log) {
+trax_handle* trax_server_setup_file(trax_metadata *metadata, int input, int output, const trax_logging log) {
 
     message_stream* stream = create_message_stream_file(input, output);
     
-    return server_setup(config, stream, log);
+    return server_setup(metadata, stream, log);
 }
 
 int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties) 
@@ -756,7 +801,7 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
             goto failure;
 
         *image = image_decode(arguments.buffer[0]);
-        if (!*image || !TRAX_SUPPORTS(server->config.format_image, (*image)->type)) 
+        if (!*image || !TRAX_SUPPORTS(server->metadata->format_image, (*image)->type)) 
             goto failure;
 
         if (properties) 
@@ -781,7 +826,7 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 
         *image = image_decode(arguments.buffer[0]);
 
-        if (!*image || !TRAX_SUPPORTS(server->config.format_image, (*image)->type)) 
+        if (!*image || !TRAX_SUPPORTS(server->metadata->format_image, (*image)->type)) 
             goto failure;
 
         if (!region_parse(arguments.buffer[1], (region_container**)region)) {
@@ -858,9 +903,7 @@ int trax_cleanup(trax_handle** handle) {
 
     (*handle)->flags |= TRAX_FLAG_TERMINATED;
 
-    if ((*handle)->properties) {
-        trax_properties_release(&((*handle)->properties));
-    }
+    trax_metadata_release(&(*handle)->metadata);
 
     destroy_message_stream((message_stream**) &(*handle)->stream);
 

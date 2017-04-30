@@ -136,23 +136,27 @@ typedef struct trax_logging {
 } trax_logging;
 
 /**
- * Some basic configuration data used to set up the server.
+ * Metadata used to specify tracker metadata and taxonomy.
 **/
-typedef struct trax_configuration {
+typedef struct trax_metadata {
     int format_region;
     int format_image;
-} trax_configuration;
+    char* tracker_name;
+    char* tracker_description;
+    char* tracker_family;
+} trax_metadata;
+
+typedef trax_metadata trax_configuration;
 
 /**
- * Core object of the protocol. Do not manipulate it directly.
+ * Core object of the protocol. Do not manipulate fields directly.
 **/
 typedef struct trax_handle {
     int flags;
     int version;
     void* stream;
-    trax_properties* properties;
     trax_logging logging;
-    trax_configuration config;
+    trax_metadata* metadata;
 } trax_handle;
 
 __TRAX_EXPORT extern const trax_logging trax_no_log;
@@ -163,6 +167,17 @@ __TRAX_EXPORT extern const trax_bounds trax_no_bounds;
  * Returns library version.
 **/
 __TRAX_EXPORT const char* trax_version();
+
+/**
+ * Create a tracker metadata structure.
+**/
+__TRAX_EXPORT trax_metadata* trax_metadata_create(int region_formats, int image_formats,
+    const char* tracker_name, const char* tracker_description, const char* tracker_family);
+
+/**
+ * Correctly releases a metadata structure.
+**/
+__TRAX_EXPORT void trax_metadata_release(trax_metadata** metadata);
 
 /**
  * A handy function to initialize a logging configuration structure.
@@ -202,12 +217,12 @@ __TRAX_EXPORT int trax_client_frame(trax_handle* client, trax_image* image, trax
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_server_setup(trax_configuration config, const trax_logging log);
+__TRAX_EXPORT trax_handle* trax_server_setup(trax_metadata *metadata, const trax_logging log);
 
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_server_setup_file(trax_configuration config, int input, int output, const trax_logging log);
+__TRAX_EXPORT trax_handle* trax_server_setup_file(trax_metadata *metadata, int input, int output, const trax_logging log);
 
 /**
  * Waits for a valid protocol message from the client.
@@ -464,13 +479,6 @@ class Properties;
 
 typedef trax_enumerator Enumerator;
 
-class __TRAX_EXPORT Configuration : public ::trax_configuration {
-public:
-    Configuration(trax_configuration config);
-    Configuration(int image_formats, int region_formats);
-    virtual ~Configuration();
-};
-
 class __TRAX_EXPORT Logging : public ::trax_logging {
 public:
     Logging(trax_logging logging);
@@ -523,6 +531,51 @@ private:
 
 };
 
+class Handle;
+class Client;
+class Server;
+
+class __TRAX_EXPORT Metadata : public Wrapper {
+friend Handle;
+friend Client;
+friend Server;
+public:
+
+    Metadata(const Metadata& original);
+
+    Metadata(int region_formats, int image_formats, std::string tracker_name = std::string(),
+        std::string tracker_description = std::string(), std::string tracker_family = std::string());
+
+    virtual ~Metadata();
+
+    int image_formats() const;
+
+    int region_formats() const;
+
+    std::string tracker_name() const;
+
+    std::string tracker_description() const;
+
+    std::string tracker_family() const;
+
+protected:
+
+    Metadata(trax_metadata* metadata);
+
+    virtual void cleanup();
+
+    void wrap(trax_metadata* obj);
+
+private:
+
+    Metadata& operator=(Metadata p) throw();
+
+    trax_metadata* metadata;
+
+};
+
+typedef Metadata Configuration;
+
 class __TRAX_EXPORT Handle: public Wrapper {
 public:
     /**
@@ -539,6 +592,8 @@ public:
      * Gets the parameter for the client or server instance.
     **/
     int get_parameter(int id, int* value);
+
+    const Metadata metadata();
 
 protected:
 
@@ -582,8 +637,6 @@ public:
     **/
     int frame(const Image& image, const Properties& properties);
 
-    const Configuration configuration();
-
 protected:
 
     using Handle::cleanup;
@@ -600,7 +653,7 @@ public:
     /**
      * Sets up the protocol for the server side and returns a handle object.
     **/
-    Server(Configuration configuration, Logging log);
+    Server(Metadata metadata, Logging log);
 
     virtual ~Server();
 
@@ -613,8 +666,6 @@ public:
      * Sends a status reply to the client.
     **/
     int reply(const Region& region, const Properties& properties);
-
-    const Configuration configuration();
 
 private:
     Server& operator=(Server p) throw();

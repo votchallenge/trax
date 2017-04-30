@@ -5,7 +5,7 @@
 % send and receive data and terminate the communication.
 %
 % Protocol setup:
-% [response] = traxserver('setup', region_formats, image_formats)
+% [response] = traxserver('setup', region_formats, image_formats, ...)
 %
 % Waiting for request:
 % [image, region, parameters] = traxserver('wait')

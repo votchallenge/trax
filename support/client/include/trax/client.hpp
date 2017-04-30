@@ -50,8 +50,7 @@ public:
 		string directory = string(), ostream *log = NULL);
 	~TrackerProcess();
 
-	int image_formats();
-	int region_formats();
+	Metadata metadata();
 
 	bool ready();
 	bool tracking();

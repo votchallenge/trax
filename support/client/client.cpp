@@ -737,17 +737,10 @@ bool TrackerProcess::reset() {
 
 }
 
-int TrackerProcess::image_formats() {
+Metadata TrackerProcess::metadata() {
 
-	if (!ready()) return 0;
-	return state->client->configuration().format_image;
-
-}
-
-int TrackerProcess::region_formats() {
-
-	if (!ready()) return 0;
-	return state->client->configuration().format_region;
+	if (!ready()) throw std::runtime_error("Tracker not initialized yet.");
+	return state->client->metadata();
 
 }
 

@@ -8,7 +8,7 @@ Requirements and building
 
 To compile ``traxserver`` MEX function manually you need a MEX compiled configured correctly on your computer.
 
-Since the MEX function is only a wrapper for the C library, you first have to ensure that the C library is compiled and available in a subdirectory of the project. Then go to Matlab/Octave console, move to the ``support/matlab/`` subdirectory and execute ``compile_trax`` script. If the script finishes correcty you will have a MEX script (exension varies from platform to platform) available in the directory. If the location of the TraX library is not found automatically, you have to verfy that it exists and possibly enter the path to its location manually.
+Since the MEX function is only a wrapper for the C library, you first have to ensure that the C library is compiled and available in a subdirectory of the project. Then go to Matlab/Octave console, move to the ``support/matlab/`` subdirectory and execute ``compile_trax`` script. If the script finishes correctly you will have a MEX script (extension varies from platform to platform) available in the directory. If the location of the TraX library is not found automatically, you have to verify that it exists and possibly enter the path to its location manually.
 
 Documentation
 -------------
@@ -17,7 +17,7 @@ The ``traxserver`` MEX function is essentially used to send or receive a protoco
 
 .. code-block:: matlab
 
-    [response] = traxserver('setup', region_formats, image_formats);
+    [response] = traxserver('setup', region_formats, image_formats, ...);
 
 The call setups the protocol and has to be called only once at the beginning of your tracking algorithm. The two mandatory input arguments are:
 
@@ -25,13 +25,13 @@ The call setups the protocol and has to be called only once at the beginning of 
 
  - **image_formats**: A string or specifies the image format that are supported by the algorithm. Any other formats should be either converted by the client or the client should terminate if it is unable to provide data in correct format. Possible values are: **path**, **url**, **memory** or **data**, see protocol specification for more details.
 
-A single output argument is a boolean value that is true if the initialization was successful.
+Additionally, you can also specify tracker name, description and family taxonomy as strings using named arguments technique. A single output argument is a boolean value that is true if the initialization was successful.
 
 .. code-block:: matlab
 
     [image, region, parameters] = traxserver('wait');
 
-A call blocks until a protocol message is received from the client, parses it and returns the data. Based on the type of message, some output arguments will be initialized as empty which also hepls determining the type of the message.
+A call blocks until a protocol message is received from the client, parses it and returns the data. Based on the type of message, some output arguments will be initialized as empty which also helps determining the type of the message.
 
  - **image**: Image data in requested format. If the variable is empty then the termination request was received and the tracker can exit.
 
@@ -70,7 +70,7 @@ Region data for rectangle and polygon types is stored in a one-dimensional float
 Internals
 ~~~~~~~~~
 
-Additionaly the function also looks for the ``TRAX_SOCKET`` environmental variable that is used to determine that the server has to be set up using TCP sockers and that a TCP server is opened (the port or IP address and port are proviede as the value of the variable) and waiting for connections from the tracker. This mechanism is important for Matlab on Microsoft Windows because the standard streams are closed at startup and cannot be used.
+Additionally the function also looks for the ``TRAX_SOCKET`` environmental variable that is used to determine that the server has to be set up using TCP sockets and that a TCP server is opened (the port or IP address and port are provide as the value of the variable) and waiting for connections from the tracker. This mechanism is important for Matlab on Microsoft Windows because the standard streams are closed at startup and cannot be used.
 
 Integration example
 -------------------
@@ -114,7 +114,7 @@ To enable tracker to receive the images over the protocol you have to change a f
     :linenos:
 
     % Initialize the protocol
-    traxserver('setup', 'rectangle', 'path');
+    traxserver('setup', 'rectangle', 'path', 'Name', 'Example');
 
 	while true
         % Wait for data

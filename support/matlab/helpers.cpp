@@ -468,8 +468,8 @@ int get_argument_code(string str) {
         return ARGUMENT_TRACKERNAME;
     }
 
-    if (str == "version") {
-        return ARGUMENT_TRACKERVERSION;
+    if (str == "description") {
+        return ARGUMENT_TRACKERDESCRIPTION;
     }
 
     if (str == "family") {
@@ -572,3 +572,55 @@ int get_flags(const mxArray * input, code_parser parser) {
     return codes;
 }
 
+mxArray* decode_region(int formats) {
+
+    vector<mxArray*> tmp;
+
+    if (TRAX_SUPPORTS(formats, TRAX_REGION_RECTANGLE)) {
+        tmp.push_back(set_string("rectangle"));
+    }
+
+    if (TRAX_SUPPORTS(formats, TRAX_REGION_POLYGON)) {
+        tmp.push_back(set_string("polygon"));
+    }
+
+    if (TRAX_SUPPORTS(formats, TRAX_REGION_MASK)) {
+        tmp.push_back(set_string("mask"));
+    }
+
+    mxArray* array = mxCreateCellMatrix(1, tmp.size());
+
+    for (int i = 0; i < tmp.size(); i++) {mxSetCell(array, i, tmp[i]); }
+
+    return array;
+
+}
+
+mxArray* decode_image(int formats) {
+
+    vector<mxArray*> tmp;
+
+    if (TRAX_SUPPORTS(formats, TRAX_IMAGE_PATH)) {
+        tmp.push_back(set_string("path"));
+    }
+
+    if (TRAX_SUPPORTS(formats, TRAX_IMAGE_URL)) {
+        tmp.push_back(set_string("url"));
+    }
+
+    if (TRAX_SUPPORTS(formats, TRAX_IMAGE_BUFFER)) {
+        tmp.push_back(set_string("buffer"));
+    }
+
+    if (TRAX_SUPPORTS(formats, TRAX_IMAGE_MEMORY)) {
+        tmp.push_back(set_string("memory"));
+    }
+
+
+    mxArray* array = mxCreateCellMatrix(1, tmp.size());
+
+    for (int i = 0; i < tmp.size(); i++) {mxSetCell(array, i, tmp[i]); }
+
+    return array;
+
+}

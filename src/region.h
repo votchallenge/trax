@@ -63,6 +63,18 @@ typedef struct region_polygon {
 
 } region_polygon;
 
+typedef struct region_mask {
+
+    int x;
+    int y;
+
+    int width;
+    int height;
+
+    char* data;
+
+} region_mask;
+
 typedef struct region_rectangle {
 
     float x;
@@ -77,6 +89,7 @@ typedef struct region_container {
     union {
         region_rectangle rectangle;
         region_polygon polygon;
+        region_mask mask;
         int special;
     } data;
 } region_container;
