@@ -32,6 +32,11 @@ extern bool utIsInterruptPending();
 #define IS_INTERRUPTED utIsInterruptPending()
 
 #else
+
+#ifdef OCTINTERP_API
+#undef OCTINTERP_API
+#endif
+
 #include <octave/config.h>
 #include <octave/quit.h>
 
@@ -255,7 +260,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	std::ostream *log = NULL;
 
 	if (!logfile.empty()) {
-		log = new std::ofstream(logfile, std::ofstream::out);
+		log = new std::ofstream(logfile.c_str(), std::ofstream::out);
 	} else {
 		log = new mexostream();
 	}

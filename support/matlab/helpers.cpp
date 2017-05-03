@@ -3,6 +3,8 @@
 
 #include "helpers.h"
 
+using namespace std;
+
 string get_string(const mxArray *arg) {
 
     if (mxGetM(arg) != 1) {
