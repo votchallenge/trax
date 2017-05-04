@@ -29,10 +29,18 @@ ELSE ()
     # Only build test executable on Unix systems / used only for development
 ENDIF ()
 
-IF(MSVC)
-  ADD_DEFINITIONS(/MP) # Build with multiple processes
-  ADD_DEFINITIONS(/wd4244 /wd4267 /wd4018 /wd4355 /wd4800 /wd4251 /wd4996 /wd4146 /wd4305) # Ignore some of the warnings
-ENDIF()
+if(MSVC)
+    ADD_DEFINITIONS(/MP) # Build with multiple processes
+    ADD_DEFINITIONS(/wd4244 /wd4267 /wd4018 /wd4355 /wd4800 /wd4251 /wd4996 /wd4146 /wd4305) # Ignore some of the warnings
+elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
+    SET (BUILD_DEBUG FALSE CACHE BOOL "Build in debug mode (with tests)")
+    IF (BUILD_DEBUG)
+        SET_TARGET_PROPERTIES(trax PROPERTIES COMPILE_FLAGS "-finstrument-functions")
+        SET_TARGET_PROPERTIES(traxstatic PROPERTIES COMPILE_FLAGS "-finstrument-functions")
+        ADD_SUBDIRECTORY(lib/tests)
+    ENDIF ()
+endif()
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -49,15 +57,6 @@ ADD_LIBRARY(traxstatic STATIC ${TRAX_SOURCE})
 
 SET_TARGET_PROPERTIES(trax PROPERTIES VERSION ${BUILD_VERSION} SOVERSION 0)
 TARGET_COMPILE_OPTIONS(traxstatic PUBLIC -DTRAX_STATIC_DEFINE)
-
-IF (CMAKE_COMPILER_IS_GNUCXX)
-    SET (BUILD_DEBUG FALSE CACHE BOOL "Build in debug mode (with tests)")
-    IF (BUILD_DEBUG)
-        SET_TARGET_PROPERTIES(trax PROPERTIES COMPILE_FLAGS "-finstrument-functions")
-        SET_TARGET_PROPERTIES(traxstatic PROPERTIES COMPILE_FLAGS "-finstrument-functions")
-        ADD_SUBDIRECTORY(lib/tests)
-    ENDIF ()
-ENDIF ()
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/src)
 SET_TARGET_PROPERTIES(traxstatic PROPERTIES POSITION_INDEPENDENT_CODE 1)

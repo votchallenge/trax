@@ -194,7 +194,7 @@ private:
 };
 
 class Synchronized {
-	friend Lock;
+friend class Lock;
 public:
 
 	Synchronized();

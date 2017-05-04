@@ -536,9 +536,9 @@ class Client;
 class Server;
 
 class __TRAX_EXPORT Metadata : public Wrapper {
-friend Handle;
-friend Client;
-friend Server;
+friend class Handle;
+friend class Client;
+friend class Server;
 public:
 
     Metadata();
