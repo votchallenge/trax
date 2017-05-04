@@ -68,8 +68,7 @@ typedef struct status {
 	Region region;
 	double time;
 	Properties properties;
-	mxArray* tracker;
-	mxArray* formats;
+	Metadata metadata;
 } status;
 
 typedef struct command {
@@ -168,16 +167,39 @@ void struct_to_env(const mxArray * input, map<string, string>& env) {
 
 command call_callback(const mxArray *callback, status& s, const mxArray* data) {
 
-	mxArray *lhs[4], *rhs[3];
+	mxArray *lhs[4], *rhs[3], *tracker_meta, *formats, *st;
 
-	const char* fieldnames[] = {"region", "time", "properties", "tracker", "formats"};
-	mxArray * st = mxCreateStructMatrix(1, 1, 5, (const char **) fieldnames);
+	{
 
-	mxSetFieldByNumber(st, 0, 0, region_to_array(s.region));
-	mxSetFieldByNumber(st, 0, 1, mxCreateDoubleScalar(s.time));
-	mxSetFieldByNumber(st, 0, 2, parameters_to_struct(s.properties));
-	mxSetFieldByNumber(st, 0, 3, s.tracker);
-	mxSetFieldByNumber(st, 0, 4, s.formats);
+		const char* fieldnames[] = {"name", "description", "family"};
+		tracker_meta = mxCreateStructMatrix(1, 1, 3, (const char **) fieldnames);
+
+		mxSetFieldByNumber(tracker_meta, 0, 0, set_string(s.metadata.tracker_name().c_str()));
+		mxSetFieldByNumber(tracker_meta, 0, 1, set_string(s.metadata.tracker_description().c_str()));
+		mxSetFieldByNumber(tracker_meta, 0, 2, set_string(s.metadata.tracker_family().c_str()));
+
+	}
+
+	{
+
+		const char* fieldnames[] = {"region", "image"};
+		formats = mxCreateStructMatrix(1, 1, 2, (const char **) fieldnames);
+
+		mxSetFieldByNumber(formats, 0, 0, decode_region(s.metadata.region_formats()));
+		mxSetFieldByNumber(formats, 0, 1, decode_image(s.metadata.image_formats()));
+
+	}
+
+	{
+		const char* fieldnames[] = {"region", "time", "properties", "tracker", "formats"};
+		st = mxCreateStructMatrix(1, 1, 5, (const char **) fieldnames);
+
+		mxSetFieldByNumber(st, 0, 0, region_to_array(s.region));
+		mxSetFieldByNumber(st, 0, 1, mxCreateDoubleScalar(s.time));
+		mxSetFieldByNumber(st, 0, 2, parameters_to_struct(s.properties));
+		mxSetFieldByNumber(st, 0, 3, tracker_meta);
+		mxSetFieldByNumber(st, 0, 4, formats);
+	}
 
 	rhs[0] = const_cast<mxArray *>(callback);
 	rhs[1] = const_cast<mxArray *>(st);
@@ -274,28 +296,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 		status st;
 
-		Metadata metadata = tracker.metadata();
-
-		{
-
-		const char* fieldnames[] = {"name", "description", "family"};
-		st.tracker = mxCreateStructMatrix(1, 1, 3, (const char **) fieldnames);
-
-		mxSetFieldByNumber(st.tracker, 0, 0, set_string(metadata.tracker_name().c_str()));
-		mxSetFieldByNumber(st.tracker, 0, 1, set_string(metadata.tracker_description().c_str()));
-		mxSetFieldByNumber(st.tracker, 0, 2, set_string(metadata.tracker_family().c_str()));
-
-		}
-
-		{
-
-		const char* fieldnames[] = {"region", "image"};
-		st.formats = mxCreateStructMatrix(1, 1, 2, (const char **) fieldnames);
-
-		mxSetFieldByNumber(st.formats, 0, 0, decode_region(metadata.region_formats()));
-		mxSetFieldByNumber(st.formats, 0, 1, decode_image(metadata.image_formats()));
-
-		}
+		st.metadata = tracker.metadata();
 
 		st.time = 0;
 

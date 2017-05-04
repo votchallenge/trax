@@ -541,6 +541,8 @@ friend Client;
 friend Server;
 public:
 
+    Metadata();
+
     Metadata(const Metadata& original);
 
     Metadata(int region_formats, int image_formats, std::string tracker_name = std::string(),
@@ -558,6 +560,8 @@ public:
 
     std::string tracker_family() const;
 
+    Metadata& operator=(Metadata p) throw();
+
 protected:
 
     Metadata(trax_metadata* metadata);
@@ -567,8 +571,6 @@ protected:
     void wrap(trax_metadata* obj);
 
 private:
-
-    Metadata& operator=(Metadata p) throw();
 
     trax_metadata* metadata;
 

@@ -98,6 +98,11 @@ void Wrapper::release() {
 	}
 }
 
+Metadata::Metadata() {
+
+	wrap(trax_metadata_create(0, 0, NULL, NULL, NULL));
+}
+
 Metadata::Metadata(const Metadata& original) : Wrapper(original) {
 	if (original.metadata) acquire();
 	metadata = original.metadata;
