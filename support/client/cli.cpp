@@ -505,7 +505,7 @@ int main( int argc, char** argv) {
 
                 for (; frame < images.size(); frame++) {
                     if (!initialization[frame].empty()) break;
-                    DEBUGMSG("Skipping frame %ld, no initialization data. \n", frame);
+                    DEBUGMSG("Skipping frame %d, no initialization data. \n", (int) frame);
                     output.push_back(Region::create_special(0));
                 }
 

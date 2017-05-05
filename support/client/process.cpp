@@ -180,7 +180,7 @@ Process::~Process() {
 
 bool Process::start() {
 
-    SYNCHRONIZED {
+    OBJECT_SYNCHRONIZE {
 
         if (running) return false;
 
@@ -389,7 +389,7 @@ bool Process::start() {
 
 bool Process::stop(bool docleanup, bool force) {
 
-    SYNCHRONIZED {
+    OBJECT_SYNCHRONIZE {
 
         bool result = true;
 
@@ -403,14 +403,14 @@ bool Process::stop(bool docleanup, bool force) {
 
             } else {
 
-                DWORD dwWindowProcessID = piProcInfo.dwProcessID;
+                DWORD dwProcessID = piProcInfo.dwProcessId;
 
                 for (HWND hwnd = GetTopWindow(NULL); hwnd; hwnd = ::GetNextWindow(hwnd, GW_HWNDNEXT))
                 {
                     DWORD dwWindowProcessID;
                     DWORD dwThreadID = ::GetWindowThreadProcessId(hwnd, &dwWindowProcessID);
                     if (dwWindowProcessID == dwProcessID)
-                        VERIFY(PostThreadMessage(dwThreadID, WM_QUIT, 0, 0));
+                        PostThreadMessage(dwThreadID, WM_QUIT, 0, 0);
                 }
     
             }
@@ -434,7 +434,7 @@ bool Process::stop(bool docleanup, bool force) {
 //GetExitCodeProcess
 void Process::cleanup() {
 
-    SYNCHRONIZED {
+    OBJECT_SYNCHRONIZE {
 
 #ifdef WIN32
 
@@ -475,7 +475,7 @@ void Process::cleanup() {
 
 int Process::get_input() {
 
-    SYNCHRONIZED {
+    OBJECT_SYNCHRONIZE {
 
         if (running) return p_stdin;
 
@@ -487,7 +487,7 @@ int Process::get_input() {
 
 int Process::get_output() {
 
-    SYNCHRONIZED {
+    OBJECT_SYNCHRONIZE {
 
         if (running) return p_stdout;
 
@@ -498,7 +498,7 @@ int Process::get_output() {
 
 int Process::get_error() {
 
-    SYNCHRONIZED {
+    OBJECT_SYNCHRONIZE {
 
         if (!running) return p_stderr;
 
@@ -509,7 +509,7 @@ int Process::get_error() {
 
 bool Process::is_alive(int *status) {
 
-    SYNCHRONIZED {
+    OBJECT_SYNCHRONIZE {
 
         if (status) *status = 0;
 
@@ -559,7 +559,7 @@ bool Process::is_alive(int *status) {
 
 int Process::get_handle() {
 
-    SYNCHRONIZED {
+    OBJECT_SYNCHRONIZE {
 
         if (!running) return 0;
 

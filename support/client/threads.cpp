@@ -1,7 +1,7 @@
 
 #include "threads.h"
 
-#ifdef WIN32
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 
 int simple_threads_cond_wait(THREAD h, HANDLE m, long milisec) {
 	if (milisec < 0)

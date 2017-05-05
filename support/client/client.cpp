@@ -571,7 +571,7 @@ public:
 
 			if (flush) {
 
-				SYNCHRONIZE(state->logger_mutex) {
+				MUTEX_SYNCHRONIZE(state->logger_mutex) {
 
 					line_buffer_flush(state->stderr_buffer, state->verbosity != VERBOSITY_SILENT ? state->logger_stream : NULL);
 
@@ -595,7 +595,7 @@ public:
 
 		if (!string) {
 
-			SYNCHRONIZE(state->logger_mutex) {
+			MUTEX_SYNCHRONIZE(state->logger_mutex) {
 
 				line_buffer_flush(state->stdout_buffer, state->logger_stream);
 
@@ -607,7 +607,7 @@ public:
 
 				if (line_buffer_push(state->stdout_buffer, string[i], state->line_truncate)) {
 
-					SYNCHRONIZE(state->logger_mutex) {
+					MUTEX_SYNCHRONIZE(state->logger_mutex) {
 
 						line_buffer_flush(state->stdout_buffer, state->logger_stream);
 

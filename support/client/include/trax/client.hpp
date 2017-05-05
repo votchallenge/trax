@@ -6,7 +6,7 @@
 #include <vector>
 #include <trax.h>
 
-#ifdef TRAX_CLIENT_STATIC_DEFINE
+#ifdef TRAX_STATIC_DEFINE
 #  define __TRAX_CLIENT_EXPORT
 #else
 #  ifndef __TRAX_CLIENT_EXPORT

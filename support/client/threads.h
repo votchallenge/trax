@@ -126,7 +126,7 @@ protected:
 private:
 
 	Mutex& operator=(Mutex& p) throw();
-    const Mutex& operator=(const Mutex&);
+    //const Mutex& operator=(const Mutex&);
 
 };
 
@@ -142,7 +142,7 @@ public:
 private:
 
 	RecursiveMutex& operator=(RecursiveMutex& p) throw();
-    const RecursiveMutex& operator=(const RecursiveMutex&);
+    //const RecursiveMutex& operator=(const RecursiveMutex&);
 
 };
 
@@ -165,7 +165,7 @@ public:
 private:
 
 	Lock& operator=(Lock& p) throw();
-	const Lock& operator=(const Lock&);
+	//const Lock& operator=(const Lock&);
 
 	Mutex& mutex;
 
@@ -206,9 +206,9 @@ protected:
 
 };
 
-#define SYNCHRONIZED for(Lock M##_lock(object_mutex); M##_lock; M##_lock.unlock())
+#define OBJECT_SYNCHRONIZE for(Lock M##_lock(object_mutex); M##_lock; M##_lock.unlock())
 
-#define SYNCHRONIZE(mutex) for(Lock M##_lock(mutex); M##_lock; M##_lock.unlock())
+#define MUTEX_SYNCHRONIZE(mutex) for(Lock M##_lock(mutex); M##_lock; M##_lock.unlock())
 
 
 #endif
