@@ -212,6 +212,11 @@ public:
 		command(command), environment(environment), socket_id(-1), socket_port(TRAX_DEFAULT_PORT),
 		connection(connection), verbosity(verbosity), timeout(timeout) {
 
+		if (log)
+			logger_stream = log;
+		else
+			logger_stream = &cout;
+
 		if (connection == CONNECTION_SOCKETS) {
 			// Try to create a listening socket by looking for a free port number.
 			while (true) {
@@ -222,14 +227,9 @@ public:
 				} else break;
 			}
 
-			print_debug("Socket opened successfully on port %d.\n", socket_port);
+			print_debug("Socket opened successfully on port %d.", socket_port);
 
 		}
-
-		if (log)
-			logger_stream = log;
-		else
-			logger_stream = &cout;
 
 		client = NULL;
 		process = NULL;
@@ -246,6 +246,8 @@ public:
 
 	~State() {
 
+		print_debug("Cleaning up.");
+
 		watchdog_active = false;
 		logger_active = false;
 
@@ -254,9 +256,8 @@ public:
 		RELEASE_THREAD(watchdog_thread);
 		RELEASE_THREAD(logger_thread);
 
-		print_debug("Cleaning up.\n");
-
 		if (connection == CONNECTION_SOCKETS) {
+			print_debug("Closing server socket.");
 			destroy_server_socket(socket_id);
 		}
 
@@ -271,7 +272,7 @@ public:
 
 		if (process_running()) return false;
 
-		print_debug("Starting process %s\n", command.c_str());
+		print_debug("Starting process %s", command.c_str());
 
 		process_state_mutex.acquire();
 		process = new Process(command, connection == CONNECTION_EXPLICIT);
@@ -297,7 +298,7 @@ public:
 		started = process->start();
 
 		if (!started) {
-			print_debug("Unable to start process\n");
+			print_debug("Unable to start process");
 			throw new std::runtime_error("Unable to start the tracker process");
 		} else {
 
@@ -309,10 +310,10 @@ public:
 				logger = Logging(client_logger, this, 0);
 
 			if (connection == CONNECTION_SOCKETS) {
-				print_debug("Setting up TraX with TCP socket connection\n");
+				print_debug("Setting up TraX with TCP socket connection");
 				client = new Client(socket_id, logger, timeout);
 			} else {
-				print_debug("Setting up TraX with %s streams connection\n", (connection == CONNECTION_EXPLICIT) ? "dedicated" : "standard");
+				print_debug("Setting up TraX with %s streams connection", (connection == CONNECTION_EXPLICIT) ? "dedicated" : "standard");
 				client = new Client(process->get_output(), process->get_input(), logger);
 			}
 			// TODO: check tracker exit state
@@ -322,14 +323,14 @@ public:
 
 			stop_watchdog();
 
-			print_debug("Tracker process ID: %d \n", process->get_handle());
+			print_debug("Tracker process ID: %d", process->get_handle());
 			int server_version = 0;
 
 			client->get_parameter(TRAX_PARAMETER_VERSION, &server_version);
 
 			if (server_version > TRAX_VERSION) throw std::runtime_error("Unsupported protocol version");
 
-			print_debug("Connection with tracker established.\n");
+			print_debug("Connection with tracker established.");
 
 			return true;
 
@@ -358,7 +359,7 @@ public:
 		if (process) {
 			int exit_status;
 
-			print_debug("Stopping.\n");
+			print_debug("Stopping.");
 
 			process->stop(false);
 			flush_streams();
@@ -372,10 +373,10 @@ public:
 			reset_logger();
 
 			if (exit_status == 0) {
-				print_debug("Tracker exited normally.\n");
+				print_debug("Tracker exited normally.");
 				return true;
 			} else {
-				print_debug("Tracker exited (exit code %d)\n", exit_status);
+				print_debug("Tracker exited (exit code %d)", exit_status);
 				return false;
 			}
 		}
@@ -433,14 +434,37 @@ public:
 	}
 
 	void print_debug(const char *format, ...) {
-		if (verbosity != VERBOSITY_DEBUG)
+		if (verbosity != VERBOSITY_DEBUG || !logger_stream)
 			return;
 
 		va_list args;
 		va_start(args, format);
 
-		printf("CLIENT: ");
-		vprintf(format, args);
+		int size = 1024;
+		char* buffer = NULL;
+
+#ifdef _MSC_VER
+
+		size = _vscprintf(format, args) + 1;
+		buffer = (char*) malloc(sizeof(char) * size);
+		_vsnprintf_s(buffer, size, _TRUNCATE, format, args);
+
+#else
+
+		buffer = (char*) malloc(sizeof(char) * size);
+
+		int required = vsnprintf(buffer, size, format, args) + 1;
+		if (required >= size) {
+			size = required;
+			buffer = (char*) realloc(buffer, sizeof(char) * size);
+			required = vsnprintf(buffer, size, format, args);
+		} 
+#endif
+		buffer[size-1] = 0;
+
+		*logger_stream << "CLIENT: " << buffer << std::endl;
+
+		free(buffer);
 
 		va_end(args);
 	}
@@ -466,7 +490,7 @@ public:
 			}
 
 			if (terminate) {
-				state->print_debug("Termination requested externally ...\n");
+				state->print_debug("Termination requested externally ...");
 				state->stop_process();
 			}
 
@@ -475,7 +499,7 @@ public:
 				state->watchdog_timeout--;
 
 				if (state->watchdog_timeout == 0) {
-					state->print_debug("Timeout reached. Stopping tracker process ...\n");
+					state->print_debug("Timeout reached. Stopping tracker process ...");
 					state->stop_process();
 				}
 
@@ -485,7 +509,7 @@ public:
 
 		}
 
-		state->print_debug("Stopping watchdog thread\n");
+		state->print_debug("Stopping watchdog thread");
 
 		return 0;
 
@@ -549,7 +573,7 @@ public:
 
 		}
 
-		state->print_debug("Stopping logger thread\n");
+		state->print_debug("Stopping logger thread");
 
 		return 0;
 
@@ -740,7 +764,7 @@ bool TrackerProcess::tracking() {
 
 bool TrackerProcess::reset() {
 
-	state->print_debug("Resetting program.\n");
+	state->print_debug("Resetting program.");
 
 	state->stop_process();
 	return state->start_process();
