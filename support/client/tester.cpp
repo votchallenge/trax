@@ -229,6 +229,8 @@ int main(int argc, char** argv) {
 
         TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
 
+        tracker.query();
+
         Image image;
 
         int image_formats = tracker.metadata().image_formats();
