@@ -500,12 +500,12 @@ int main( int argc, char** argv) {
 
             tracker.query();
 
-            int frame = 0;
+            size_t frame = 0;
             while (frame < images.size()) {
 
                 for (; frame < images.size(); frame++) {
                     if (!initialization[frame].empty()) break;
-                    DEBUGMSG("Skipping frame %d, no initialization data. \n", frame);
+                    DEBUGMSG("Skipping frame %ld, no initialization data. \n", frame);
                     output.push_back(Region::create_special(0));
                 }
 
@@ -609,7 +609,7 @@ int main( int argc, char** argv) {
 
                     if (reinitialize > 0) {
                         // If reinitialization is specified after 1 or more frames ...
-                        int j = frame + 1;
+                        size_t j = frame + 1;
                         output.push_back(Region::create_special(2));
                         timings.push_back(0);
                         for (; j < frame + reinitialize && j < images.size(); j++) {
@@ -625,7 +625,7 @@ int main( int argc, char** argv) {
 
                     } else {
                         // ... otherwise just fill the remaining part of sequence with empty frames.
-                        int j = frame + 1;
+                        size_t j = frame + 1;
                         output.push_back(Region::create_special(2));
                         timings.push_back(0);
                         for (; j < images.size(); j++) {

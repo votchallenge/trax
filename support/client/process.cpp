@@ -142,7 +142,7 @@ char** parse_command(const char* command) {
 }
 
 
-Process::Process(string command, bool explicit_mode) : explicit_mode(explicit_mode), running(false) {
+Process::Process(string command, bool explicit_mode) : running(false), explicit_mode(explicit_mode) {
 
 #ifdef WIN32
     piProcInfo.hProcess = 0;
@@ -384,6 +384,7 @@ bool Process::start() {
 
     }
 
+    return false;
 }
 
 bool Process::stop(bool docleanup) {
@@ -411,6 +412,8 @@ bool Process::stop(bool docleanup) {
         return result;
 
     }
+
+    return false;
 }
 //GetExitCodeProcess
 void Process::cleanup() {
@@ -458,11 +461,11 @@ int Process::get_input() {
 
     SYNCHRONIZED {
 
-        if (!running) return -1;
-
-        return p_stdin;
+        if (running) return p_stdin;
 
     }
+
+    return -1;
 
 }
 
@@ -470,24 +473,22 @@ int Process::get_output() {
 
     SYNCHRONIZED {
 
-        if (!running) return -1;
-
-        return p_stdout;
+        if (running) return p_stdout;
 
     }
 
+    return -1;
 }
 
 int Process::get_error() {
 
     SYNCHRONIZED {
 
-        if (!running) return -1;
-
-        return p_stderr;
+        if (!running) return p_stderr;
 
     }
 
+    return -1;
 }
 
 bool Process::is_alive(int *status) {
@@ -537,6 +538,7 @@ bool Process::is_alive(int *status) {
 
     }
 
+    return false;
 }
 
 int Process::get_handle() {
@@ -552,6 +554,8 @@ int Process::get_handle() {
 #endif
 
     }
+
+    return 0;
 
 }
 

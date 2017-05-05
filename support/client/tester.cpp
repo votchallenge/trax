@@ -278,8 +278,6 @@ int main(int argc, char** argv) {
 
             initializations++;
 
-            bool initialized = true;
-
             frame = 0;
 
             while (frame < 20) {
@@ -293,7 +291,6 @@ int main(int argc, char** argv) {
                     // Default option, the tracker returns a valid status.
 
                     Region storage;
-                    initialized = false;
 
                 } else {
                     if (tracker.ready()) {

@@ -211,9 +211,7 @@ int main(int argc, char** argv) {
     int result = 0;
     ConnectionMode connection = CONNECTION_DEFAULT;
     VerbosityMode verbosity = VERBOSITY_DEFAULT;
-    float threshold = -1;
     int timeout = 30;
-    int reinitialize = 0;
 
     string timing_file;
     string tracker_command;
@@ -292,8 +290,6 @@ int main(int argc, char** argv) {
 
         DEBUGMSG("Sequence length: %d frames.\n", video_length);
 
-        int realtime_delta = (int) 1000.0 / reader.get(CV_CAP_PROP_FPS);
-
         TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
 
         int frame = 0;
@@ -318,10 +314,6 @@ int main(int argc, char** argv) {
 
             Image image = convert_image(cvimage, metadata.image_formats());
 
-            // Start timing a frame
-            clock_t timing_toc;
-            clock_t timing_tic = clock();
-
             if (!tracker.initialize(image, initialization_region, properties)) {
                 throw std::runtime_error("Unable to initialize tracker.");
             }
@@ -330,8 +322,6 @@ int main(int argc, char** argv) {
             imshow(WINDOW_NAME, cvimage);
             waitKey(25);
 
-            bool initialized = true;
-
             while (frame < video_length) {
                 // Repeat while tracking the target.
                 Region status;
@@ -339,14 +329,10 @@ int main(int argc, char** argv) {
 
                 bool result = tracker.wait(status, additional);
 
-                // Stop timing a frame
-                timing_toc = clock();
-
                 if (result) {
                     // Default option, the tracker returns a valid status.
 
                     Region storage;
-                    initialized = false;
 
                 } else {
                     if (tracker.ready()) {
@@ -371,9 +357,6 @@ int main(int argc, char** argv) {
                 }
 
                 image = convert_image(cvimage, metadata.image_formats());
-
-                // Start timing a frame
-                timing_tic = clock();
 
                 Properties no_properties;
                 if (!tracker.frame(image, no_properties))
