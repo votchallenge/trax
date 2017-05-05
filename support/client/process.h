@@ -7,7 +7,7 @@
 #include <string.h>
 #include <string>
 
-#ifdef WIN32
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 
 #include <windows.h>
 #include <io.h>

@@ -2,7 +2,7 @@
 #ifndef SIMPLE_THREADS
 #define SIMPLE_THREADS
 
-#ifdef WIN32
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <windows.h>
 #include <process.h>
 #else
@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#ifdef WIN32
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 
 #define CREATE_THREAD(T, R, P) simple_threads_create_thread(&T, R, P)
 #define RELEASE_THREAD(T) simple_threads_release_thread(T)
