@@ -62,7 +62,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         }
 
-        Metadata metadata(get_flags(prhs[2], get_image_code), get_flags(prhs[1], get_region_code),
+        int region_formats = get_flags(prhs[1], get_region_code);
+        int image_formats = get_flags(prhs[2], get_image_code);
+
+        Metadata metadata(region_formats, image_formats,
             tracker_name, tracker_description, tracker_family);
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
@@ -107,7 +110,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int tr = handle->wait(img, reg, prop);
 
         if (tr == TRAX_INITIALIZE) {
-
             if (nlhs > 0) plhs[0] = image_to_array(img);
             if (nlhs > 1) plhs[1] = region_to_array(reg);
             if (nlhs > 2) plhs[2] = (propstruct) ? parameters_to_struct(prop) : parameters_to_cell(prop);

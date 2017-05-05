@@ -99,19 +99,17 @@ public:
 	mexstream() {}
 
 protected:
-	virtual int_type overflow(int_type c)
-	{
+	virtual int_type overflow(int_type c) {
 	    if (c != EOF) {
 	      mexPrintf("%.1s",&c);
 	    }
 	    return 1;
 	}
 
-	virtual std::streamsize xsputn(const char* s, std::streamsize num)
-	{
+	virtual std::streamsize xsputn(const char* s, std::streamsize num) {
 		
 		mexPrintf("%.*s", num, s);
-		//fprintf(stderr, "%ld, %d \n", num, a);
+
 		return num;
 	}
 };

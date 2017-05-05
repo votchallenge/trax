@@ -264,12 +264,14 @@ mxArray* image_to_array(const Image& img) {
 
     switch (img.type()) {
     case TRAX_IMAGE_PATH: {
-        const char* cp = img.get_path().c_str();
+        std::string s = img.get_path();
+        const char* cp = s.c_str();
         val = mxCreateCharMatrixFromStrings(1, &cp);
         break;
     }
     case TRAX_IMAGE_URL: {
-        const char* cp = img.get_url().c_str();
+        std::string s = img.get_path();
+        const char* cp = s.c_str();
         val = mxCreateCharMatrixFromStrings(1, &cp);
         break;
     }
