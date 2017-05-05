@@ -98,8 +98,8 @@ int create_server_socket(int port) {
 		return -1;
 	}
 
-	int enable = 1;
-	if (setsockopt(sid, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
+	const int enable = 1;
+	if (setsockopt(sid, SOL_SOCKET, SO_REUSEADDR, (const char*) &enable, sizeof(int)) < 0) {
 	    perror("setsockopt");
 	    return -1;
 	}
