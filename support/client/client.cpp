@@ -217,7 +217,7 @@ class TrackerProcess::State : public Synchronized {
 public:
 	State(const string& command, const map<std::string, std::string> environment, ConnectionMode connection, VerbosityMode verbosity, int timeout, string directory, ostream *log):
 		command(command), environment(environment), socket_id(-1), socket_port(TRAX_DEFAULT_PORT),
-		connection(connection), verbosity(verbosity), timeout(timeout) {
+		connection(connection), verbosity(verbosity), timeout(timeout), directory(directory) {
 
 		if (log)
 			logger_stream = log;
@@ -283,7 +283,10 @@ public:
 
 		process_state_mutex.acquire();
 		process = new Process(command, connection == CONNECTION_EXPLICIT);
-		if (!directory.empty()) process->set_directory(directory);
+		if (!directory.empty()) {
+			print_debug("Working directory is %s", directory.c_str());
+			process->set_directory(directory);
+		} 
 		process_state_mutex.release();
 
 		process->copy_environment();
@@ -348,8 +351,6 @@ public:
 
 	bool stop_process() {
 
-		if (!process_running()) return false;
-
 		stop_watchdog();
 
 		sleep(0);
@@ -370,7 +371,7 @@ public:
 
 			process->stop(false);
 			flush_streams();
-			process->stop(true);
+			process->stop(true, true);
 
 			process->is_alive(&exit_status);
 
@@ -423,6 +424,8 @@ public:
 	}
 
 	void flush_streams() {
+
+		print_debug("Flushing streams");
 
 		char buffer[LOGGER_BUFFER_SIZE];
 

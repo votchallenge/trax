@@ -387,7 +387,7 @@ bool Process::start() {
     return false;
 }
 
-bool Process::stop(bool docleanup) {
+bool Process::stop(bool docleanup, bool force) {
 
     SYNCHRONIZED {
 
@@ -397,11 +397,27 @@ bool Process::stop(bool docleanup) {
 
 #ifdef WIN32
 
-            result = TerminateProcess(piProcInfo.hProcess, 0);
+            if (force) {
+
+                result = TerminateProcess(piProcInfo.hProcess, 0);
+
+            } else {
+
+                DWORD dwWindowProcessID = piProcInfo.dwProcessID;
+
+                for (HWND hwnd = GetTopWindow(NULL); hwnd; hwnd = ::GetNextWindow(hwnd, GW_HWNDNEXT))
+                {
+                    DWORD dwWindowProcessID;
+                    DWORD dwThreadID = ::GetWindowThreadProcessId(hwnd, &dwWindowProcessID);
+                    if (dwWindowProcessID == dwProcessID)
+                        VERIFY(PostThreadMessage(dwThreadID, WM_QUIT, 0, 0));
+                }
+    
+            }
 
 #else
 
-            kill(pid, SIGTERM);
+            kill(pid, force ? SIGKILL : SIGTERM);
 
 #endif
 

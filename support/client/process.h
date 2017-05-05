@@ -41,7 +41,7 @@ public:
     void copy_environment();
 
     bool start();
-    bool stop(bool cleanup = false);
+    bool stop(bool cleanup = false, bool force = false);
 
     int get_input();
     int get_output();
