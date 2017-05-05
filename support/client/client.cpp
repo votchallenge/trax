@@ -94,7 +94,14 @@ int create_server_socket(int port) {
 	initialize_sockets();
 
 	if ((sid = (int) socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+		perror("socket");
 		return -1;
+	}
+
+	int enable = 1;
+	if (setsockopt(sid, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
+	    perror("setsockopt");
+	    return -1;
 	}
 
 	memset(&sin, 0, sizeof(sin));
