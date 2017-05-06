@@ -266,6 +266,7 @@ bool Process::start() {
         // This structure specifies the STDIN and STDOUT handles for redirection.
         ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
         siStartInfo.cb = sizeof(STARTUPINFO);
+        siStartInfo.dwFlags |= STARTF_USESHOWWINDOW;
         if (!explicit_mode) {
             siStartInfo.hStdError = handle_ERR_Wr;
             siStartInfo.hStdOutput = handle_OUT_Wr;
@@ -285,7 +286,7 @@ bool Process::start() {
 
         LPCSTR curdir = directory.empty() ? NULL : directory.c_str();
 
-        if (!CreateProcess(NULL, (char *) cmdbuffer.str().c_str(), NULL, NULL, true, 0,
+        if (!CreateProcess(NULL, (char *) cmdbuffer.str().c_str(), NULL, NULL, true, CREATE_NO_WINDOW,
         (void *)envbuffer.str().c_str(),
         curdir, &siStartInfo, &piProcInfo )) {
 
