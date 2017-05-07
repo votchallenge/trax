@@ -370,10 +370,11 @@ public:
 			print_debug("Stopping.");
 
 			process->stop(false);
-			flush_streams();
-			process->stop(true, true);
 
 			process->is_alive(&exit_status);
+
+			flush_streams();
+			process->stop(true, true);
 
 			delete process;
 			process = NULL;

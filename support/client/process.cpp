@@ -173,9 +173,6 @@ Process::~Process() {
 
     delete [] arguments;
 
-    stop();
-
-
 }
 
 bool Process::start() {
@@ -419,6 +416,8 @@ bool Process::stop(bool docleanup, bool force) {
 #else
 
             kill(pid, force ? SIGKILL : SIGTERM);
+
+            is_alive();
 
 #endif
 
