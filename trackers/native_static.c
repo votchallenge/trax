@@ -39,15 +39,15 @@
 #include "trax.h"
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
-#  include <windows.h>
-void _sleep(float seconds) {
+#include <windows.h>
+void sleep_seconds(float seconds) {
 	Sleep((long) (seconds * 1000.0));
 }
 #else
 //#  ifndef _MAC_
 #include <unistd.h>
 //#  endif
-void _sleep(float seconds) {
+void sleep_seconds(float seconds) {
     usleep((long) (seconds * 1000000.0));
 }
 #endif
@@ -94,7 +94,7 @@ int main( int argc, char** argv)
             wait = trax_properties_get_float(prop, "wait", 0);
 
             // Artificial wait period that can be used for testing
-            if (wait > 0) _sleep(wait);
+            if (wait > 0) sleep_seconds(wait);
 
             if (mem) trax_region_release(&mem);
             mem = trax_region_clone(reg);
@@ -106,7 +106,7 @@ int main( int argc, char** argv)
         if (tr == TRAX_FRAME) {
 
             // Artificial wait period that can be used for testing
-            if (wait > 0) _sleep(wait);
+            if (wait > 0) sleep_seconds(wait);
 
             // Note that the tracker also has an option of sending additional data
             // back to the main program in a form of key-value pairs. We do not use
