@@ -5,7 +5,7 @@
  * The main function of this example is to show the developers how to modify
  * their trackers to work with the evaluation environment.
  *
- * Copyright (c) 2015, Luka Cehovin
+ * Copyright (c) 2017, Luka Cehovin
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <cstring>
+#include <stdarg.h>
 
 #include <stdexcept>
 #include <iostream>
@@ -152,17 +153,30 @@ else
 #define tester_header_only
 #include "tester_resources.c"
 
-#define CMD_OPTIONS "hdt:p:e:xX"
+ConnectionMode connection = CONNECTION_DEFAULT;
+VerbosityMode verbosity = VERBOSITY_DEFAULT;
 
-#define DEBUGMSG(...) if (verbosity == VERBOSITY_DEBUG) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
+void print_debug(const char *format, ...) {
+    if (verbosity != VERBOSITY_DEBUG)
+        return;
+
+    va_list args;
+    va_start(args, format);
+
+    fprintf(stdout, "CLIENT: ");
+    vfprintf(stdout, format, args);
+
+    va_end(args);
+}
+
+
+#define CMD_OPTIONS "hdt:p:e:xX"
 
 int main(int argc, char** argv) {
 
     int c;
     opterr = 0;
     int result = 0;
-    ConnectionMode connection = CONNECTION_DEFAULT;
-    VerbosityMode verbosity = VERBOSITY_SILENT;
     int timeout = 30;
 
     string tracker_command;
@@ -295,7 +309,7 @@ int main(int argc, char** argv) {
                 } else {
                     if (tracker.ready()) {
                         // The tracker has requested termination of connection.
-                        DEBUGMSG("Termination requested by tracker.\n");
+                        print_debug("Termination requested by tracker.\n");
                         break;
                     } else {
                         // In case of an error ...

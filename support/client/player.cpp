@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <fstream>
+#include <stdarg.h>
 #include <trax/client.hpp>
 #include <trax/opencv.hpp>
 #include <opencv2/core/core.hpp>
@@ -37,6 +38,22 @@ using namespace std;
 using namespace trax;
 
 #define WINDOW_NAME "TraX Player"
+
+ConnectionMode connection = CONNECTION_DEFAULT;
+VerbosityMode verbosity = VERBOSITY_DEFAULT;
+
+void print_debug(const char *format, ...) {
+    if (verbosity != VERBOSITY_DEBUG)
+        return;
+
+    va_list args;
+    va_start(args, format);
+
+    fprintf(stdout, "CLIENT: ");
+    vfprintf(stdout, format, args);
+
+    va_end(args);
+}
 
 Image convert_image(Mat& sensor, int formats) {
 
@@ -202,15 +219,11 @@ void print_help() {
     cout << "\n";
 }
 
-#define DEBUGMSG(...) if (verbosity == VERBOSITY_DEBUG) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
-
 int main(int argc, char** argv) {
 
     int c;
     opterr = 0;
     int result = 0;
-    ConnectionMode connection = CONNECTION_DEFAULT;
-    VerbosityMode verbosity = VERBOSITY_DEFAULT;
     int timeout = 30;
 
     string timing_file;
@@ -284,11 +297,11 @@ int main(int argc, char** argv) {
         VideoCapture reader(video_file);
         int video_length = reader.get(CV_CAP_PROP_FRAME_COUNT);
 
-        DEBUGMSG("Video will be loaded from file %s.\n", video_file.c_str());
+        print_debug("Video will be loaded from file %s.\n", video_file.c_str());
 
         namedWindow(WINDOW_NAME);
 
-        DEBUGMSG("Sequence length: %d frames.\n", video_length);
+        print_debug("Sequence length: %d frames.\n", video_length);
 
         TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
 
@@ -298,12 +311,12 @@ int main(int argc, char** argv) {
             Region initialization_region;
 
             if (!read_frame(reader, frame, cvimage)) {
-                DEBUGMSG("No data available. Stopping. \n");
+                print_debug("No data available. Stopping. \n");
                 break;
             }
             initialization_region = get_region_interactive(WINDOW_NAME, cvimage);
             if (!initialization_region.empty()) {
-                DEBUGMSG("Using interactive region: %s\n", ((string) initialization_region).c_str());
+                print_debug("Using interactive region: %s\n", ((string) initialization_region).c_str());
             } else break;
 
             if (!tracker.ready()) {
@@ -337,7 +350,7 @@ int main(int argc, char** argv) {
                 } else {
                     if (tracker.ready()) {
                         // The tracker has requested termination of connection.
-                        DEBUGMSG("Termination requested by tracker.\n");
+                        print_debug("Termination requested by tracker.\n");
                         break;
                     } else {
                         // In case of an error ...
@@ -352,7 +365,7 @@ int main(int argc, char** argv) {
                 frame++;
 
                 if (!read_frame(reader, frame, cvimage)) {
-                    DEBUGMSG("No more data available. Stopping. \n");
+                    print_debug("No more data available. Stopping. \n");
                     break;
                 }
 

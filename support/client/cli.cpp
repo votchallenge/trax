@@ -49,6 +49,7 @@
 #include <fstream>
 #include <sstream>
 #include <streambuf>
+#include <stdarg.h>
 
 #include <trax/client.hpp>
 
@@ -314,15 +315,27 @@ Image load_image(string& path, int formats) {
 
 }
 
-#define DEBUGMSG(...) if (verbosity == VERBOSITY_DEBUG) { fprintf(stdout, "CLIENT: "); fprintf(stdout, __VA_ARGS__); }
+ConnectionMode connection = CONNECTION_DEFAULT;
+VerbosityMode verbosity = VERBOSITY_DEFAULT;
+
+void print_debug(const char *format, ...) {
+    if (verbosity != VERBOSITY_DEBUG)
+        return;
+
+    va_list args;
+    va_start(args, format);
+
+    fprintf(stdout, "CLIENT: ");
+    vfprintf(stdout, format, args);
+
+    va_end(args);
+}
 
 int main( int argc, char** argv) {
     int c;
     int result = 0;
     bool overlap_bounded = false;
     bool query_mode = false;
-    ConnectionMode connection = CONNECTION_DEFAULT;
-    VerbosityMode verbosity = VERBOSITY_DEFAULT;
     opterr = 0;
     float threshold = -1;
     int timeout = 30;
@@ -426,7 +439,7 @@ int main( int argc, char** argv) {
             printf("TRAX_BOUNDED_OVERLAP: %s \n", getenv("TRAX_BOUNDED_OVERLAP"));
             overlap_bounded = strcmpi(getenv("TRAX_BOUNDED_OVERLAP"), "true") == 0;
             if (overlap_bounded)
-                DEBUGMSG("Using bounded region overlap calculation\n");
+                print_debug("Using bounded region overlap calculation\n");
         }
 
         if(getenv("TRAX_REGION_LEGACY")) {
@@ -435,13 +448,13 @@ int main( int argc, char** argv) {
                 region_set_flags(REGION_LEGACY_RASTERIZATION);
         }
 
-        DEBUGMSG("Tracker command: '%s'\n", tracker_command.c_str());
+        print_debug("Tracker command: '%s'\n", tracker_command.c_str());
 
         if (threshold >= 0)
-            DEBUGMSG("Failure overlap threshold: %.2f\n", threshold);
+            print_debug("Failure overlap threshold: %.2f\n", threshold);
 
         if (timeout >= 1)
-            DEBUGMSG("Timeout: %d\n", timeout);
+            print_debug("Timeout: %d\n", timeout);
 
         if (query_mode) {
             // Query mode: in query mode we only check if the client successfuly connects to the tracker and receives introduction message.
@@ -474,27 +487,27 @@ int main( int argc, char** argv) {
             load_images(images_file, images);
             load_trajectory(groundtruth_file, groundtruth);
 
-            DEBUGMSG("Images loaded from file %s.\n", images_file.c_str());
-            DEBUGMSG("Groundtruth loaded from file %s.\n", groundtruth_file.c_str());
+            print_debug("Images loaded from file %s.\n", images_file.c_str());
+            print_debug("Groundtruth loaded from file %s.\n", groundtruth_file.c_str());
 
             if (images.size() < groundtruth.size()) {
-                DEBUGMSG("Warning: Image sequence shorter that groundtruth. Truncating.");
+                print_debug("Warning: Image sequence shorter that groundtruth. Truncating.");
                 groundtruth = vector<Region>(groundtruth.begin(), groundtruth.begin() + images.size());
             }
 
             if (images.size() > groundtruth.size()) {
-                DEBUGMSG("Warning: Image sequence longer that groundtruth. Truncating.");
+                print_debug("Warning: Image sequence longer that groundtruth. Truncating.");
                 images = vector<string>(images.begin(), images.begin() + groundtruth.size());
             }
 
             if (!initialization_file.empty()) {
                 load_trajectory(initialization_file, initialization);
-                DEBUGMSG("Initialization loaded from file %s.\n", initialization_file.c_str());
+                print_debug("Initialization loaded from file %s.\n", initialization_file.c_str());
             } else {
                 initialization = vector<Region>(groundtruth.begin(), groundtruth.end());
             }
 
-            DEBUGMSG("Sequence length: %d frames.\n", (int) images.size());
+            print_debug("Sequence length: %d frames.\n", (int) images.size());
 
             TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
 
@@ -505,7 +518,7 @@ int main( int argc, char** argv) {
 
                 for (; frame < images.size(); frame++) {
                     if (!initialization[frame].empty()) break;
-                    DEBUGMSG("Skipping frame %d, no initialization data. \n", (int) frame);
+                    print_debug("Skipping frame %d, no initialization data. \n", (int) frame);
                     output.push_back(Region::create_special(0));
                 }
 
@@ -515,7 +528,7 @@ int main( int argc, char** argv) {
                     throw std::runtime_error("Tracker process not alive anymore.");
                 }
 
-                DEBUGMSG("Loading initialization image: %s\n", images[frame].c_str());
+                print_debug("Loading initialization image: %s\n", images[frame].c_str());
 
                 Metadata metadata = tracker.metadata();
 
@@ -553,13 +566,13 @@ int main( int argc, char** argv) {
 
                         if (overlap_bounded) {
                             image_size is = image_get_size(image);
-                            DEBUGMSG("Bounds for overlap calculation %dx%d\n", is.width, is.height);
+                            print_debug("Bounds for overlap calculation %dx%d\n", is.width, is.height);
                             bounds = Bounds(0, 0, is.width, is.height);
                         }
 
                         float overlap = reference.overlap(status, bounds);
 
-                        DEBUGMSG("Region overlap: %.2f\n", overlap);
+                        print_debug("Region overlap: %.2f\n", overlap);
 
                         // Check the failure criterion.
                         if (threshold >= 0 && overlap <= threshold) {
@@ -580,7 +593,7 @@ int main( int argc, char** argv) {
                     } else {
                         if (tracker.ready()) {
                             // The tracker has requested termination of connection.
-                            DEBUGMSG("Termination requested by tracker.\n");
+                            print_debug("Termination requested by tracker.\n");
                             break;
                         } else {
                             // In case of an error ...
@@ -592,7 +605,7 @@ int main( int argc, char** argv) {
 
                     if (frame >= images.size()) break;
 
-                    DEBUGMSG("Loading image: %s\n", images[frame].c_str());
+                    print_debug("Loading image: %s\n", images[frame].c_str());
                     Image image = load_image(images[frame], metadata.image_formats());
 
                     // Start timing a frame
