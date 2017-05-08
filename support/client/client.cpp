@@ -576,7 +576,7 @@ public:
 
 				MUTEX_SYNCHRONIZE(state->logger_mutex) {
 
-					line_buffer_flush(state->stderr_buffer, state->verbosity != VERBOSITY_SILENT ? state->logger_stream : NULL);
+					line_buffer_flush(state->stderr_buffer, (state->verbosity != VERBOSITY_SILENT) ? state->logger_stream : NULL);
 
 				}
 

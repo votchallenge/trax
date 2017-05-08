@@ -255,7 +255,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 		for (int i = 2; i < std::floor((float)nrhs / 2) * 2; i += 2) {
 			switch (get_argument_code(get_string(prhs[i]))) {
-			case ARGUMENT_DEBUG: verbosity = (mxGetScalar(prhs[i + 1]) != 0) ? VERBOSITY_DEBUG : VERBOSITY_DEFAULT; break;
+			case ARGUMENT_DEBUG: verbosity = (mxGetScalar(prhs[i + 1]) != 0) ? VERBOSITY_DEBUG : VERBOSITY_SILENT; break;
 			case ARGUMENT_TIMEOUT: timeout = (int) mxGetScalar(prhs[i + 1]); break;
 			case ARGUMENT_CONNECTION: connection = get_connection_mode(get_string(prhs[i + 1])); break;
 			case ARGUMENT_ENVIRONMENT: struct_to_env(prhs[i + 1], environment); break;

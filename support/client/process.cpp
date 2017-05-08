@@ -238,7 +238,6 @@ bool Process::start() {
 
 
         STARTUPINFO siStartInfo;
-        BOOL bSuccess = FALSE;
 
         // Set up members of the PROCESS_INFORMATION structure.
 
