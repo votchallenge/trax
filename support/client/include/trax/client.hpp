@@ -78,6 +78,9 @@ void __TRAX_CLIENT_EXPORT save_trajectory(const std::string& file, std::vector<R
 
 typedef unsigned long long timer_state;
 
+// Can be called to initialize timer (also called in the TrackerProcess constructor)
+void __TRAX_CLIENT_EXPORT timer_init();
+
 timer_state __TRAX_CLIENT_EXPORT timer_clock();
 
 double __TRAX_CLIENT_EXPORT timer_elapsed(timer_state begin);

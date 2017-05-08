@@ -219,6 +219,8 @@ public:
 		command(command), environment(environment), socket_id(-1), socket_port(TRAX_DEFAULT_PORT),
 		connection(connection), verbosity(verbosity), timeout(timeout), directory(directory) {
 
+		timer_init();
+
 		if (log)
 			logger_stream = log;
 		else
