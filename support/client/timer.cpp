@@ -4,7 +4,7 @@
 #define WINDOWS
 #include <windows.h>
 #else
-#ifdef _MAC_
+#ifdef __APPLE__
 #define OSX
 #include <mach/mach.h>
 #include <mach/mach_time.h>

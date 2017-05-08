@@ -40,6 +40,8 @@ extern "C" {
 #define MUTEX_UNLOCK(M) ReleaseMutex(M)
 #define MUTEX_INIT(M) (M = CreateMutex(NULL, FALSE, NULL))
 #define MUTEX_DESTROY(M) WaitForSingleObject(M, INFINITE); CloseHandle(M)
+#define THREAD_EQUALS(T1, T2) (T1 == T2)
+#define THREAD_NONE -1
 
 #define CONDITION_SIGNAL(C) SetEvent(C)
 #define CONDITION_DESTROY(C) CloseHandle(C)
@@ -77,6 +79,8 @@ typedef struct pthread_wrapper {
 #define MUTEX_UNLOCK(M) pthread_mutex_unlock(&M)
 #define MUTEX_INIT(M) pthread_mutex_init(&M, NULL)
 #define MUTEX_DESTROY(M) pthread_mutex_destroy(&M)
+#define THREAD_EQUALS(T1, T2) (T1 == T2 || (T1 && T2 && pthread_equal(T1, T2)))
+#define THREAD_NONE ((pthread_t) 0)
 
 #define CONDITION_SIGNAL(C) pthread_cond_signal(&C)
 #define CONDITION_DESTROY(C) pthread_cond_destroy(&C)

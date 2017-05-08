@@ -50,16 +50,16 @@ static void initialize_sockets(void) {
 
 #else
 
-#ifdef _MAC_
-    #include <tcpd.h>
-#else
-    #include <sys/socket.h>
-    #include <unistd.h>
-    #include <sys/select.h>
-    #include <arpa/inet.h>
-    #include <netinet/tcp.h>
-    #define closesocket close
-#endif
+//#ifdef __APPLE__
+//    #include <tcpd.h>
+//#else
+#include <sys/socket.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
+#define closesocket close
+//#endif
 
 #define __INLINE static inline
 

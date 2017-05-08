@@ -54,16 +54,16 @@ __inline void sleep(long time) {
 
 #else
 
-#ifdef _MAC_
-#include <tcpd.h>
-#else
+//#ifdef __APPLE__
+//    #include <tcpd.h>
+//#else
 #include <sys/socket.h>
 #include <unistd.h>
 #include <sys/select.h>
-#include <netdb.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #define closesocket close
-#endif
+//#endif
 
 void sleepf(float seconds) {
 	usleep((long) (seconds * 1000000.0));

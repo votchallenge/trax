@@ -108,7 +108,7 @@ void* simple_threads_join_thread(THREAD t) {
 Mutex::Mutex() {
 	MUTEX_INIT(mutex);
 
-	owner = -1;
+	owner = THREAD_NONE;
 
 	counter = 0;
 
@@ -126,7 +126,7 @@ void Mutex::acquire() {
 	} else {
 		THREAD_IDENTIFIER tid = THREAD_GET_IDENTIFIER();
 
-	    if (tid != owner) {
+	    if (!THREAD_EQUALS(tid, owner)) {
 	    	MUTEX_LOCK(mutex);
 	    	owner = tid;
 	    	counter = 0;
@@ -145,11 +145,11 @@ void Mutex::release() {
 
 		THREAD_IDENTIFIER tid = THREAD_GET_IDENTIFIER();
 
-		if (tid == owner) {
+		if (THREAD_EQUALS(tid, owner)) {
 			counter--;
 
 			if (counter < 1) {
-				owner = -1;
+				owner = THREAD_NONE;
 	    		MUTEX_UNLOCK(mutex);
 	    	}
 	    }
