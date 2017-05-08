@@ -148,7 +148,7 @@ void _param_names_enumerator(const char *key, const char *value, const void *obj
 
 	fieldnames[0] = (char*)mxMalloc(strlen(key)+1);
 
-	memcpy(fieldnames[0], key, sizeof(key));
+	memcpy(fieldnames[0], key, strlen(key)+1);
 
 	for (i = 1; i < strlen(key); i++) {
 		if (!isalnum(fieldnames[0][i]) || fieldnames[0][i] != '_')
