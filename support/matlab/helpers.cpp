@@ -67,8 +67,9 @@ Properties cell_to_parameters(const mxArray * input) {
     int length = mxGetM(input);
     int n = mxGetN(input);
 
-    if ( min(mxGetM(input), mxGetN(input)) != 1 )
-        mexErrMsgTxt("Array must be a vector");
+    if ( min(mxGetM(input), mxGetN(input)) != 1 ) {
+        MEX_ERROR("Array must be a vector");
+    }
 
 
     Properties prop;
@@ -145,11 +146,11 @@ void _param_names_enumerator(const char *key, const char *value, const void *obj
 	int i;
     char** fieldnames = (char **) obj;
 
-	fieldnames[0] = (char*)mxMalloc(sizeof(key));
+	fieldnames[0] = (char*)mxMalloc(strlen(key)+1);
 
 	memcpy(fieldnames[0], key, sizeof(key));
 
-	for (i = 1; i < sizeof(key); i++) {
+	for (i = 1; i < strlen(key); i++) {
 		if (!isalnum(fieldnames[0][i]) || fieldnames[0][i] != '_')
 			fieldnames[0][i] = '_';
 	}
@@ -375,7 +376,6 @@ mxArray* image_to_array(const Image& img) {
     }
 
     return val;
-
 }
 
 Image array_to_image(const mxArray* arr) {
@@ -456,7 +456,7 @@ Image array_to_image(const mxArray* arr) {
 	}
 
 	MEX_ERROR("Unable to determine image type");
-
+    return Image();
 }
 
 
@@ -509,6 +509,7 @@ int get_argument_code(string str) {
     }
 
     MEX_ERROR("Illegal argument name");
+    return 0;
 }
 
 int get_region_code(string str) {
@@ -528,6 +529,7 @@ int get_region_code(string str) {
     }
 
     MEX_ERROR("Illegal region type");
+    return TRAX_REGION_RECTANGLE;
 }
 
 int get_image_code(string str) {
@@ -551,6 +553,7 @@ int get_image_code(string str) {
     }
 
     MEX_ERROR("Illegal image type");
+    return TRAX_IMAGE_PATH;
 }
 
 int get_flags(const mxArray * input, code_parser parser) {

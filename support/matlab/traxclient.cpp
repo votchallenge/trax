@@ -7,6 +7,7 @@
 #include <fstream>
 #include <ostream>
 #include <cmath>
+#include <stdexcept>
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <io.h>
@@ -140,6 +141,8 @@ ConnectionMode get_connection_mode(string str) {
 	}
 
 	MEX_ERROR("Illegal connection type");
+
+	return CONNECTION_DEFAULT; // Avoiding clang warnings
 }
 
 void struct_to_env(const mxArray * input, map<string, string>& env) {
