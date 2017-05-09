@@ -3,8 +3,8 @@ language: cpp
 before_install:
 - if [ "$TRAVIS_OS_NAME" == "osx" ]; then /usr/bin/yes | pip uninstall numpy; fi
 - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew install opencv; fi
-- if [ "$TRAVIS_OS_NAME" == "linux" ]; sudo apt-get -qq update; fi
-- if [ "$TRAVIS_OS_NAME" == "linux" ]; sudo apt-get install -y libopencv-dev; fi
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get -qq update; fi
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -y libopencv-dev; fi
 before_script:
 - cd ${TRAVIS_BUILD_DIR} && export BUILD_VERSION="`cat VERSION`" BUILD_PLATFORM="$TRAVIS_OS_NAME"
 - cd ${TRAVIS_BUILD_DIR} && mkdir -p $INSTALL_DIR && mkdir -p build
