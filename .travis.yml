@@ -1,0 +1,30 @@
+dist: xenial
+language: cpp
+before_install:
+- if [ "$TRAVIS_OS_NAME" == "osx" ]; then /usr/bin/yes | pip uninstall numpy; fi
+- if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew install opencv; fi
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; sudo apt-get -qq update; fi
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; sudo apt-get install -y libopencv-dev; fi
+before_script:
+- cd ${TRAVIS_BUILD_DIR} && export BUILD_VERSION="`cat VERSION`" BUILD_PLATFORM="$TRAVIS_OS_NAME"
+- cd ${TRAVIS_BUILD_DIR} && mkdir -p $INSTALL_DIR && mkdir -p build
+- cd ${TRAVIS_BUILD_DIR}/build && cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DBUILD_CLIENT=ON -DBUILD_OPENCV=ON -DBUILD_PLATFORM=$BUILD_PLATFORM ..
+script: cd ${TRAVIS_BUILD_DIR}/build && make
+branches:
+  only:
+  - master
+env:
+  global:
+  - INSTALL_DIR=/tmp/install
+  - secure: DQUSl2A8KfuHEdRoZlxOgXF2nckROrN34eYn92G6y80+cgex4PzHtmsOveI9cxRQoBkyIt2Pi7Lht/FhavA84ctU0BSo4A3T+uWJZXT3tskg7Gvmd6IfiIxQxIslldbTsyF4ZUL2MQUa3nPI2ejWZ/ClvhumLYfSmbR8b9fUhFP2wQ4P8gJVEZgHPCUSW6LZx4rqwJvRmWkN7Tbh91YyN2/5D3rQggT69OwafyLab7qXkqcw96Fq38u8/nVI86+Z2LBynlOWgz1DTlLhLS3eIAjyWdnPLTVw7mN14d5CTf6A3L2QFlgPyYSHV511/3i7qROGyV8Q9xmWgbiarDH4rQp+7mYO7Inz8qtmwBAcNOtA9Zv4S5gNRQqBHelk/OSac+QOAZkUH008whCvYme1vC1E5lnaoqt/EoOFTeudbxSTujWs4E7EbXfzF0KPvC/EZxmSPAsXzwcJvVY3j9zFf69yb4984ao7oWvxZ3NLqnr6cO6mvOUQeIexy/zc1xHVkqA+qMZFJjHReVjTlUAVfqsxD6rbSppoNOkolAqTk7Xd2y3+3xpULQmtkk7d55OOTaZ6f78Ti7CeIDH4+GeXuc4D62ZGrSvh6cTe3qJm8gbhNVVgaTFVSLcipCunz8h8bG82sMPxdyP2YqWaXvPMZOHE5iebw+Y6egns863Fpks=
+  - secure: m4YO7XmusRZzaDVYayUK/NJLfg9p2gML1SqIzYpyxtw/QMVtC1uL9ESvUydeuTJu15xVonTF1xTRrjFaH7u6niGUIUHBvXs5dt+hgxueShRv7mqrZCtOpee9CeoV8BRlqP6E8n2wSa+vkJKBG67+sn5bbS+KEuTfXW6o2SO/E4/EAUl1I8OHyIKCXsYNeeBzT2qZ+T0zjNPf1oRKymsVWtwW3C9pgGQL/xWx5nDp9IZzQdNb3iqFs3S9hm6KlOiai3FC3B64OQkSG7/bDPdWPtYynPrBY5cx9JS27zBZcDmkzuVHNV+298au14E5acE1/dlXcTSS611fsdr527xrZy95yDrd+6GEdcOKFVMEKK+sHUIk7Vw1ZUAcijyYXY+FVxF78SUHDWU9JhxHK12DA2yyqDBmf8TFONh6gpA1X1YY/8ZGEhrl0C1TOZv7aCMQtkpQ8C+NuC5uoZu4kFu11rntWhUTunFW8flkv2KayqGUTfpDrd52s/M8DBG+5Rjp+XUFRdcG5LfutFkHsTw+D+xUNN9LqoWgSZ9UFfd9wlQJqHfx89MdsXgyfTyFFKCIY+AUDHTijXFwr983ADTP1KvJ2STSFRU7h15VLUgdQRA7dZpo2LyDXf7Q3kBsxyTzigRPCcNfAWL9H0VaErVTqh4fRvk8j+2cASdk0ApCoko=
+  - secure: d4/fIab8oyTYWBpJksvyVddpqo9Rbltf5KAnCsNpFEEklzXu0cOCvGBuWVAes7DqLQQUr7UNKE44dHHYvTYA+LX3N9wbU1Nh8Ux/GvdMIYhaXGNJLp+hSQJ52T/iwfhue9PDjsnxRJNWJjg4bmYnKn85Gok6yGFGKIWueUd8a8x9SyXCaaqVesuKcRoP+vMN35p30dTS5KiT+fFJMTmp/+oa5Ovogk8m5aw6dH4jPTXw4cvl1E6wQrjkFIaIIpRU3B7PAN7zD7rsPb2H/tc02knlGpRwWIgXjlEmrFGxnMa8KYCLm6O9t/wAWuz38fBDelTjUuLavlrUDy6/vjXe0ax/IZH8YgR5Dt0NjcTiMN+wJQMYxc3gbWrwWeNKfZ+hGmWg3+18Ffp62Xxh/8UedXxDgzngr8VJqGaaSkqzNATyU6nwPz4QRCjtYWAKgeGsonQ0tCLopjZ/dQ0+TKrXVEWBvcrzpy/wxwq1KrpQS9d/vx4jUv7gvhEOFogEHD4I+NsIyl38SkY31vS3tKHYygX/uRPSshl/md4liMIrHmvrjcTL5okVFY9eYDiAl+94WrKzFa6QqMUCO5GXtDBya40YjBCRHoUgkS3YpoCcFasMDUo/9jCCJ2qialoPzKXUDsgj1hBgK8mQ0fsfg8pSrzdt8y2QEHiBJ+6dhph+HrU=
+after_success:
+- cd $INSTALL_DIR && zip * /tmp/trax-$BUILD_VERSION-$BUILD_PLATFORM.zip
+- curl --ftp-create-dirs -T /tmp/trax-$BUILD_VERSION-$BUILD_PLATFORM.zip -u $FTP_USER:$FTP_PASSWORD $FTP_URL
+notifications:
+  email:
+    recipients:
+    - luka.cehovin@gmail.com
+    on_success: change
+    on_failure: always
