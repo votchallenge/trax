@@ -6,7 +6,7 @@ ADD_LIBRARY(trax_client_static STATIC client.cpp process.cpp threads.cpp timer.c
 TARGET_COMPILE_OPTIONS(trax_client_static PUBLIC -DTRAX_STATIC_DEFINE)
 TARGET_LINK_LIBRARIES(trax_client trax)
 INSTALL(FILES "include/trax/client.hpp" DESTINATION include/trax)
-SET_TARGET_PROPERTIES(trax_client PROPERTIES VERSION 0.0.0 SOVERSION 0)
+SET_TARGET_PROPERTIES(trax_client PROPERTIES VERSION ${BUILD_VERSION} SOVERSION 0)
 SET_TARGET_PROPERTIES(trax_client_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 ADD_EXECUTABLE(traxclient cli.cpp getopt.c)
