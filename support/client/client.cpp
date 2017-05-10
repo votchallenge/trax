@@ -369,17 +369,26 @@ public:
 		if (process) {
 			int exit_status;
 
-			print_debug("Stopping.");
+			print_debug("Trying to stop process nicely.");
 
 			process->stop(false);
-
-			process->is_alive(&exit_status);
-
 			flush_streams();
-			process->stop(true, true);
+
+			sleepf(0.01);
+
+			if (process->is_alive(&exit_status)) {
+				print_debug("Process termination.");
+				process->stop(true, true);
+				process->is_alive(&exit_status);
+				sleepf(0.01);
+			}
+
+			print_debug("Process should be terminated.");
 
 			delete process;
 			process = NULL;
+
+			print_debug("Stopping logger.");
 
 			reset_logger();
 
@@ -432,13 +441,15 @@ public:
 
 		char buffer[LOGGER_BUFFER_SIZE];
 
-		while (true) {
+		for (int i = 0; i < 10; i++) {
 
 			int read = read_stream(process->get_error(), buffer, LOGGER_BUFFER_SIZE);
 
 			if (read <= 0) break;
 
 			client_logger(buffer, read, this);
+
+			sleepf(0.05);
 
 		}
 
