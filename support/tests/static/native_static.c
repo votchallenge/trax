@@ -76,6 +76,9 @@ int main( int argc, char** argv)
 
     run = 1;
 
+    fprintf(stdout, "OUT: START\n");
+    fprintf(stderr, "ERR: START\n");
+
     while (run)
     {
 
@@ -135,6 +138,11 @@ int main( int argc, char** argv)
         if (reg) trax_region_release(&reg);
 
     }
+
+    fflush(stdout);
+    fflush(stderr);
+
+    fsync(fileno (stderr));
 
     if (mem) trax_region_release(&mem);
 
