@@ -162,7 +162,9 @@ Process::Process(string command, bool explicit_mode) : running(false), explicit_
 
 Process::~Process() {
 
-    stop();
+    kill();
+
+    cleanup();
 
     int i = 0;
 
@@ -384,7 +386,7 @@ bool Process::start() {
     return false;
 }
 
-bool Process::stop(bool docleanup, bool force) {
+bool Process::stop() {
 
     OBJECT_SYNCHRONIZE {
 
@@ -394,27 +396,21 @@ bool Process::stop(bool docleanup, bool force) {
 
 #ifdef WIN32
 
-            if (force) {
+            DWORD dwProcessID = piProcInfo.dwProcessId;
 
-                result = TerminateProcess(piProcInfo.hProcess, 0);
-
-            } else {
-
-                DWORD dwProcessID = piProcInfo.dwProcessId;
-
-                for (HWND hwnd = GetTopWindow(NULL); hwnd; hwnd = ::GetNextWindow(hwnd, GW_HWNDNEXT))
-                {
-                    DWORD dwWindowProcessID;
-                    DWORD dwThreadID = ::GetWindowThreadProcessId(hwnd, &dwWindowProcessID);
-                    if (dwWindowProcessID == dwProcessID)
-                        PostThreadMessage(dwThreadID, WM_QUIT, 0, 0);
-                }
-    
+            for (HWND hwnd = GetTopWindow(NULL); hwnd; hwnd = ::GetNextWindow(hwnd, GW_HWNDNEXT))
+            {
+                DWORD dwWindowProcessID;
+                DWORD dwThreadID = ::GetWindowThreadProcessId(hwnd, &dwWindowProcessID);
+                if (dwWindowProcessID == dwProcessID)
+                    PostThreadMessage(dwThreadID, WM_QUIT, 0, 0);
             }
+
+            is_alive();
 
 #else
 
-            kill(pid, force ? SIGKILL : SIGTERM);
+            ::kill(pid, SIGTERM);
 
             is_alive();
 
@@ -422,7 +418,34 @@ bool Process::stop(bool docleanup, bool force) {
 
         }
 
-        if (docleanup) cleanup();
+        return result;
+
+    }
+
+    return false;
+}
+
+bool Process::kill() {
+
+    OBJECT_SYNCHRONIZE {
+
+        bool result = true;
+
+        if (running) {
+
+#ifdef WIN32
+
+            result = TerminateProcess(piProcInfo.hProcess, -15);
+            is_alive();
+
+#else
+
+            ::kill(pid, SIGKILL);
+            is_alive();
+
+#endif
+
+        }
 
         return result;
 
@@ -430,6 +453,7 @@ bool Process::stop(bool docleanup, bool force) {
 
     return false;
 }
+
 //GetExitCodeProcess
 void Process::cleanup() {
 
@@ -437,8 +461,10 @@ void Process::cleanup() {
 
 #ifdef WIN32
 
-        CloseHandle(piProcInfo.hProcess);
-        CloseHandle(piProcInfo.hThread);
+#define CLOSE_AND_RESET(H) { if (H) { CloseHandle((H)); H = NULL; }  }
+
+        CLOSE_AND_RESET(piProcInfo.hProcess);
+        CLOSE_AND_RESET(piProcInfo.hThread);
 
         if (p_stdin)
             close(p_stdin);
@@ -447,12 +473,12 @@ void Process::cleanup() {
         if (p_stderr)
             close(p_stderr);
 
-        CloseHandle(handle_IN_Rd);
-        CloseHandle(handle_IN_Wr);
-        CloseHandle(handle_OUT_Rd);
-        CloseHandle(handle_OUT_Wr);
-        CloseHandle(handle_ERR_Rd);
-        CloseHandle(handle_ERR_Wr);
+        CLOSE_AND_RESET(handle_IN_Rd);
+        CLOSE_AND_RESET(handle_IN_Wr);
+        CLOSE_AND_RESET(handle_OUT_Rd);
+        CLOSE_AND_RESET(handle_OUT_Wr);
+        CLOSE_AND_RESET(handle_ERR_Rd);
+        CLOSE_AND_RESET(handle_ERR_Wr);
 
 #else
 
@@ -540,7 +566,7 @@ bool Process::is_alive(int *status) {
             exit_status = WEXITSTATUS(childExitStatus);
             running = false;
         } else if (WIFSIGNALED(childExitStatus)) {
-            exit_status = WTERMSIG(childExitStatus);
+            exit_status = -WTERMSIG(childExitStatus);
             running = false;
         } else {
             return true;

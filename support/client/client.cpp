@@ -367,34 +367,37 @@ public:
 		Lock lock(process_state_mutex);
 
 		if (process) {
-			int exit_status;
+			int exit_status = -1;
 
 			print_debug("Trying to stop process nicely.");
 
-			process->stop(false);
-			flush_streams();
-
-			sleepf(0.01);
+			process->stop();
+			sleepf(0.1);
 
 			if (process->is_alive(&exit_status)) {
-				print_debug("Process termination.");
-				process->stop(true, true);
-				process->is_alive(&exit_status);
+				print_debug("Escalating to process termination.");
+				process->kill();
 				sleepf(0.01);
+				process->is_alive(&exit_status);
 			}
 
-			print_debug("Process should be terminated.");
+			flush_streams();
 
 			delete process;
 			process = NULL;
 
-			print_debug("Stopping logger.");
+			print_debug("Process should be terminated.");
 
 			reset_logger();
+
+			print_debug("Stopping logger.");
 
 			if (exit_status == 0) {
 				print_debug("Tracker exited normally.");
 				return true;
+			} else if (exit_status < 0) {
+				print_debug("Tracker exited (stopped by signal %d)", -exit_status);
+				return false;
 			} else {
 				print_debug("Tracker exited (exit code %d)", exit_status);
 				return false;
