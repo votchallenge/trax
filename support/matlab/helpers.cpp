@@ -144,15 +144,16 @@ mxArray* parameters_to_cell(Properties& input) {
 void _param_names_enumerator(const char *key, const char *value, const void *obj) {
 
 	int i;
-    char** fieldnames = (char **) obj;
+    char*** fieldnames = (char ***) obj;
+    int len = strlen(key);
 
-	fieldnames[0] = (char*)mxMalloc(strlen(key)+1);
+	**fieldnames = (char*)mxMalloc(len+1);
 
-	memcpy(fieldnames[0], key, strlen(key)+1);
+	memcpy(**fieldnames, key, len+1);
 
-	for (i = 1; i < strlen(key); i++) {
-		if (!isalnum(fieldnames[0][i]) || fieldnames[0][i] != '_')
-			fieldnames[0][i] = '_';
+	for (i = 1; i < len; i++) {
+		if (!isalnum((**fieldnames)[i]) && (**fieldnames)[i] != '_')
+			(**fieldnames)[i] = '_';
 	}
 
     (*fieldnames) ++;
@@ -179,13 +180,18 @@ mxArray* parameters_to_struct(Properties& input) {
 
 	char **fieldnames = (char **) mxMalloc(sizeof(char*) * length);
 
-	input.enumerate(_param_names_enumerator,fieldnames);
+    char **fields = fieldnames;
+	input.enumerate(_param_names_enumerator, &fields);
 
     _param_copy tmp;
 
     tmp.array = mxCreateStructMatrix(1, 1, length,  (const char **) fieldnames);
     tmp.pos = 0;
     tmp.length = length;
+
+    for (int i = 0; i < length; i++) mxFree(fieldnames[i]);
+ 
+    mxFree(fieldnames);
 
     input.enumerate(_param_struct_enumerator, &tmp);
 
