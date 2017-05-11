@@ -525,7 +525,7 @@ int Process::get_error() {
 
     OBJECT_SYNCHRONIZE {
 
-        if (!running) return p_stderr;
+        if (running) return p_stderr;
 
     }
 
