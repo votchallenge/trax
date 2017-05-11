@@ -109,7 +109,11 @@ test: off
 artifacts:
 
   # pushing a single file
-  - path: trax*.zip
+  - path: trax-*.zip
+    name: trax_ftp
+
+  - path: trax_*.zip
+    name: trax_bintray
 
   # pushing all *.nupkg files in build directory recursively
 #  - path: '**\*.nupkg'
@@ -132,7 +136,7 @@ deploy:
     active_mode: false
     beta: true      # enable alternative FTP library for 'ftp' and 'ftps' modes
     debug: true     # show complete FTP log
-    artifact: trax-*.zip
+    artifact: trax_ftp
   - provider: BinTray
     username:
       secure: Pj3SA0paaY9ttXiqhO3Ktw==
@@ -145,7 +149,7 @@ deploy:
     publish: true
     override: true
     explode: false
-    artifact: trax_*.zip
+    artifact: trax_bintray
 
     # Deploying to NuGet feed
 #  - provider: NuGet
