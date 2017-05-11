@@ -7,7 +7,7 @@ import trax.region
 import trax.image
 import time
 
-options = trax.server.ServerOptions(trax.region.RECTANGLE, [trax.image.MEMORY, trax.image.PATH])
+options = trax.server.ServerOptions(trax.region.RECTANGLE, [trax.image.PATH])
 region = None
 delay = 0
 with trax.server.Server(options, verbose=True) as server:

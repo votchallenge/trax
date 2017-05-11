@@ -41,7 +41,7 @@
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <windows.h>
 void sleep_seconds(float seconds) {
-	Sleep((long) (seconds * 1000.0));
+    Sleep((long) (seconds * 1000.0));
 }
 #else
 //#  ifndef _MAC_
@@ -67,7 +67,7 @@ int main( int argc, char** argv)
 
     trax_handle* trax;
     trax_metadata* metadata = trax_metadata_create(TRAX_REGION_ANY, TRAX_IMAGE_ANY,
-        "Static", "Static demo tracker", "Demo");
+                              "Static", "Static demo tracker", "Demo");
 
     log = argc > 1 ? fopen(argv[1], "w") : NULL;
     trax = trax_server_setup(metadata, log ? trax_logger_setup_file(log) : trax_no_log);
@@ -76,7 +76,7 @@ int main( int argc, char** argv)
 
     run = 1;
 
-    while(run)
+    while (run)
     {
 
         trax_properties* prop = trax_properties_create();
@@ -91,7 +91,7 @@ int main( int argc, char** argv)
         // tracker how to initialize.
         if (tr == TRAX_INITIALIZE) {
 
-            wait = trax_properties_get_float(prop, "wait", 0);
+            wait = trax_properties_get_float(prop, "time_wait", 0);
 
             // Artificial wait period that can be used for testing
             if (wait > 0) sleep_seconds(wait);
@@ -101,28 +101,35 @@ int main( int argc, char** argv)
 
             trax_server_reply(trax, mem, NULL);
 
+            fprintf(stdout, "OUT: INIT\n");
+            fprintf(stderr, "ERR: INIT\n");
+
         } else
-        // The second one is TRAX_FRAME that tells the tracker what to process next.
-        if (tr == TRAX_FRAME) {
+            // The second one is TRAX_FRAME that tells the tracker what to process next.
+            if (tr == TRAX_FRAME) {
 
-            // Artificial wait period that can be used for testing
-            if (wait > 0) sleep_seconds(wait);
+                // Artificial wait period that can be used for testing
+                if (wait > 0) sleep_seconds(wait);
 
-            // Note that the tracker also has an option of sending additional data
-            // back to the main program in a form of key-value pairs. We do not use
-            // this option here, so this part is empty.
-            trax_server_reply(trax, mem, NULL);
+                // Note that the tracker also has an option of sending additional data
+                // back to the main program in a form of key-value pairs. We do not use
+                // this option here, so this part is empty.
+                trax_server_reply(trax, mem, NULL);
 
-        }
+                fprintf(stdout, "OUT: FRAME\n");
+                fprintf(stderr, "ERR: FRAME\n");
+
+            }
         // Any other command is either TRAX_QUIT or illegal, so we exit.
-        else {
+            else {
 
-			printf("QUITTING\n");
+                fprintf(stdout, "OUT: QUITTING\n");
+                fprintf(stderr, "ERR: QUITTING\n");
 
-            trax_properties_release(&prop);
-            run = 0;
+                trax_properties_release(&prop);
+                run = 0;
 
-        }
+            }
 
         if (img) trax_image_release(&img);
         if (reg) trax_region_release(&reg);
