@@ -1,21 +1,21 @@
 /* -*- Mode: C++; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*- */
 /*
- * This is an example of a stationary tracker. It only reports the initial 
+ * This is an example of a stationary tracker. It only reports the initial
  * position for all frames and is used for testing purposes.
  * The main function of this example is to show the developers how to modify
  * their trackers to work with the evaluation environment.
  *
- * Copyright (c) 2015, Luka Cehovin
+ * Copyright (c) 2017, Luka Cehovin
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met: 
+ * modification, are permitted provided that the following conditions are met:
 
  * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer. 
+ *    list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution. 
+ *    and/or other materials provided with the distribution.
 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -27,9 +27,9 @@
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * The views and conclusions contained in the software and documentation are those
- * of the authors and should not be interpreted as representing official policies, 
+ * of the authors and should not be interpreted as representing official policies,
  * either expressed or implied, of the FreeBSD Project.
  *
  */
@@ -38,7 +38,7 @@
 #include <ctype.h>
 #include "trax.h"
 
-#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER) 
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <windows.h>
 void sleep_seconds(float seconds) {
 	Sleep((long) (seconds * 1000.0));
@@ -56,7 +56,7 @@ int main( int argc, char** argv)
 {
     FILE* log;
     int run;
-    float wait = 0;    
+    float wait = 0;
     trax_image* img = NULL;
     trax_region* reg = NULL;
     trax_region* mem = NULL;
@@ -66,7 +66,7 @@ int main( int argc, char** argv)
     // *****************************************
 
     trax_handle* trax;
-    trax_metadata* metadata = trax_metadata_create(TRAX_REGION_ANY, TRAX_IMAGE_ANY, 
+    trax_metadata* metadata = trax_metadata_create(TRAX_REGION_ANY, TRAX_IMAGE_ANY,
         "Static", "Static demo tracker", "Demo");
 
     log = argc > 1 ? fopen(argv[1], "w") : NULL;
@@ -82,7 +82,7 @@ int main( int argc, char** argv)
         trax_properties* prop = trax_properties_create();
 
         // The main idea of Trax interface is to leave the control to the master program
-        // and just follow the instructions that the tracker gets. 
+        // and just follow the instructions that the tracker gets.
         // The main function for this is trax_wait that actually listens for commands.
 
         int tr = trax_server_wait(trax, &img, &reg, prop);
@@ -113,7 +113,7 @@ int main( int argc, char** argv)
             // this option here, so this part is empty.
             trax_server_reply(trax, mem, NULL);
 
-        } 
+        }
         // Any other command is either TRAX_QUIT or illegal, so we exit.
         else {
 
