@@ -53,15 +53,15 @@ environment:
   INSTALL_DIR: c:\projects\trax\trax
   matrix:
     - GENERATOR: "Visual Studio 12 2013"
-      BUILD_PLATFORM: 32_vs12
+      BUILD_PLATFORM: windows32_vs12
       OPENCV_VERSION: 2.4.13
 
     - GENERATOR: "Visual Studio 12 2013 Win64"
-      BUILD_PLATFORM: 64_vs12
+      BUILD_PLATFORM: windows64_vs12
       OPENCV_VERSION: 2.4.13
 
     - GENERATOR: "Visual Studio 14 2015 Win64"
-      BUILD_PLATFORM: 64_vs14
+      BUILD_PLATFORM: windows64_vs14
       OPENCV_VERSION: 3.1.0.20160701
 
 # Automatically register private account and/or project AppVeyor NuGet feeds.
@@ -98,7 +98,8 @@ build_script:
   - msbuild INSTALL.vcxproj /p:Configuration=Debug /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - msbuild INSTALL.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - 7z a -tzip trax-%BUILD_VERSION%-%BUILD_PLATFORM%.zip trax/*
-  
+  - 7z a -tzip trax_%BUILD_PLATFORM%.zip trax/*
+
 test: off
 
 #---------------------------------#
@@ -108,7 +109,7 @@ test: off
 artifacts:
 
   # pushing a single file
-  - path: trax-*.zip
+  - path: trax*.zip
 
   # pushing all *.nupkg files in build directory recursively
 #  - path: '**\*.nupkg'
@@ -122,7 +123,8 @@ deploy:
   - provider: FTP
     protocol: ftp
     host: box.vicos.si
-    username: appveyor
+    username:
+      secure: bDHnDKIt8ViL7omIcl/oSQ==
     password:
       secure: iUkFvVxZhfw9FG4FC7YqxQ==
     folder: /vot/trax/
@@ -130,6 +132,20 @@ deploy:
     active_mode: false
     beta: true      # enable alternative FTP library for 'ftp' and 'ftps' modes
     debug: true     # show complete FTP log
+    artifact: trax-*.zip
+  - provider: BinTray
+    username:
+      secure: Pj3SA0paaY9ttXiqhO3Ktw==
+    api_key:
+      secure: MNgt5hxXPUBXZbzzQ4fVHfl6f4A3Koile2Ebc0iCLCDl2LxexlLLxlFXEIDc/h3o
+    subject: votchallenge
+    repo: trax
+    package: stable
+    version: $(BUILD_VERSION)
+    publish: true
+    override: true
+    explode: false
+    artifact: trax_*.zip
 
     # Deploying to NuGet feed
 #  - provider: NuGet
