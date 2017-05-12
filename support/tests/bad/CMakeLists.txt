@@ -17,7 +17,7 @@ set_tests_properties(
 	test_badtracker_sigsegv5
 	test_badtracker_sigusr1
 	test_badtracker_sigusr5
-	PROPERTIES TIMEOUT 2 PASS_REGULAR_EXPRESSION "stopped by signal [0-9]+")
+	PROPERTIES TIMEOUT 3 PASS_REGULAR_EXPRESSION "stopped by signal [0-9]+")
 
 FIND_PROGRAM(MKOCTFILE mkoctfile)
 

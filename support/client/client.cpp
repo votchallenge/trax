@@ -379,12 +379,16 @@ public:
 			print_debug("Trying to stop process nicely.");
 
 			process->stop();
-			sleepf(0.1);
+
+			for (int i = 0; i < 10; i++) {
+				if (!process->is_alive(&exit_status)) break;
+				sleepf(0.1);
+			}
 
 			if (process->is_alive(&exit_status)) {
 				print_debug("Escalating to process termination.");
 				process->kill();
-				sleepf(0.01);
+				sleepf(0.1);
 				process->is_alive(&exit_status);
 			}
 
