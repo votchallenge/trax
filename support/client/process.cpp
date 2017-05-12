@@ -185,6 +185,10 @@ bool Process::start() {
 
         exit_status = -1;
 
+        p_stdin = -1;
+        p_stdout = -1;
+        p_stderr = -1;
+
 #if defined(WIN32)
 
         handle_IN_Rd = NULL;
@@ -193,10 +197,6 @@ bool Process::start() {
         handle_OUT_Wr = NULL;
         handle_ERR_Rd = NULL;
         handle_ERR_Wr = NULL;
-
-        p_stdin = -1;
-        p_stdout = -1;
-        p_stderr = -1;
 
         SECURITY_ATTRIBUTES saAttr;
 
@@ -314,6 +314,8 @@ bool Process::start() {
 
 #else
 
+        action_initialized = false;
+
         if (pid) return false;
 
         if (pipe(out) == -1 || pipe(in) == -1 || pipe(err) == -1) {
@@ -330,6 +332,7 @@ bool Process::start() {
         }
 
         posix_spawn_file_actions_init(&action);
+        action_initialized = true;
         posix_spawn_file_actions_addclose(&action, out[1]);
         posix_spawn_file_actions_addclose(&action, in[0]);
         posix_spawn_file_actions_addclose(&action, err[0]);
@@ -354,9 +357,10 @@ bool Process::start() {
 
         string cwd = __getcwd();
 
-#define CHDIR_SOFT(D) { if (chdir((D).c_str()) == -1) { \
-    std::cerr << "Error: unable to switch to working directory" << std::endl; \
-    } }
+#define CHDIR_SOFT(D) \
+        { if (chdir((D).c_str()) == -1) { \
+            std::cerr << "Error: unable to switch to working directory" << std::endl; \
+        } }
 
         if (directory.size() > 0)
             CHDIR_SOFT(directory);
@@ -489,7 +493,10 @@ void Process::cleanup() {
         if (err[1] != -1) {close(err[1]); err[1] = -1; };
         if (in[0] != -1) {close(in[0]); in[0] = -1; };
 
-        posix_spawn_file_actions_destroy(&action);
+        if (action_initialized) {
+            posix_spawn_file_actions_destroy(&action);
+            action_initialized = false;
+        }
 
 #endif
 

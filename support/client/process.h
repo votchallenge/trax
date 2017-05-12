@@ -103,6 +103,8 @@ private:
 	int pid;
 
     posix_spawn_file_actions_t action;
+
+    bool action_initialized;
 #endif
 
 };
