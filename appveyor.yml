@@ -79,7 +79,6 @@ build_script:
   - msbuild INSTALL.vcxproj /p:Configuration=Debug /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - msbuild INSTALL.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - 7z a -tzip trax-%BUILD_VERSION%-%BUILD_PLATFORM%.zip trax/*
-  - 7z a -tzip trax_%BUILD_PLATFORM%.zip trax/*
 
 test: off
 
@@ -91,10 +90,7 @@ artifacts:
 
   # pushing a single file
   - path: trax-*.zip
-    name: trax_ftp
-
-  - path: trax_*.zip
-    name: trax_bintray
+    name: trax
 
 #---------------------------------#
 #     deployment configuration    #
@@ -113,7 +109,7 @@ deploy:
     active_mode: false
     beta: true      # enable alternative FTP library for 'ftp' and 'ftps' modes
     debug: true     # show complete FTP log
-    artifact: trax_ftp
+    artifact: trax
   - provider: BinTray
     username:
       secure: Pj3SA0paaY9ttXiqhO3Ktw==
@@ -126,7 +122,7 @@ deploy:
     publish: true
     override: true
     explode: false
-    artifact: trax_bintray
+    artifact: trax
 
 # scripts to run after deployment
 after_deploy:
