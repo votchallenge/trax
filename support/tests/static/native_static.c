@@ -137,12 +137,12 @@ int main( int argc, char** argv)
         if (img) trax_image_release(&img);
         if (reg) trax_region_release(&reg);
 
+        fflush(stdout);
+        fflush(stderr);
     }
 
     fflush(stdout);
     fflush(stderr);
-
-    fsync(fileno (stderr));
 
     if (mem) trax_region_release(&mem);
 

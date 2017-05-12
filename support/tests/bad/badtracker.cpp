@@ -51,8 +51,10 @@ int main( int argc, char** argv) {
         raise (SIGABRT);
       case 2:
         raise (SIGSEGV);
+#ifndef _MSC_VER
       case 3:
         raise (SIGUSR1);
+#endif
       default:
         abort();
       }
