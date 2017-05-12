@@ -327,7 +327,7 @@ int main(int argc, char** argv) {
 
         }
 
-    } catch (std::runtime_error e) {
+    } catch (const std::runtime_error &e) {
 
         fprintf(stderr, "Error: %s\n", e.what());
         result = -1;

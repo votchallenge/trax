@@ -311,8 +311,15 @@ public:
 
 		if (!started) {
 			print_debug("Unable to start process");
-			throw new std::runtime_error("Unable to start the tracker process");
+			throw std::runtime_error("Unable to start the tracker process");
 		} else {
+
+			sleepf(0.1);
+			if (!process->is_alive()) {
+				print_debug("Unable to start process");
+				throw std::runtime_error("Unable to start the tracker process");
+			}
+
 
 			start_watchdog();
 
@@ -564,7 +571,6 @@ public:
 					state->flush_condition.notify();
 
 				}
-
 				if (err == -1) {
 					sleep(0);
 					continue;
@@ -575,6 +581,7 @@ public:
 			char chr;
 			bool flush = false;
 			int read = read_stream(err, &chr, 1);
+
 			if (read != 1) {
 
 				if (state->process_running()) err =  -1;
