@@ -532,6 +532,12 @@ int Process::get_error() {
 
     OBJECT_SYNCHRONIZE {
 
+    // On Visual Studio there seem to be problems with stderr forwarding,
+    // so it is disabled for now.
+#ifdef _MSC_VER
+        return -1;
+#endif
+
         if (running) return p_stderr;
 
     }
