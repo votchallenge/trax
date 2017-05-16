@@ -363,8 +363,8 @@ The code above can be modified to use the TraX protocol by including the C/C++ l
       int run = 1;
 
       // Initialize protocol
-      trax::Server handle(trax::Metadata(TRAX_IMAGE_PATH,
-            TRAX_REGION_RECTANGLE), trax_no_log);
+      trax::Server handle(trax::Metadata(TRAX_REGION_RECTANGLE,
+                                  TRAX_IMAGE_PATH), trax_no_log);
 
       while(run)
       {
