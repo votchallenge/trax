@@ -30,7 +30,7 @@ extern "C" bool utIsInterruptPending();
 extern bool utIsInterruptPending();
 #endif
 
-#define IS_INTERRUPTED utIsInterruptPending()
+#define IS_INTERRUPTED (utIsInterruptPending())
 
 #else
 
@@ -38,19 +38,21 @@ extern bool utIsInterruptPending();
 #undef OCTINTERP_API
 #endif
 
+// Probably required for Octave 4.1+ until we figure out how to
+// detect octave version
+#define OCTAVE_USE_DEPRECATED_FUNCTIONS 1
+
 #include <octave/config.h>
 #include <octave/quit.h>
+#include <octave/sighandlers.h>
 
-inline bool _octave_quit (void) {
-	if (octave_signal_caught)
-	{
-		octave_signal_caught = 0;
-		return true;
-	}
-	return false;
-};
+bool octave_interrupted = false;
 
-#define IS_INTERRUPTED _octave_quit()
+void octave_interrupt_hook_trax(int s) {
+	octave_interrupted = true;
+}
+
+#define IS_INTERRUPTED (octave_interrupted) // (octave_interrupt_state != 0)
 
 #endif
 
@@ -83,15 +85,19 @@ void on_exit() {
 
 }
 
+static bool exit_cache;
 
 bool must_exit() {
 
-	bool exit = IS_INTERRUPTED;
+	if (exit_cache)
+		return true;
 
-	if (exit)
+	exit_cache = IS_INTERRUPTED;
+
+	if (exit_cache)
 		mexPrintf("User termination request detected. Stopping.\n");
 
-	return exit;
+	return exit_cache;
 } 
 
 class mexstream : public std::streambuf
@@ -241,6 +247,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	map<string, string> environment;
 	string directory, logfile;
 
+	exit_cache = false;
+
 	if (nlhs > 1) { MEX_ERROR("At most one output argument supported."); return; }
 
 	if (nrhs < 2) { MEX_ERROR("At least two input arguments required."); return; }
@@ -272,6 +280,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		}
 
 	}
+
+#ifdef OCTAVE
+	octave_interrupted = false;
+	can_interrupt = true;
+	octave_interrupt_handler h;
+	h.int_handler = &octave_interrupt_hook_trax;
+	octave_set_interrupt_handler(h);
+#endif
 
 	if (!data) data = mxCreateDoubleMatrix( 0, 0, mxREAL );
 
@@ -354,7 +370,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 		}
 
-	} catch (std::runtime_error e) {
+	} catch (const std::runtime_error &e) {
 
 		if (log) {
 			delete log;
