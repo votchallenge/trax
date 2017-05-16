@@ -6,6 +6,7 @@
 #include <trax/client.hpp>
 #include <trax/opencv.hpp>
 #include <opencv2/core/core.hpp>
+#include <stdexcept>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
