@@ -61,14 +61,7 @@ timer_state timer_clock() {
 }
 
 double timer_elapsed(timer_state start) {
-#if defined(WINDOWS)
-    static timer_state freq = 0;
     timer_state delta, stop;
-
-#else
-    timer_state delta, stop;
-#endif
-
     stop = timer_clock();
     delta = stop - start;
     return (double) delta / (double) freq;
