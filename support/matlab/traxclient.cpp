@@ -34,25 +34,31 @@ extern bool utIsInterruptPending();
 
 #else
 
-#ifdef OCTINTERP_API
-#undef OCTINTERP_API
-#endif
+#include <octave/version.h>
+	// Probably required for Octave 4.1
+	#define OCTAVE_USE_DEPRECATED_FUNCTIONS 1
 
-// Probably required for Octave 4.1+ until we figure out how to
-// detect octave version
-#define OCTAVE_USE_DEPRECATED_FUNCTIONS 1
+	#if (OCTAVE_MAJOR_VERSION >= 4) && (OCTAVE_MINOR_VERSION >= 1)
+		#define SET_INTERRUPT_HANDLER(H) { octave::interrupt_handler h; h.int_handler = H; h.brk_handler = H; octave::set_interrupt_handler(h); }
+	#else
+		#ifdef OCTINTERP_API
+			#undef OCTINTERP_API
+		#endif
 
-#include <octave/config.h>
-#include <octave/quit.h>
-#include <octave/sighandlers.h>
+		#include <octave/config.h>
+		#define SET_INTERRUPT_HANDLER(H) { octave_interrupt_handler h; h.int_handler = H; octave_set_interrupt_handler(h); }
+	#endif
 
-bool octave_interrupted = false;
+	#include <octave/quit.h>
+	#include <octave/sighandlers.h>
 
-void octave_interrupt_hook_trax(int s) {
-	octave_interrupted = true;
-}
+	bool octave_interrupted = false;
 
-#define IS_INTERRUPTED (octave_interrupted) // (octave_interrupt_state != 0)
+	void interrupt_handler(int s) {
+		octave_interrupted = true;
+	}
+
+	#define IS_INTERRUPTED (octave_interrupted) // (octave_interrupt_state != 0)
 
 #endif
 
@@ -283,10 +289,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 #ifdef OCTAVE
 	octave_interrupted = false;
-	can_interrupt = true;
-	octave_interrupt_handler h;
-	h.int_handler = &octave_interrupt_hook_trax;
-	octave_set_interrupt_handler(h);
+	SET_INTERRUPT_HANDLER(&interrupt_handler);
 #endif
 
 	if (!data) data = mxCreateDoubleMatrix( 0, 0, mxREAL );
