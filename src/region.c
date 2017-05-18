@@ -162,6 +162,8 @@ int region_parse(const char* buffer, region_container** region) {
 	const char* strdata = NULL;
 	int num;
 
+	region_type prefix_type;
+
 	const char* tmp = buffer;
 
 	(*region) = NULL;
@@ -169,8 +171,6 @@ int region_parse(const char* buffer, region_container** region) {
 	if (!buffer || !buffer[0]) {
 		return 1;
 	}
-
-	region_type prefix_type;
 
 	strdata = __parse_uri_prefix(buffer, &prefix_type);
 
