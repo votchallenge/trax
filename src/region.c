@@ -61,11 +61,6 @@ int __is_valid_sequence(float* sequence, int len) {
 	return 1;
 }
 
-double round(double number) {
-
-	return number < 0.0 ? ceil(number - 0.5) : floor(number + 0.5);
-
-}
 
 #define MAX_URI_SCHEME 16
 
