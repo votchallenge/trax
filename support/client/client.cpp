@@ -110,7 +110,7 @@ int create_server_socket(int port) {
 
 	sin.sin_port = htons(port);
 
-	if (bind(sid, (struct sockaddr *)&sin, sizeof(sin)) == -1) {
+	if (::bind(sid, (struct sockaddr *)&sin, sizeof(sin)) == -1) {
 		perror("bind");
 		closesocket(sid);
 		return -1;
