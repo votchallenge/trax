@@ -61,11 +61,6 @@ int __is_valid_sequence(float* sequence, int len) {
 	return 1;
 }
 
-double round(double number) {
-
-	return number < 0.0 ? ceil(number - 0.5) : floor(number + 0.5);
-
-}
 
 #define MAX_URI_SCHEME 16
 
@@ -162,6 +157,8 @@ int region_parse(const char* buffer, region_container** region) {
 	const char* strdata = NULL;
 	int num;
 
+	region_type prefix_type;
+
 	const char* tmp = buffer;
 
 	(*region) = NULL;
@@ -169,8 +166,6 @@ int region_parse(const char* buffer, region_container** region) {
 	if (!buffer || !buffer[0]) {
 		return 1;
 	}
-
-	region_type prefix_type;
 
 	strdata = __parse_uri_prefix(buffer, &prefix_type);
 
