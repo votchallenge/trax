@@ -24,7 +24,7 @@ int main( int argc, char** argv) {
 
     if (strcmpi(argv[1], "parsing") == 0) {
 
-        string_list arguments;
+        string_list *arguments;
         trax_properties* properties;
         int input;
         int output = fileno(stdout);
@@ -33,7 +33,7 @@ int main( int argc, char** argv) {
 
         input = open(argv[2], O_RDONLY);
 
-        LIST_CREATE(arguments, 8);
+        arguments = list_create(8);
         properties = trax_properties_create();
 
         message_stream* stream = create_message_stream_file(input, output);
@@ -42,10 +42,10 @@ int main( int argc, char** argv) {
 
             int type;
 
-            LIST_RESET(arguments);
+            list_reset(arguments);
             trax_properties_clear(properties);
 
-            type = read_message(stream, NULL, &arguments, properties);
+            type = read_message(stream, NULL, arguments, properties);
 
             if (type == TRAX_ERROR) break;
 
@@ -55,7 +55,7 @@ int main( int argc, char** argv) {
 
         close(input);
 
-        LIST_DESTROY(arguments);
+        list_destroy(&arguments);
         trax_properties_release(&properties);
 
         destroy_message_stream(&stream);

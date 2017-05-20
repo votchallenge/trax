@@ -286,32 +286,32 @@ char* region_string(region_container* region) {
 
 	int i;
 	char* result = NULL;
-	string_buffer buffer;
+	string_buffer *buffer;
 
 	if (!region) return NULL;
 
-	BUFFER_CREATE(buffer, 32);
+	buffer = buffer_create(32);
 
 	if (region->type == SPECIAL) {
 
-		BUFFER_APPEND(buffer, "%d", region->data.special);
+		buffer_append(buffer, "%d", region->data.special);
 
 	} else if (region->type == RECTANGLE) {
 
-		BUFFER_APPEND(buffer, "%.4f,%.4f,%.4f,%.4f",
+		buffer_append(buffer, "%.4f,%.4f,%.4f,%.4f",
 		              region->data.rectangle.x, region->data.rectangle.y,
 		              region->data.rectangle.width, region->data.rectangle.height);
 
 	} else if (region->type == POLYGON) {
 
-		for (i = 0; i < region->data.polygon.count; i++)
-			BUFFER_APPEND(buffer, i == 0 ? "%.4f,%.4f" : ",%.4f,%.4f", region->data.polygon.x[i], region->data.polygon.y[i]);
+		for (i = 0; i < region->data.polygon.count; i++) {
+			buffer_append(buffer, (i == 0 ? "%.4f,%.4f" : ",%.4f,%.4f"), region->data.polygon.x[i], region->data.polygon.y[i]);
+		}
 	}
 
-	if (BUFFER_SIZE(buffer) > 0)
-		BUFFER_EXTRACT(buffer, result);
-
-	BUFFER_DESTROY(buffer);
+	if (buffer_size(buffer) > 0)
+		result = buffer_extract(buffer);
+	buffer_destroy(&buffer);
 
 	return result;
 }

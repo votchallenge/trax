@@ -29,13 +29,13 @@ typedef struct input_cache {
     int message_type;
     int complete;
     int state;
-    string_buffer key_buffer, value_buffer;
+    string_buffer* key_buffer, *value_buffer;
 } input_cache;
 
 typedef struct output_cache {
     int complete;
     int state;
-    string_buffer key_buffer, value_buffer;
+    string_buffer* key_buffer, *value_buffer;
 } output_cache;
 
 
@@ -62,6 +62,6 @@ void destroy_message_stream(message_stream** stream);
 
 int read_message(message_stream* stream, trax_logging* log, string_list* arguments, trax_properties* properties);
 	
-void write_message(message_stream* stream, trax_logging* log, int type, const string_list arguments, trax_properties* properties);
+void write_message(message_stream* stream, trax_logging* log, int type, const string_list* arguments, trax_properties* properties);
 
 #endif

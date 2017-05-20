@@ -109,15 +109,15 @@ void initialize_cache(message_stream* stream) {
     stream->input.complete = FALSE;
     stream->input.state = -prefix_length;
 
-    BUFFER_CREATE(stream->input.key_buffer, BUFFER_INCREMENT_STEP);
-    BUFFER_CREATE(stream->input.value_buffer, BUFFER_INCREMENT_STEP);
+    stream->input.key_buffer = buffer_create(BUFFER_INCREMENT_STEP);
+    stream->input.value_buffer = buffer_create(BUFFER_INCREMENT_STEP);
 
 }
 
 void destroy_cache(message_stream* stream) {
 
-    BUFFER_DESTROY(stream->input.key_buffer);
-    BUFFER_DESTROY(stream->input.value_buffer);
+    buffer_destroy(&(stream->input.key_buffer));
+    buffer_destroy(&(stream->input.value_buffer));
 
 }
 
@@ -265,7 +265,8 @@ void destroy_message_stream(message_stream** stream) {
         closesocket((*stream)->socket.socket);
 
     }
-
+    (*stream)->flags = 0;
+    
     destroy_cache(*stream);
 
     free(*stream);
@@ -296,6 +297,8 @@ __INLINE int read_character(message_stream* stream) {
             return -1; // The stream was closed
         }
 
+       // fprintf(stderr, "RCV: %*s \n", stream->buffer_length-1, stream->buffer);
+       // fflush(stderr);
         stream->buffer_position = 0;
     }
 
@@ -312,7 +315,7 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
 
 	VALIDATE_MESSAGE_STREAM(stream);
 
-    LIST_RESET((*arguments));
+    list_reset(arguments);
 
     while (!stream->input.complete) {
 
@@ -332,11 +335,11 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
 
                 if (isalnum(chr)) {
 
-                    BUFFER_PUSH(stream->input.key_buffer, chr);
+                    buffer_push(stream->input.key_buffer, chr);
 
                 } else if (chr == ' ') {
                     char* key_tmp;
-                    BUFFER_EXTRACT(stream->input.key_buffer, key_tmp);
+                    key_tmp = buffer_extract(stream->input.key_buffer);
                 	stream->input.message_type = __parse_message_type(key_tmp);
                     free(key_tmp);
                     
@@ -347,12 +350,12 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
                         stream->input.state = PARSE_STATE_SPACE; 
                     }
 
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
 
                 } else if (chr == '\n') {
                     char* key_tmp;
-                    BUFFER_EXTRACT(stream->input.key_buffer, key_tmp);
+                    key_tmp = buffer_extract(stream->input.key_buffer);
                 	stream->input.message_type = __parse_message_type(key_tmp);
                     free(key_tmp);
 
@@ -363,12 +366,12 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
                         stream->input.complete = TRUE;
                     }
 
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
                     
                 } else {
                    stream->input. state = PARSE_STATE_PASS;
-                    BUFFER_RESET(stream->input.key_buffer);
+                    buffer_reset(stream->input.key_buffer);
                 }
 
                 break;
@@ -382,9 +385,9 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
                 } else {
                 	stream->input.message_type = -1;
                 	stream->input.state = PARSE_STATE_PASS;
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
-                    BUFFER_PUSH(stream->input.key_buffer, chr);             	
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
+                    buffer_push(stream->input.key_buffer, chr);             	
                 }
 
                 break;
@@ -398,13 +401,13 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
                 	stream->input.complete = TRUE;
                 } else if (chr == '"') {
                     stream->input.state = PARSE_STATE_QUOTED_KEY;
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
                 } else {
                 	stream->input.state = PARSE_STATE_UNQUOTED_KEY;
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
-                    BUFFER_PUSH(stream->input.key_buffer, chr);              	
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
+                    buffer_push(stream->input.key_buffer, chr);              	
                 }
 
                 break;
@@ -416,28 +419,28 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
                     stream->input.state = PARSE_STATE_UNQUOTED_ESCAPE_KEY;
                 } else if (chr == '\n') { // append arg and finalize
                     char* key_tmp;
-                    BUFFER_EXTRACT(stream->input.key_buffer, key_tmp);            
-                    LIST_APPEND(*arguments, key_tmp);
+                    key_tmp = buffer_extract(stream->input.key_buffer);            
+                    list_append(arguments, key_tmp);
                     free(key_tmp);
 
                     stream->input.complete = TRUE;
                 } else if (chr == ' ') { // append arg and move on
                     char* key_tmp;
-                    BUFFER_EXTRACT(stream->input.key_buffer, key_tmp);            
-                    LIST_APPEND(*arguments, key_tmp);
+                    key_tmp = buffer_extract(stream->input.key_buffer);            
+                    list_append(arguments, key_tmp);
                     free(key_tmp);
 
                     stream->input.state = PARSE_STATE_SPACE;
-                    BUFFER_RESET(stream->input.key_buffer);
+                    buffer_reset(stream->input.key_buffer);
 
                 } else if (chr == '=') { // we have a kwarg
-                	if (__is_valid_key(stream->input.key_buffer.buffer, stream->input.key_buffer.position))
+                	if (__is_valid_key(stream->input.key_buffer->buffer, stream->input.key_buffer->position))
                     	stream->input.state = PARSE_STATE_UNQUOTED_VALUE;
                 	else { // If the key is not valid then we probably have a Base64 encoding
-                		BUFFER_PUSH(stream->input.key_buffer, chr);
+                		buffer_push(stream->input.key_buffer, chr);
                 	}
                 } else {                    
-                	BUFFER_PUSH(stream->input.key_buffer, chr);
+                	buffer_push(stream->input.key_buffer, chr);
                 } 
 
                 break;
@@ -449,28 +452,28 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
                     stream->input.state = PARSE_STATE_UNQUOTED_ESCAPE_VALUE;
                 } else if (chr == ' ') {
                     char *key_tmp, *value_tmp;
-                    BUFFER_EXTRACT(stream->input.key_buffer, key_tmp);
-                    BUFFER_EXTRACT(stream->input.value_buffer, value_tmp);                
+                    key_tmp = buffer_extract(stream->input.key_buffer);
+                    value_tmp = buffer_extract(stream->input.value_buffer);                
                     trax_properties_set(properties, key_tmp, value_tmp);
                     free(key_tmp); free(value_tmp);
 
                     stream->input.state = PARSE_STATE_SPACE;
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);  
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);  
        
                 } else if (chr == '\n') {
                     char *key_tmp, *value_tmp;
-                    BUFFER_EXTRACT(stream->input.key_buffer, key_tmp);
-                    BUFFER_EXTRACT(stream->input.value_buffer, value_tmp);                
+                    key_tmp = buffer_extract(stream->input.key_buffer);
+                    value_tmp = buffer_extract(stream->input.value_buffer);  
                     trax_properties_set(properties, key_tmp, value_tmp);
                     free(key_tmp); free(value_tmp);
 
                     stream->input.complete = TRUE;
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
 
                 } else
-                    BUFFER_PUSH(stream->input.value_buffer, chr);
+                    buffer_push(stream->input.value_buffer, chr);
 
                 break;
 
@@ -478,16 +481,16 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
             case PARSE_STATE_UNQUOTED_ESCAPE_KEY: {
 
                 if (chr == 'n') {
-                	BUFFER_PUSH(stream->input.key_buffer, '\n');
+                	buffer_push(stream->input.key_buffer, '\n');
                     stream->input.state = PARSE_STATE_UNQUOTED_KEY;
                 } else if (chr != '\n') {
-                	BUFFER_PUSH(stream->input.key_buffer, chr);
+                	buffer_push(stream->input.key_buffer, chr);
                     stream->input.state = PARSE_STATE_UNQUOTED_KEY;
                 } else {
                     stream->input.state = PARSE_STATE_PASS;
                     stream->input.message_type = -1;
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
 
                 }
                 
@@ -497,16 +500,16 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
             case PARSE_STATE_UNQUOTED_ESCAPE_VALUE: {
 
                 if (chr == 'n') {
-                    BUFFER_PUSH(stream->input.value_buffer, '\n');
+                    buffer_push(stream->input.value_buffer, '\n');
                     stream->input.state = PARSE_STATE_UNQUOTED_VALUE;
                 } else if (chr != '\n') {
-                    BUFFER_PUSH(stream->input.value_buffer, chr);
+                    buffer_push(stream->input.value_buffer, chr);
                     stream->input.state = PARSE_STATE_UNQUOTED_VALUE;
                 } else {
                     stream->input.state = PARSE_STATE_PASS;
                     stream->input.message_type = -1;
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
                 }
                 
                 break;
@@ -519,19 +522,19 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
                     stream->input.state = PARSE_STATE_QUOTED_ESCAPE_KEY;
                 } else if (chr == '"') { // append arg and move on
                     char *key_tmp;
-                    BUFFER_EXTRACT(stream->input.key_buffer, key_tmp);            
-                    LIST_APPEND((*arguments), key_tmp);
+                    key_tmp = buffer_extract(stream->input.key_buffer);            
+                    list_append(arguments, key_tmp);
                     free(key_tmp);
 
                 	stream->input.state = PARSE_STATE_SPACE_EXPECT;
                 } else if (chr == '=') { // we have a kwarg
-                	if (__is_valid_key(stream->input.key_buffer.buffer, stream->input.key_buffer.position))
+                	if (__is_valid_key(stream->input.key_buffer->buffer, stream->input.key_buffer->position))
                     	stream->input.state = PARSE_STATE_QUOTED_VALUE;
                 	else { // If the key is not valid then we probably have a Base64 encoding
-                		BUFFER_PUSH(stream->input.key_buffer, chr);
+                		buffer_push(stream->input.key_buffer, chr);
                 	}
                 } else {                    
-                	BUFFER_PUSH(stream->input.key_buffer, chr);
+                	buffer_push(stream->input.key_buffer, chr);
                 } 
 
                 break;
@@ -543,17 +546,17 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
                     stream->input.state = PARSE_STATE_QUOTED_ESCAPE_VALUE;
                 } else if (chr == '"') {
                     char *key_tmp, *value_tmp;
-                    BUFFER_EXTRACT(stream->input.key_buffer, key_tmp);
-                    BUFFER_EXTRACT(stream->input.value_buffer, value_tmp);                
+                    key_tmp = buffer_extract(stream->input.key_buffer);
+                    value_tmp = buffer_extract(stream->input.value_buffer);                
                     trax_properties_set(properties, key_tmp, value_tmp);
                     free(key_tmp); free(value_tmp);
 
                     stream->input.state = PARSE_STATE_SPACE_EXPECT;
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
 
                 } else
-                    BUFFER_PUSH(stream->input.value_buffer, chr);
+                    buffer_push(stream->input.value_buffer, chr);
 
                 break;
 
@@ -561,16 +564,16 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
             case PARSE_STATE_QUOTED_ESCAPE_KEY: {
 
                 if (chr == 'n') {
-                	BUFFER_PUSH(stream->input.key_buffer, '\n');
+                	buffer_push(stream->input.key_buffer, '\n');
                     stream->input.state = PARSE_STATE_QUOTED_KEY;
                 } else if (chr != '\n') {
-                	BUFFER_PUSH(stream->input.key_buffer, chr);
+                	buffer_push(stream->input.key_buffer, chr);
                     stream->input.state = PARSE_STATE_QUOTED_KEY;
                 } else {
                     stream->input.state = PARSE_STATE_PASS;
                     stream->input.message_type = -1;
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
 
                 }
                 
@@ -580,16 +583,16 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
             case PARSE_STATE_QUOTED_ESCAPE_VALUE: {
 
                 if (chr == 'n') {
-                    BUFFER_PUSH(stream->input.value_buffer, '\n');
+                    buffer_push(stream->input.value_buffer, '\n');
                     stream->input.state = PARSE_STATE_QUOTED_VALUE;
                 } else if (chr != '\n') {
-                    BUFFER_PUSH(stream->input.value_buffer, chr);
+                    buffer_push(stream->input.value_buffer, chr);
                     stream->input.state = PARSE_STATE_QUOTED_VALUE;
                 } else {
                     stream->input.state = PARSE_STATE_PASS;
                     stream->input.message_type = -1;
-                    BUFFER_RESET(stream->input.key_buffer);
-                    BUFFER_RESET(stream->input.value_buffer);
+                    buffer_reset(stream->input.key_buffer);
+                    buffer_reset(stream->input.value_buffer);
 
 
                 }
@@ -626,8 +629,8 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
 
     stream->input.state = -prefix_length;
     stream->input.complete = FALSE;
-    BUFFER_RESET(stream->input.key_buffer);
-    BUFFER_RESET(stream->input.value_buffer);
+    buffer_reset(stream->input.key_buffer);
+    buffer_reset(stream->input.value_buffer);
 
     return stream->input.message_type;
     
@@ -723,7 +726,7 @@ void __output_properties(const char *key, const char *value, const void *obj) {
 
 }
 
-void write_message(message_stream* stream, trax_logging* log, int type, const string_list arguments, trax_properties* properties) {
+void write_message(message_stream* stream, trax_logging* log, int type, const string_list* arguments, trax_properties* properties) {
 
     int i;
 
@@ -759,8 +762,8 @@ void write_message(message_stream* stream, trax_logging* log, int type, const st
 
     OUTPUT_STRING(" ");
 
-    for (i = 0; i < LIST_SIZE(arguments); i++) {
-        char* arg = arguments.buffer[i];
+    for (i = 0; i < list_size(arguments); i++) {
+        char* arg = arguments->buffer[i];
         OUTPUT_STRING("\"");
         OUTPUT_ESCAPED(arg);
         OUTPUT_STRING("\" ");

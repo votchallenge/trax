@@ -442,7 +442,7 @@ void copy_properties(trax_properties* source, trax_properties* dest) {
 trax_handle* client_setup(message_stream* stream, const trax_logging log) {
 
     trax_properties* tmp_properties;
-    string_list arguments;
+    string_list* arguments;
     int version = 1;
     char *tmp, *tracker_name, *tracker_description, *tracker_family;
     int region_formats, image_formats;
@@ -455,13 +455,13 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     client->stream = stream;
 
     tmp_properties = trax_properties_create();
-    LIST_CREATE(arguments, 8);
+    arguments = list_create(8);
   
-    if (read_message((message_stream*)client->stream, &LOGGER(client), &arguments, tmp_properties) != TRAX_HELLO) {
+    if (read_message((message_stream*)client->stream, &LOGGER(client), arguments, tmp_properties) != TRAX_HELLO) {
         goto failure;
     }
 
-    if (LIST_SIZE(arguments) > 0)
+    if (list_size(arguments) > 0)
         goto failure;
 
     client->version = trax_properties_get_int(tmp_properties, "trax.version", 1);
@@ -482,13 +482,13 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
         tracker_family);
 
     trax_properties_release(&tmp_properties);
-    LIST_DESTROY(arguments);
+    list_destroy(&arguments);
 
     return client;
     
 failure:
 
-    LIST_DESTROY(arguments);
+    list_destroy(&arguments);
     trax_properties_release(&tmp_properties);
     free(client);
     return NULL;
@@ -499,7 +499,7 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
 
     trax_properties* properties;
     trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
-    string_list arguments;
+    string_list* arguments;
     char tmp[BUFFER_LENGTH];
 
     server->flags = (TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
@@ -531,13 +531,13 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
     server->metadata = trax_metadata_create(metadata->format_region, metadata->format_image,
         metadata->tracker_name, metadata->tracker_description, metadata->tracker_family);
    
-    LIST_CREATE(arguments, 1);
+    arguments = list_create(1);
 
     write_message((message_stream*)server->stream, &LOGGER(server), TRAX_HELLO, arguments, properties);
 
     trax_properties_release(&properties);
 
-    LIST_DESTROY(arguments);
+    list_destroy(&arguments);
 
     return server;
 
@@ -595,7 +595,7 @@ trax_handle* trax_client_setup_socket(int server, int timeout, const trax_loggin
 int trax_client_wait(trax_handle* client, trax_region** region, trax_properties* properties) {
 
     trax_properties* tmp_properties;
-    string_list arguments;
+    string_list* arguments;
     int result = TRAX_ERROR;
 
     (*region) = NULL;
@@ -604,20 +604,20 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
     VALIDATE_CLIENT_HANDLE(client);
 
     tmp_properties = trax_properties_create();
-    LIST_CREATE(arguments, 8);
+    arguments = list_create(8);
 
-    result = read_message((message_stream*)client->stream, &LOGGER(client), &arguments, tmp_properties);
+    result = read_message((message_stream*)client->stream, &LOGGER(client), arguments, tmp_properties);
 
     if (result == TRAX_STATE) {
 
 		region_container *_region = NULL;
 
-        if (LIST_SIZE(arguments) != 1)
+        if (list_size(arguments) != 1)
             goto failure;
 
         result = TRAX_STATE;
 
-        if (!region_parse(arguments.buffer[0], &_region)) {
+        if (!region_parse(arguments->buffer[0], &_region)) {
             goto failure;
         }  
           
@@ -629,7 +629,7 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
     } else if (result == TRAX_QUIT) {
 
-        if (LIST_SIZE(arguments) != 0)
+        if (list_size(arguments) != 0)
             goto failure;
 
         if (properties) 
@@ -645,7 +645,7 @@ failure:
 
 end:
 
-    LIST_DESTROY(arguments);
+    list_destroy(&arguments);
     trax_properties_release(&tmp_properties);
 
     return result;
@@ -656,7 +656,7 @@ int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* 
 
 	char* data = NULL;
 	region_container* _region;
-    string_list arguments;
+    string_list* arguments;
 
     VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
@@ -667,11 +667,11 @@ int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* 
 
     assert(_region->type != SPECIAL);
 
-    LIST_CREATE(arguments, 2);
+    arguments = list_create(2);
 
     if (TRAX_SUPPORTS(client->metadata->format_image, image->type)) {
         char* buffer = image_encode(image);
-        LIST_APPEND_DIRECT(arguments, buffer);
+        list_append_direct(arguments, buffer);
     } else goto failure;
 
     if (!TRAX_SUPPORTS(client->metadata->format_region, REGION_TYPE(region))) {
@@ -694,17 +694,19 @@ int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* 
     } else data = region_string((region_container *)region);
 
     if (data) {
-        LIST_APPEND(arguments, data);
+        list_append(arguments, data);
         free(data);
     }
 
     write_message((message_stream*)client->stream, &LOGGER(client), TRAX_INITIALIZE, arguments, properties);
 
+    list_destroy(&arguments);
+
     return TRAX_OK;
 
 failure:
 
-    LIST_DESTROY(arguments);
+    list_destroy(&arguments);
 
     return TRAX_ERROR;
 
@@ -712,26 +714,28 @@ failure:
 
 int trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties) {
 
-    string_list arguments;
+    string_list* arguments;
     VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
 
     assert(TRAX_SUPPORTS(client->metadata->format_image, image->type));
 
-    LIST_CREATE(arguments, 2);
+    arguments = list_create(2);
 
     if (TRAX_SUPPORTS(client->metadata->format_image, image->type)) {
         char* buffer = image_encode(image);
-        LIST_APPEND_DIRECT(arguments, buffer);
+        list_append_direct(arguments, buffer);
     } else goto failure;
 
     write_message((message_stream*)client->stream, &LOGGER(client), TRAX_FRAME, arguments, properties);
+
+    list_destroy(&arguments);
 
     return TRAX_OK;
 
 failure:
 
-    LIST_DESTROY(arguments);
+    list_destroy(&arguments);
 
     return TRAX_ERROR;
 
@@ -782,25 +786,25 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 {
 
     int result = TRAX_ERROR;
-    string_list arguments;
+    string_list* arguments;
     trax_properties* tmp_properties;
 
     VALIDATE_ALIVE_HANDLE(server);
     VALIDATE_SERVER_HANDLE(server);
 
     tmp_properties = trax_properties_create();
-    LIST_CREATE(arguments, 8);
+    arguments = list_create(8);
 
     *image = NULL;
 
-    result = read_message((message_stream*)server->stream, &LOGGER(server), &arguments, tmp_properties);
+    result = read_message((message_stream*)server->stream, &LOGGER(server), arguments, tmp_properties);
 
     if (result == TRAX_FRAME) {
 
-        if (LIST_SIZE(arguments) != 1)
+        if (list_size(arguments) != 1)
             goto failure;
 
-        *image = image_decode(arguments.buffer[0]);
+        *image = image_decode(arguments->buffer[0]);
         if (!*image || !TRAX_SUPPORTS(server->metadata->format_image, (*image)->type)) 
             goto failure;
 
@@ -810,7 +814,7 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
         goto end;
     } else if (result == TRAX_QUIT) {
 
-        if (LIST_SIZE(arguments) != 0)
+        if (list_size(arguments) != 0)
             goto failure;
 
         if (properties) 
@@ -821,15 +825,15 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
         goto end;
     } else if (result == TRAX_INITIALIZE) {
 
-        if (LIST_SIZE(arguments) != 2)
+        if (list_size(arguments) != 2)
             goto failure;
 
-        *image = image_decode(arguments.buffer[0]);
+        *image = image_decode(arguments->buffer[0]);
 
         if (!*image || !TRAX_SUPPORTS(server->metadata->format_image, (*image)->type)) 
             goto failure;
 
-        if (!region_parse(arguments.buffer[1], (region_container**)region)) {
+        if (!region_parse(arguments->buffer[1], (region_container**)region)) {
             goto failure;
         }
 
@@ -851,7 +855,7 @@ failure:
 
 end:
 
-    LIST_DESTROY(arguments);
+    list_destroy(&arguments);
     trax_properties_release(&tmp_properties);
 
     return result;
@@ -860,7 +864,7 @@ end:
 int trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties) {
 
 	char* data;
-    string_list arguments;
+    string_list* arguments;
 
     VALIDATE_ALIVE_HANDLE(server);
     VALIDATE_SERVER_HANDLE(server);
@@ -869,13 +873,13 @@ int trax_server_reply(trax_handle* server, trax_region* region, trax_properties*
 
     if (!data) return TRAX_ERROR;
 
-    LIST_CREATE(arguments, 1);
+    arguments = list_create(1);
 
-    LIST_APPEND_DIRECT(arguments, data);
+    list_append_direct(arguments, data);
 
     write_message((message_stream*)server->stream, &LOGGER(server), TRAX_STATE, arguments, properties);
 
-    LIST_DESTROY(arguments);
+    list_destroy(&arguments);
 
     return TRAX_OK;
 
@@ -888,15 +892,15 @@ int trax_cleanup(trax_handle** handle) {
     VALIDATE_HANDLE((*handle));
 
     if (!((*handle)->flags & TRAX_FLAG_TERMINATED)) {
-        string_list arguments;
+        string_list *arguments;
         trax_properties* tmp_properties;
 
-        LIST_CREATE(arguments, 1);
+        arguments = list_create(1);
         tmp_properties = trax_properties_create();
 
         write_message((message_stream*)(*handle)->stream, &LOGGER(*handle), TRAX_QUIT, arguments, tmp_properties);
 
-        LIST_DESTROY(arguments);
+        list_destroy(&arguments);
         trax_properties_release(&tmp_properties);
 
     }
