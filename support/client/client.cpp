@@ -265,6 +265,11 @@ public:
 		RELEASE_THREAD(watchdog_thread);
 		RELEASE_THREAD(logger_thread);
 
+		if (client) {
+			delete client;
+			client = NULL;
+		}
+
 		if (connection == CONNECTION_SOCKETS) {
 			print_debug("Closing server socket.");
 			destroy_server_socket(socket_id);
@@ -328,6 +333,11 @@ public:
 			if (verbosity != VERBOSITY_SILENT)
 				logger = Logging(client_logger, this, 0);
 
+			if (client) {
+				delete client;
+				client = NULL;
+			}
+
 			if (connection == CONNECTION_SOCKETS) {
 				print_debug("Setting up TraX with TCP socket connection");
 				client = new Client(socket_id, logger, timeout);
@@ -363,11 +373,6 @@ public:
 		stop_watchdog();
 
 		sleep(0);
-
-		if (client) {
-			delete client;
-			client = NULL;
-		}
 
 		sleep(0);
 

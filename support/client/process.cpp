@@ -470,12 +470,18 @@ void Process::cleanup() {
         CLOSE_AND_RESET(piProcInfo.hProcess);
         CLOSE_AND_RESET(piProcInfo.hThread);
 
-        if (p_stdin)
+        if (p_stdin != -1) {
             close(p_stdin);
-        if (p_stdout)
+            p_stdin = -1;
+        }
+        if (p_stdout != -1) {
             close(p_stdout);
-        if (p_stderr)
+            p_stdout = -1;
+        }
+        if (p_stderr != -1) {
             close(p_stderr);
+            p_stderr = -1;
+        }
 
         CLOSE_AND_RESET(handle_IN_Rd);
         CLOSE_AND_RESET(handle_IN_Wr);
