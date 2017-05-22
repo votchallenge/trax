@@ -69,8 +69,6 @@ __inline void sleep(long time) {
     Sleep(time * 1000);
 }
 
-#define __INLINE __inline
-
 #else
 
 #ifdef _MAC_
@@ -81,7 +79,6 @@ __inline void sleep(long time) {
 
 #include <signal.h>
 #define strcmpi strcasecmp
-#define __INLINE inline
 
 #endif
 

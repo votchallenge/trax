@@ -46,22 +46,14 @@ static void initialize_sockets(void) {
     return;
 }
 
-#define __INLINE 
-
 #else
 
-//#ifdef __APPLE__
-//    #include <tcpd.h>
-//#else
 #include <sys/socket.h>
 #include <unistd.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #define closesocket close
-//#endif
-
-#define __INLINE static inline
 
 #define strcmpi strcasecmp
 
@@ -274,7 +266,7 @@ void destroy_message_stream(message_stream** stream) {
 
 }
 
-__INLINE int read_character(message_stream* stream) {
+static __INLINE int read_character(message_stream* stream) {
     char chr;
 
     if (stream->buffer_position >= stream->buffer_length) {
