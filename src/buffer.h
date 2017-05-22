@@ -2,10 +2,8 @@
 #ifndef __STRING_BUFFER_H
 #define __STRING_BUFFER_H
 
-// MinGW requires this for compatibility
-#ifndef _POSIX_C_SOURCE
-#define  _POSIX_C_SOURCE 200809L
-#endif
+// Enable MinGW secure API for _snprintf_s
+#define MINGW_HAS_SECURE_API 1
 
 #include <string.h>
 #include <stdlib.h>
@@ -73,7 +71,7 @@ static inline void buffer_append(string_buffer* B, const char *format, ...) {
 	int required;
 	va_list args;
 
-#ifdef _MSC_VER
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER)
 
 	va_start(args, format);
 	required = _vscprintf(format, args) + 1;
