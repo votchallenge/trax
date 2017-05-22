@@ -205,7 +205,7 @@ Region array_to_region(const mxArray* input) {
     double *r = (double*)mxGetPr(input);
     int l = mxGetN(input);
 
-    if (l % 2 == 0 && l > 6) {
+    if (l % 2 == 0 && l >= 6) {
 
         p = Region::create_polygon(l / 2);
 
