@@ -655,7 +655,6 @@ int write_buffer(message_stream* stream, const char* buf, int len, trax_logging*
             cnt += l;
 
         }
-        fsync(stream->files.output);
 
     }
 
