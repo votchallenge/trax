@@ -94,11 +94,23 @@ int create_server_socket(int port) {
 		return -1;
 	}
 
-	const int enable = 1;
-	if (setsockopt(sid, SOL_SOCKET, SO_REUSEADDR, (const char*) &enable, sizeof(int)) < 0) {
-	    perror("setsockopt");
-	    return -1;
+	{
+		const int enable = 1;
+		if (setsockopt(sid, SOL_SOCKET, SO_REUSEADDR, (const char*) &enable, sizeof(int)) < 0) {
+		    perror("setsockopt");
+		    return -1;
+		}
 	}
+
+#ifdef SO_NOSIGPIPE
+	{
+		const int enable = 1;
+		if (setsockopt(sid, SOL_SOCKET, SO_NOSIGPIPE, (const char*) &enable, sizeof(int)) < 0) {
+		    perror("setsockopt");
+		    return -1;
+		}
+	}
+#endif
 
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
@@ -282,7 +294,13 @@ public:
 
 		if (process_running()) return false;
 
-		print_debug("Starting process %s", command.c_str());
+		if (client) {
+			delete client;
+			client = NULL;
+			print_debug("Deleted stale client");
+		}
+
+		print_debug("Creating process %s", command.c_str());
 
 		process_state_mutex.acquire();
 		process = new Process(command, connection == CONNECTION_EXPLICIT);
@@ -308,6 +326,7 @@ public:
 		reset_logger();
 
 		bool started = false;
+		print_debug("Starting process");
 		started = process->start();
 
 		if (!started) {
@@ -321,18 +340,12 @@ public:
 				throw std::runtime_error("Unable to start the tracker process");
 			}
 
-
 			start_watchdog();
 
 			Logging logger = trax_no_log;
 
 			if (verbosity != VERBOSITY_SILENT)
 				logger = Logging(client_logger, this, 0);
-
-			if (client) {
-				delete client;
-				client = NULL;
-			}
 
 			if (connection == CONNECTION_SOCKETS) {
 				print_debug("Setting up TraX with TCP socket connection");
@@ -501,7 +514,9 @@ public:
 #endif
 		buffer[size-1] = 0;
 
-		*logger_stream << "CLIENT: " << buffer << std::endl;
+		MUTEX_SYNCHRONIZE(logger_mutex) {
+			*logger_stream << "CLIENT: " << buffer << std::endl;
+		}
 
 		free(buffer);
 
@@ -534,7 +549,7 @@ public:
 			}
 
 			if (state->watchdog_timeout > 0) {
-
+state->print_debug("Timeout state %d", state->watchdog_timeout);
 				state->watchdog_timeout--;
 
 				if (state->watchdog_timeout == 0) {

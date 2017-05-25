@@ -63,10 +63,6 @@ static void initialize_sockets(void) {}
 
 #define VALIDATE_MESSAGE_STREAM(S) assert((S->flags & TRAX_STREAM_FILES) || (S->flags & TRAX_STREAM_SOCKET))
 
-#define LOG_BUFFER(L, S, N) { if ((L) && (L)->callback ) { (L)->callback(S, N, (L)->data); } }
-
-#define LOG_CHAR(L, C) { if ((L) && (L)->callback ) { (L)->callback(&(C), 1, (L)->data); } }
-
 #define MAX_KEY_LENGTH 64
 
 const int prefix_length = sizeof(TRAX_PREFIX) - 1;
@@ -636,7 +632,11 @@ int write_buffer(message_stream* stream, const char* buf, int len, trax_logging*
         int cnt = 0;
 
         while(cnt < len) {
+            #ifdef MSG_NOSIGNAL
+            int l = send(stream->socket.socket, buf+cnt, len-cnt, MSG_NOSIGNAL);
+            #else
             int l = send(stream->socket.socket, buf+cnt, len-cnt, 0);
+            #endif
             if(l == -1) {
                 return -1;
             }
@@ -653,7 +653,9 @@ int write_buffer(message_stream* stream, const char* buf, int len, trax_logging*
                 return -1;
             }
             cnt += l;
+
         }
+        fsync(stream->files.output);
 
     }
 

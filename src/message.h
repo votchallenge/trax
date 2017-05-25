@@ -64,4 +64,8 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
 	
 void write_message(message_stream* stream, trax_logging* log, int type, const string_list* arguments, trax_properties* properties);
 
+#define LOG_STRING(L, S) { if ((L) && (L)->callback ) { (L)->callback(S, strlen(S), (L)->data); } }
+#define LOG_BUFFER(L, S, N) { if ((L) && (L)->callback ) { (L)->callback(S, N, (L)->data); } }
+#define LOG_CHAR(L, C) { if ((L) && (L)->callback ) { (L)->callback(&(C), 1, (L)->data); } }
+
 #endif
