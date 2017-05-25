@@ -549,7 +549,7 @@ public:
 			}
 
 			if (state->watchdog_timeout > 0) {
-state->print_debug("Timeout state %d", state->watchdog_timeout);
+
 				state->watchdog_timeout--;
 
 				if (state->watchdog_timeout == 0) {
