@@ -21,7 +21,7 @@ set_tests_properties(test_native_static_timeout PROPERTIES TIMEOUT 10 WILL_FAIL 
 
 IF (PYTHON_EXECUTABLE)
 ADD_TEST(NAME test_python_static_timeout COMMAND traxtest -t 3 -p time_wait=5 -d -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python_static.py WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-set_tests_properties(test_python_static_default PROPERTIES TIMEOUT 10)
+set_tests_properties(test_python_static_timeout PROPERTIES TIMEOUT 10 WILL_FAIL TRUE)
 ENDIF()
 
 IF (OCTAVE)
