@@ -97,8 +97,8 @@ int create_server_socket(int port) {
 	{
 		const int enable = 1;
 		if (setsockopt(sid, SOL_SOCKET, SO_REUSEADDR, (const char*) &enable, sizeof(int)) < 0) {
-		    perror("setsockopt");
-		    return -1;
+			perror("setsockopt");
+			return -1;
 		}
 	}
 
@@ -106,8 +106,8 @@ int create_server_socket(int port) {
 	{
 		const int enable = 1;
 		if (setsockopt(sid, SOL_SOCKET, SO_NOSIGPIPE, (const char*) &enable, sizeof(int)) < 0) {
-		    perror("setsockopt");
-		    return -1;
+			perror("setsockopt");
+			return -1;
 		}
 	}
 #endif
@@ -224,7 +224,7 @@ namespace trax {
 class TrackerProcess::State : public Synchronized {
 public:
 	State(const string& command, const map<std::string, std::string> environment, ConnectionMode connection, VerbosityMode verbosity, int timeout, string directory, ostream *log):
-		command(command), environment(environment), socket_id(-1), socket_port(TRAX_DEFAULT_PORT),
+		client(NULL), process(NULL), command(command), environment(environment), socket_id(-1), socket_port(TRAX_DEFAULT_PORT),
 		connection(connection), verbosity(verbosity), timeout(timeout), directory(directory) {
 
 		timer_init();
@@ -248,8 +248,6 @@ public:
 
 		}
 
-		client = NULL;
-		process = NULL;
 		watchdog_active = true;
 		logger_active = true;
 
@@ -268,10 +266,10 @@ public:
 		watchdog_active = false;
 		logger_active = false;
 
-		stop_process();
-
 		RELEASE_THREAD(watchdog_thread);
 		RELEASE_THREAD(logger_thread);
+
+		stop_process();
 
 		if (client) {
 			delete client;
@@ -307,7 +305,7 @@ public:
 		if (!directory.empty()) {
 			print_debug("Working directory is %s", directory.c_str());
 			process->set_directory(directory);
-		} 
+		}
 		process_state_mutex.release();
 
 		process->copy_environment();
@@ -356,6 +354,7 @@ public:
 			}
 			// TODO: check tracker exit state
 			if (!(*client)) {
+				print_debug("Unable to establish connection.");
 				throw std::runtime_error("Unable to establish connection.");
 			}
 
@@ -379,31 +378,38 @@ public:
 
 	bool stop_process() {
 
+		int exit_status = -1;
+
 		stop_watchdog();
-
-		sleep(0);
-
-		sleep(0);
 
 		Lock lock(process_state_mutex);
 
+		if (client != NULL) {
+			print_debug("Trying to stop process using protocol.");
+			client->terminate();
+		}
+
 		if (process) {
-			int exit_status = -1;
 
-			print_debug("Trying to stop process nicely.");
-
-			process->stop();
-
-			for (int i = 0; i < 10; i++) {
+			for (int i = 0; i < 5; i++) {
 				if (!process->is_alive(&exit_status)) break;
 				sleepf(0.1);
 			}
 
 			if (process->is_alive(&exit_status)) {
-				print_debug("Escalating to process termination.");
-				process->kill();
-				sleepf(0.1);
-				process->is_alive(&exit_status);
+				print_debug("Trying to terminate process nicely.");
+				process->stop();
+				for (int i = 0; i < 5; i++) {
+					if (!process->is_alive(&exit_status)) break;
+					sleepf(0.1);
+				}
+
+				if (process->is_alive(&exit_status)) {
+					print_debug("Escalating to brute-force termination.");
+					process->kill();
+					sleepf(0.1);
+					process->is_alive(&exit_status);
+				}
 			}
 
 			flush_streams();
@@ -510,9 +516,9 @@ public:
 			size = required;
 			buffer = (char*) realloc(buffer, sizeof(char) * size);
 			required = vsnprintf(buffer, size, format, args);
-		} 
+		}
 #endif
-		buffer[size-1] = 0;
+		buffer[size - 1] = 0;
 
 		MUTEX_SYNCHRONIZE(logger_mutex) {
 			*logger_stream << "CLIENT: " << buffer << std::endl;
@@ -546,17 +552,18 @@ public:
 			if (terminate) {
 				state->print_debug("Termination requested externally ...");
 				state->stop_process();
-			}
+			} else {
 
-			if (state->watchdog_timeout > 0) {
+				if (state->watchdog_timeout > 0) {
 
-				state->watchdog_timeout--;
+					state->watchdog_timeout--;
 
-				if (state->watchdog_timeout == 0) {
-					state->print_debug("Timeout reached. Stopping tracker process ...");
-					state->stop_process();
+					if (state->watchdog_timeout == 0) {
+						state->print_debug("Timeout reached. Stopping tracker process ...");
+						state->stop_process();
+					}
+
 				}
-
 			}
 
 			state->watchdog_mutex.release();
@@ -672,6 +679,9 @@ public:
 
 	}
 
+	Client* client;
+	Process* process;
+
 	vector<WatchdogCallback*> callbacks;
 	string command;
 	map<string, string> environment;
@@ -682,9 +692,6 @@ public:
 	bool tracking;
 	ConnectionMode connection;
 	VerbosityMode verbosity;
-
-	Client* client;
-	Process* process;
 
 	int timeout;
 
@@ -721,7 +728,8 @@ TrackerProcess::TrackerProcess(const string& command, const map<string, string> 
 
 TrackerProcess::~TrackerProcess() {
 
-	delete state;
+	if (state) delete state;
+	state = NULL;
 
 }
 
@@ -803,7 +811,7 @@ bool TrackerProcess::frame(const Image& image, const Properties& properties) {
 
 bool TrackerProcess::ready() {
 
-	if (!state->process_running()) return false;
+	if (!state || !state->process_running()) return false;
 
 	return true;
 
