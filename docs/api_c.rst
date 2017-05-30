@@ -196,6 +196,14 @@ Communication
    :param properties: Additional properties
    :return: Integer value indicating status, can be either :c:macro:`TRAX_OK` or :c:macro:`TRAX_ERROR`
 
+.. c:function:: int trax_terminate(trax_handle* handle)
+
+   Used in client and server. Closes communication, sends quit message if needed. This function is implicitly
+   called in :c:func:`trax_cleanup`.
+
+   :param handle: Server or client state object
+   :return: Integer value indicating status, can be either :c:macro:`TRAX_OK` or :c:macro:`TRAX_ERROR`
+
 .. c:function:: int trax_cleanup(trax_handle** handle)
 
    Used in client and server. Closes communication, sends quit message if needed. Releases the handle structure.

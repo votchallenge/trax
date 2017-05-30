@@ -14,10 +14,11 @@
 #include "message.h"
 #include "base64.h"
 
-#define VALIDATE_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID))
-#define VALIDATE_ALIVE_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && !(H->flags & TRAX_FLAG_TERMINATED))
-#define VALIDATE_SERVER_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && (H->flags & TRAX_FLAG_SERVER))
-#define VALIDATE_CLIENT_HANDLE(H) assert((H->flags & TRAX_FLAG_VALID) && !(H->flags & TRAX_FLAG_SERVER))
+#define VALIDATE_HANDLE(H) assert(((H)->flags & TRAX_FLAG_VALID))
+#define VALIDATE_SERVER_HANDLE(H) assert(((H)->flags & TRAX_FLAG_VALID) && ((H)->flags & TRAX_FLAG_SERVER))
+#define VALIDATE_CLIENT_HANDLE(H) assert(((H)->flags & TRAX_FLAG_VALID) && !((H)->flags & TRAX_FLAG_SERVER))
+
+#define HANDLE_ALIVE(H) (((H)->flags & TRAX_FLAG_VALID) && !((H)->flags & TRAX_FLAG_TERMINATED))
 
 #define LOGGER(H) (((H)->logging))
 
@@ -600,8 +601,10 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
     (*region) = NULL;
 
-    VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
+
+    if (!HANDLE_ALIVE(client))
+        return TRAX_ERROR;
 
     tmp_properties = trax_properties_create();
     arguments = list_create(8);
@@ -658,8 +661,10 @@ int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* 
 	region_container* _region;
     string_list* arguments;
 
-    VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
+
+    if (!HANDLE_ALIVE(client))
+        return TRAX_ERROR;
 
 	assert(image && region);
 
@@ -715,8 +720,10 @@ failure:
 int trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties) {
 
     string_list* arguments;
-    VALIDATE_ALIVE_HANDLE(client);
     VALIDATE_CLIENT_HANDLE(client);
+
+    if (!HANDLE_ALIVE(client))
+        return TRAX_ERROR;
 
     assert(TRAX_SUPPORTS(client->metadata->format_image, image->type));
 
@@ -789,8 +796,10 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
     string_list* arguments;
     trax_properties* tmp_properties;
 
-    VALIDATE_ALIVE_HANDLE(server);
     VALIDATE_SERVER_HANDLE(server);
+
+    if (!HANDLE_ALIVE(server))
+        return TRAX_ERROR;
 
     tmp_properties = trax_properties_create();
     arguments = list_create(8);
@@ -866,8 +875,10 @@ int trax_server_reply(trax_handle* server, trax_region* region, trax_properties*
 	char* data;
     string_list* arguments;
 
-    VALIDATE_ALIVE_HANDLE(server);
     VALIDATE_SERVER_HANDLE(server);
+
+    if (!HANDLE_ALIVE(server))
+        return TRAX_ERROR;
 
     data = region_string(REGION(region));
 
@@ -885,27 +896,37 @@ int trax_server_reply(trax_handle* server, trax_region* region, trax_properties*
 
 }
 
+int trax_terminate(trax_handle* handle) {
+
+    VALIDATE_HANDLE(handle);
+
+    if ((handle->flags & TRAX_FLAG_TERMINATED)) 
+        return TRAX_ERROR;
+
+    string_list *arguments;
+    trax_properties* tmp_properties;
+
+    arguments = list_create(1);
+    tmp_properties = trax_properties_create();
+
+    write_message((message_stream*)handle->stream, &LOGGER(handle), TRAX_QUIT, arguments, tmp_properties);
+
+    list_destroy(&arguments);
+    trax_properties_release(&tmp_properties);
+
+    handle->flags |= TRAX_FLAG_TERMINATED;
+
+    return TRAX_OK;
+
+}
+
 int trax_cleanup(trax_handle** handle) {
 
     if (!*handle) return -1;
 
     VALIDATE_HANDLE((*handle));
 
-    if (!((*handle)->flags & TRAX_FLAG_TERMINATED)) {
-        string_list *arguments;
-        trax_properties* tmp_properties;
-
-        arguments = list_create(1);
-        tmp_properties = trax_properties_create();
-
-        write_message((message_stream*)(*handle)->stream, &LOGGER(*handle), TRAX_QUIT, arguments, tmp_properties);
-
-        list_destroy(&arguments);
-        trax_properties_release(&tmp_properties);
-
-    }
-
-    (*handle)->flags |= TRAX_FLAG_TERMINATED;
+    trax_terminate((*handle));
 
     trax_metadata_release(&(*handle)->metadata);
 
@@ -919,7 +940,8 @@ int trax_cleanup(trax_handle** handle) {
 
 int trax_set_parameter(trax_handle* handle, int id, int value) {
 
-    VALIDATE_ALIVE_HANDLE(handle);
+    if (!HANDLE_ALIVE(handle))
+        return TRAX_ERROR;
 
     // No settable parameters at the moment.
 
@@ -928,7 +950,8 @@ int trax_set_parameter(trax_handle* handle, int id, int value) {
 
 int trax_get_parameter(trax_handle* handle, int id, int* value) {
 
-    VALIDATE_ALIVE_HANDLE(handle);
+    if (!HANDLE_ALIVE(handle))
+        return TRAX_ERROR;
 
     switch (id) {
         case TRAX_PARAMETER_VERSION:

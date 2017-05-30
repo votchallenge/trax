@@ -166,6 +166,7 @@ void Metadata::cleanup() {
 }
 
 void Metadata::wrap(trax_metadata* obj) {
+	if (!obj) return;
 	release();
 	if (obj) acquire();
 	metadata = obj;
@@ -205,6 +206,7 @@ int Handle::get_parameter(int id, int* value) {
 }
 
 void Handle::wrap(trax_handle* obj) {
+	if (!obj) return;
 	release();
 	if (obj) acquire();
 	handle = obj;
@@ -212,8 +214,16 @@ void Handle::wrap(trax_handle* obj) {
 
 const Metadata Handle::metadata() {
 
+	if (!claims()) return Metadata();
+
 	return Metadata(handle->metadata);
 
+}
+
+bool Handle::terminate() {
+	if (!claims()) return -1;
+
+	return trax_terminate(handle) == TRAX_OK;
 }
 
 Client::Client(int input, int output, Logging log) {
@@ -230,6 +240,8 @@ Client::~Client() {
 
 int Client::wait(Region& region, Properties& properties) {
 
+	if (!claims()) return -1;
+
 	trax_region* tregion = NULL;
 
 	properties.ensure_unique();
@@ -244,12 +256,14 @@ int Client::wait(Region& region, Properties& properties) {
 }
 
 int Client::initialize(const Image& image, const Region& region, const Properties& properties) {
+	if (!claims()) return -1;
 
 	return trax_client_initialize(handle, image.image, region.region, properties.properties);
 
 }
 
 int Client::frame(const Image& image, const Properties& properties) {
+	if (!claims()) return -1;
 
 	return trax_client_frame(handle, image.image, properties.properties);
 
@@ -266,6 +280,8 @@ Server::~Server() {
 }
 
 int Server::wait(Image& image, Region& region, Properties& properties) {
+
+	if (!claims()) return -1;
 
 	trax_image* timage = NULL;
 	trax_region* tregion = NULL;
@@ -284,6 +300,8 @@ int Server::wait(Image& image, Region& region, Properties& properties) {
 }
 
 int Server::reply(const Region& region, const Properties& properties) {
+
+	if (!claims()) return -1;
 
 	return trax_server_reply(handle, region.region, properties.properties);
 
@@ -363,6 +381,7 @@ void Image::cleanup() {
 }
 
 void Image::wrap(trax_image* obj) {
+	if (!obj) return;
 	release();
 	image = obj;
 	if (image) acquire();
@@ -492,6 +511,7 @@ float Region::overlap(const Region& region, const Bounds& bounds) const {
 }
 
 void Region::wrap(trax_region* obj) {
+	if (!obj) return;
 	release();
 	if (obj) acquire();
 	region = obj;
@@ -665,6 +685,7 @@ void Properties::cleanup() {
 }
 
 void Properties::wrap(trax_properties* obj) {
+	if (!obj) return;
 	release();
 	properties = obj;
 	acquire();

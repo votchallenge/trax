@@ -91,8 +91,11 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
       Sends a frame message.
 
-   .. cpp:function:: const Configuration configuration()
+   .. cpp:function:: const Metadata metadata()
 
+   .. cpp:function:: const bool terminate()
+
+      Terminate session by sending quit message. Implicitly called when object is destroyed.
 
 .. cpp:class:: Server
 
@@ -110,7 +113,11 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
       Sends a status reply to the client.
 
-   .. cpp:function:: const Configuration configuration()
+   .. cpp:function:: const Metadata metadata()
+
+   .. cpp:function:: const bool terminate()
+
+      Terminate session by sending quit message. Implicitly called when object is destroyed.
 
 
 .. cpp:class:: Image

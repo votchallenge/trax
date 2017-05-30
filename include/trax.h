@@ -238,6 +238,11 @@ __TRAX_EXPORT int trax_server_reply(trax_handle* server, trax_region* region, tr
 
 /**
  * Used in client and server. Closes communication, sends quit message if needed.
+**/
+__TRAX_EXPORT int trax_terminate(trax_handle* handle);
+
+/**
+ * Used in client and server. Closes communication, sends quit message if needed.
  * Releases the handle structure.
 **/
 __TRAX_EXPORT int trax_cleanup(trax_handle** handle);
@@ -598,6 +603,11 @@ public:
     int get_parameter(int id, int* value);
 
     const Metadata metadata();
+
+    /**
+     * Terminates session, sends quit message.
+    **/
+    bool terminate();
 
 protected:
 
