@@ -121,8 +121,8 @@ char* parse_uri(char* buffer) {
 int verify_image_format(const char* buffer) {
 
     int i;
-    char jpeg_prefix[] = { (char) 255, (char) 216, (char) 255, (char) 224 }; 
-    char png_prefix[] = { (char) 137, (char) 80, (char) 78, (char) 71 }; 
+    char jpeg_prefix[] = { (char) 255, (char) 216, (char) 255, (char) 224 };
+    char png_prefix[] = { (char) 137, (char) 80, (char) 78, (char) 71 };
 
     for (i = 0; i < 4; i++) {
         if (buffer[i] != jpeg_prefix[i])
@@ -233,11 +233,11 @@ char* image_encode(trax_image* image) {
     }
     case TRAX_IMAGE_MEMORY: {
         int offset = 0;
-        const char* format = image->format == TRAX_IMAGE_MEMORY_RGB ? "rgb" : 
-            image->format == TRAX_IMAGE_MEMORY_GRAY8 ? "gray8" : 
+        const char* format = image->format == TRAX_IMAGE_MEMORY_RGB ? "rgb" :
+            image->format == TRAX_IMAGE_MEMORY_GRAY8 ? "gray8" :
             image->format == TRAX_IMAGE_MEMORY_GRAY16 ? "gray16" : NULL;
-        int depth = image->format == TRAX_IMAGE_MEMORY_RGB ? 1 : 
-            (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : 
+        int depth = image->format == TRAX_IMAGE_MEMORY_RGB ? 1 :
+            (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
             (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
         int channels = image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
         int length = (image->width * image->height * depth * channels);
@@ -253,7 +253,7 @@ char* image_encode(trax_image* image) {
     case TRAX_IMAGE_BUFFER: {
         int offset = 0;
         int length = image->width;
-        const char* format = (image->format == TRAX_IMAGE_BUFFER_JPEG) ? "image/jpeg" : 
+        const char* format = (image->format == TRAX_IMAGE_BUFFER_JPEG) ? "image/jpeg" :
             ((image->format == TRAX_IMAGE_BUFFER_PNG) ? "image/png" : NULL);
         int body = base64encodelen(length);
         int header = snprintf(NULL, 0, "data:%s;", format);
@@ -301,8 +301,8 @@ trax_image* image_decode(char* buffer) {
 
         outlen = base64decodelen(resource) - 1;
 
-        depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 : 
-            (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : 
+        depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 :
+            (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
             (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
         channels = format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
         allocated =  (width * height * depth * channels);
@@ -361,7 +361,7 @@ int image_formats_decode(char *str) {
         else if (strcmp(pch, "buffer") == 0)
             formats |= TRAX_IMAGE_BUFFER;
         else if (strlen(pch) == 0)
-            continue; // Skip empty 
+            continue; // Skip empty
         else return -1;
 
         pch = strtok (NULL, ";");
@@ -406,7 +406,7 @@ int region_formats_decode(char *str) {
         else if (strcmp(pch, "mask") == 0)
             formats |= TRAX_REGION_MASK;
         else if (strlen(pch) == 0)
-            continue; // Skip empty 
+            continue; // Skip empty
         else return -1;
 
         pch = strtok (NULL, ";");
@@ -457,7 +457,7 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
 
     tmp_properties = trax_properties_create();
     arguments = list_create(8);
-  
+
     if (read_message((message_stream*)client->stream, &LOGGER(client), arguments, tmp_properties) != TRAX_HELLO) {
         goto failure;
     }
@@ -486,7 +486,7 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     list_destroy(&arguments);
 
     return client;
-    
+
 failure:
 
     list_destroy(&arguments);
@@ -531,7 +531,7 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
 
     server->metadata = trax_metadata_create(metadata->format_region, metadata->format_image,
         metadata->tracker_name, metadata->tracker_description, metadata->tracker_family);
-   
+
     arguments = list_create(1);
 
     write_message((message_stream*)server->stream, &LOGGER(server), TRAX_HELLO, arguments, properties);
@@ -578,7 +578,7 @@ void trax_metadata_release(trax_metadata** metadata) {
 trax_handle* trax_client_setup_file(int input, int output, const trax_logging log) {
 
     message_stream* stream = create_message_stream_file(input, output);
-    
+
     return client_setup(stream, log);
 
 }
@@ -586,7 +586,7 @@ trax_handle* trax_client_setup_file(int input, int output, const trax_logging lo
 trax_handle* trax_client_setup_socket(int server, int timeout, const trax_logging log) {
 
     message_stream* stream = create_message_stream_socket_accept(server, timeout);
-    
+
 	if (!stream) return NULL;
 
     return client_setup(stream, log);
@@ -622,8 +622,8 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
         if (!region_parse(arguments->buffer[0], &_region)) {
             goto failure;
-        }  
-          
+        }
+
         (*region) = _region;
 
         copy_properties(tmp_properties, properties);
@@ -635,13 +635,13 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
         if (list_size(arguments) != 0)
             goto failure;
 
-        if (properties) 
+        if (properties)
             copy_properties(tmp_properties, properties);
 
         client->flags |= TRAX_FLAG_TERMINATED;
 
         goto end;
-    } 
+    }
 
 failure:
     result = TRAX_ERROR;
@@ -766,7 +766,7 @@ trax_handle* trax_server_setup(trax_metadata *metadata, const trax_logging log) 
         char* env_in = getenv("TRAX_IN");
         char* env_out = getenv("TRAX_OUT");
 
-#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER) 
+#if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER)
         if (env_in) fin = get_shared_fd(strtol(env_in, NULL, 16), 1);
         if (env_out) fout = get_shared_fd(strtol(env_out, NULL, 16), 0);
 #else
@@ -785,11 +785,11 @@ trax_handle* trax_server_setup(trax_metadata *metadata, const trax_logging log) 
 trax_handle* trax_server_setup_file(trax_metadata *metadata, int input, int output, const trax_logging log) {
 
     message_stream* stream = create_message_stream_file(input, output);
-    
+
     return server_setup(metadata, stream, log);
 }
 
-int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties) 
+int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties)
 {
 
     int result = TRAX_ERROR;
@@ -814,11 +814,11 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
             goto failure;
 
         *image = image_decode(arguments->buffer[0]);
-        if (!*image || !TRAX_SUPPORTS(server->metadata->format_image, (*image)->type)) 
+        if (!*image || !TRAX_SUPPORTS(server->metadata->format_image, (*image)->type))
             goto failure;
 
-        if (properties) 
-            copy_properties(tmp_properties, properties);  
+        if (properties)
+            copy_properties(tmp_properties, properties);
 
         goto end;
     } else if (result == TRAX_QUIT) {
@@ -826,8 +826,8 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
         if (list_size(arguments) != 0)
             goto failure;
 
-        if (properties) 
-            copy_properties(tmp_properties, properties);  
+        if (properties)
+            copy_properties(tmp_properties, properties);
 
         server->flags |= TRAX_FLAG_TERMINATED;
 
@@ -839,15 +839,15 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
 
         *image = image_decode(arguments->buffer[0]);
 
-        if (!*image || !TRAX_SUPPORTS(server->metadata->format_image, (*image)->type)) 
+        if (!*image || !TRAX_SUPPORTS(server->metadata->format_image, (*image)->type))
             goto failure;
 
         if (!region_parse(arguments->buffer[1], (region_container**)region)) {
             goto failure;
         }
 
-        if (properties) 
-            copy_properties(tmp_properties, properties);  
+        if (properties)
+            copy_properties(tmp_properties, properties);
 
         goto end;
     }
@@ -898,13 +898,13 @@ int trax_server_reply(trax_handle* server, trax_region* region, trax_properties*
 
 int trax_terminate(trax_handle* handle) {
 
-    VALIDATE_HANDLE(handle);
-
-    if ((handle->flags & TRAX_FLAG_TERMINATED)) 
-        return TRAX_ERROR;
-
     string_list *arguments;
     trax_properties* tmp_properties;
+
+    VALIDATE_HANDLE(handle);
+
+    if ((handle->flags & TRAX_FLAG_TERMINATED))
+        return TRAX_ERROR;
 
     arguments = list_create(1);
     tmp_properties = trax_properties_create();
@@ -1012,11 +1012,11 @@ trax_image* trax_image_create_memory(int width, int height, int format) {
     int channels, depth;
     trax_image* img;
 
-    assert(format == TRAX_IMAGE_MEMORY_GRAY8 || 
+    assert(format == TRAX_IMAGE_MEMORY_GRAY8 ||
         format == TRAX_IMAGE_MEMORY_GRAY16 || format == TRAX_IMAGE_MEMORY_RGB);
 
-    depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 : 
-        (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : 
+    depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 :
+        (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
         (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
     channels = format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
 
@@ -1149,7 +1149,7 @@ trax_region* trax_region_create_special(int code) {
 trax_region* trax_region_create_polygon(int size) {
 
     assert(size > 2);
-   
+
     return region_create_polygon(size);
 
 }
@@ -1197,7 +1197,7 @@ float trax_region_overlap(const trax_region* a, const trax_region* b, const trax
     if (!a || !b) return 0;
 
     rb.top = bounds.top;
-    rb.left = bounds.left;  
+    rb.left = bounds.left;
     rb.right = bounds.right;
     rb.bottom = bounds.bottom;
 
@@ -1310,7 +1310,7 @@ trax_region* trax_region_decode(const char* data) {
 }
 
 void trax_properties_release(trax_properties** properties) {
-    
+
     if (properties && *properties) {
         if ((*properties)->map) sm_delete((*properties)->map);
         free((*properties));
@@ -1320,9 +1320,9 @@ void trax_properties_release(trax_properties** properties) {
 }
 
 void trax_properties_clear(trax_properties* properties) {
-    
+
     if (properties) {
-        if (properties->map) 
+        if (properties->map)
             sm_delete(properties->map);
         properties->map = sm_new(32);
     }
@@ -1413,7 +1413,7 @@ float trax_properties_get_float(const trax_properties* properties, const char* k
 
 void trax_properties_enumerate(trax_properties* properties, trax_enumerator enumerator, const void* object) {
     if (properties && enumerator) {
-        
+
         sm_enum(properties->map, enumerator, object);
     }
 }
