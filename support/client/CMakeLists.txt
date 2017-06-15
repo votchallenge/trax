@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
 ADD_LIBRARY(trax_client SHARED client.cpp process.cpp threads.cpp timer.cpp)
@@ -8,6 +8,12 @@ TARGET_LINK_LIBRARIES(trax_client trax)
 INSTALL(FILES "include/trax/client.hpp" DESTINATION include/trax)
 SET_TARGET_PROPERTIES(trax_client PROPERTIES VERSION ${BUILD_VERSION} SOVERSION 0)
 SET_TARGET_PROPERTIES(trax_client_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+
+# On older linux distributions, we need to explicitly link against librt
+# in order to get clock_gettime() in timer.cpp
+IF (UNIX AND NOT APPLE)
+	TARGET_LINK_LIBRARIES(trax_client -lrt)
+ENDIF()
 
 ADD_EXECUTABLE(traxclient cli.cpp getopt.c)
 TARGET_LINK_LIBRARIES(traxclient trax_client)
