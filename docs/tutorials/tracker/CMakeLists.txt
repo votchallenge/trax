@@ -30,7 +30,7 @@
  # either expressed or implied, of the FreeBSD Project.
 
 PROJECT(ncc_example)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 
 FIND_PACKAGE(OpenCV REQUIRED COMPONENTS core imgproc highgui)
 

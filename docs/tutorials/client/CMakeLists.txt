@@ -30,7 +30,7 @@
  # either expressed or implied, of the FreeBSD Project.
 
 PROJECT(sample_client)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 
 ADD_EXECUTABLE(sample_client client.cpp)
 
