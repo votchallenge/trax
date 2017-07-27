@@ -221,10 +221,11 @@ int read_stream(int fd, char* buffer, int len) {
 
 namespace trax {
 
+int next_available_socket_port = TRAX_DEFAULT_PORT;
 class TrackerProcess::State : public Synchronized {
 public:
 	State(const string& command, const map<std::string, std::string> environment, ConnectionMode connection, VerbosityMode verbosity, int timeout, string directory, ostream *log):
-		client(NULL), process(NULL), command(command), environment(environment), socket_id(-1), socket_port(TRAX_DEFAULT_PORT),
+		client(NULL), process(NULL), command(command), environment(environment), socket_id(-1), socket_port(-1),
 		connection(connection), verbosity(verbosity), timeout(timeout), directory(directory) {
 
 		timer_init();
@@ -236,13 +237,18 @@ public:
 
 		if (connection == CONNECTION_SOCKETS) {
 			// Try to create a listening socket by looking for a free port number.
-			while (true) {
-				socket_id = create_server_socket(socket_port);
-				if (socket_id < 0) {
-					socket_port++;
-					if (socket_port > 65535) throw std::runtime_error("Unable to configure TCP server socket.");
-				} else break;
+			int attempts = 10;
+			while (attempts--) {
+				socket_id = create_server_socket(next_available_socket_port++);
+				if (next_available_socket_port > 65535)
+					next_available_socket_port = TRAX_DEFAULT_PORT;
+
+				if (socket_id > 0) break;
 			}
+			if (socket_id < 0)
+				throw std::runtime_error("Unable to configure TCP server socket.");
+
+			socket_port = next_available_socket_port-1;
 
 			print_debug("Socket opened successfully on port %d.", socket_port);
 
