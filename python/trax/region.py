@@ -143,7 +143,8 @@ class Polygon(Region):
         super(Polygon, self).__init__(POLYGON)
         assert(isinstance(points, list))
         # do not allow empty list
-        assert(reduce(lambda x,y: x and y, [isinstance(p, tuple) for p in points], False))
+        assert(len(points) > 0)
+        assert(reduce(lambda x,y: x and y, [isinstance(p, tuple) for p in points]))
         self.count = len(points) 
         self.points = points
 
