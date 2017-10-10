@@ -43,8 +43,8 @@ Below we list the valid messages of the protocol as well as the states of the cl
   * ``trax.version`` (integer): Specifies the supported version of the protocol. If not present, version 1 is assumed.
   * ``trax.name`` (string): Specifies the name of the tracker. The name can be used by the client to verify that the correct algorithm is executed.
   * ``trax.identifier`` (string): Specifies the identifier of the current implementation. The identifier can be used to determine the version of the tracker.
-  * ``trax.image`` (string): Specifies the supported image format. See Section `Region formats`_ for the list of supported formats. By default it is assumed that the tracker can accept file paths as image source.
-  * ``trax.region`` (string): Specifies the supported region format. See Section `Image formats`_ for the list of supported formats. By default it is assumed that the tracker can accept rectangles as region specification.
+  * ``trax.image`` (string): Specifies the supported image format. See Section `Image formats`_ for the list of supported formats. By default it is assumed that the tracker can accept file paths as image source.
+  * ``trax.region`` (string): Specifies the supported region format. See Section `Region formats`_ for the list of supported formats. By default it is assumed that the tracker can accept rectangles as region specification.
  
  - ``initialize`` (client): This message is sent by the client to initialize the tracker. The message contains the image data and the region of the object. The actual format of the required arguments is determined by the image and region formats specified by the server.
  - ``frame`` (client): This message is sent by the client to request processing of a new image. The message contains the image data. The actual format of the required argument is determined by the image format specified by the server.
