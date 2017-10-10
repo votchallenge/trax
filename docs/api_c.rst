@@ -94,7 +94,7 @@ Communication
 
 .. c:function:: void trax_metadata_release(trax_metadata** metadata)
 
-   Releases a given metadata structure, clearing its memory. 
+   Releases a given metadata structure, clearing its memory.
 
    :param metadata: Pointer of a pointer of tracker metadata structure.
 
@@ -612,6 +612,14 @@ Properties
    :param key: A key for the property
    :param def: Default value for the property
    :returns: The value for the property or default value if there is no value associated with the key or conversion from string is impossible
+
+.. c:function:: int trax_properties_count(const trax_properties* properties)
+
+   Get a number of all pairs in the properties object.
+
+   :param properties: A pointer to a properties object
+   :returns: Number of key-value pairs in the properties object
+
 
 .. :c:function:: void(*trax_enumerator)(const char *key, const char *value, const void *obj)
 

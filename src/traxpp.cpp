@@ -111,7 +111,7 @@ Metadata::Metadata(const Metadata& original) : Wrapper(original) {
 Metadata::Metadata(int region_formats, int image_formats, std::string tracker_name,
 	std::string tracker_description, std::string tracker_family) {
 
-	wrap(trax_metadata_create(region_formats, image_formats, 
+	wrap(trax_metadata_create(region_formats, image_formats,
 		(tracker_name.empty()) ? NULL : tracker_name.c_str(),
 		(tracker_description.empty()) ? NULL : tracker_description.c_str(),
 		(tracker_family.empty()) ? NULL : tracker_family.c_str()
@@ -121,7 +121,7 @@ Metadata::Metadata(int region_formats, int image_formats, std::string tracker_na
 
 Metadata::Metadata(trax_metadata* metadata) {
 
-	wrap(trax_metadata_create(metadata->format_region, metadata->format_image, 
+	wrap(trax_metadata_create(metadata->format_region, metadata->format_image,
 		metadata->tracker_name, metadata->tracker_description, metadata->tracker_family));
 
 }
@@ -616,6 +616,11 @@ Properties::~Properties() {
 	release();
 }
 
+int Properties::size() const {
+	if (!properties) return 0;
+	return trax_properties_count(properties);
+}
+
 void Properties::clear()  {
 	if (!properties) return;
 	if (claims() > 1)
@@ -639,11 +644,11 @@ void Properties::set(const std::string key, float value)  {
 	trax_properties_set_float(properties, key.c_str(), value);
 }
 
-std::string Properties::get(const std::string key, const char* def)  {
+std::string Properties::get(const std::string key, const char* def) const {
 	return get(key, (def ? std::string(def) : std::string("")));
 }
 
-std::string Properties::get(const std::string key, const std::string& def)  {
+std::string Properties::get(const std::string key, const std::string& def) const {
 	if (!properties) return def;
 	char* str = trax_properties_get(properties, key.c_str());
 	if (str) {
@@ -655,21 +660,21 @@ std::string Properties::get(const std::string key, const std::string& def)  {
 		return def;
 }
 
-int Properties::get(const std::string key, int def)  {
+int Properties::get(const std::string key, int def) const {
 	if (!properties) return def;
 	return trax_properties_get_int(properties, key.c_str(), def);
 }
 
-float Properties::get(const std::string key, float def)  {
+float Properties::get(const std::string key, float def) const {
 	if (!properties) return def;
 	return trax_properties_get_float(properties, key.c_str(), def);
 }
 
-double Properties::get(const std::string key, double def)  {
+double Properties::get(const std::string key, double def) const {
 	return (double) get(key, (float) def);
 }
 
-bool Properties::get(const std::string key, bool def)  {
+bool Properties::get(const std::string key, bool def) const {
 	if (!properties) return def;
 	return trax_properties_get_int(properties, key.c_str(), def) != 0;
 }
@@ -715,6 +720,12 @@ void map_enumerator(const char *key, const char *value, const void *obj) {
 
 }
 
+void vector_enumerator(const char *key, const char *value, const void *obj) {
+
+	(*((std::vector<std::string>*) obj)).push_back(std::string(key));
+
+}
+
 void Properties::ensure_unique() {
 
 	if (!properties) {
@@ -742,10 +753,18 @@ void Properties::from_map(const std::map<std::string, std::string>& m) {
 }
 
 void Properties::to_map(std::map<std::string, std::string>& m) const {
-	
+
 	if (!properties) return;
 
 	trax_properties_enumerate(properties, map_enumerator, &m);
+
+}
+
+void Properties::to_vector(std::vector<std::string>& v) const {
+
+	if (!properties) return;
+
+	trax_properties_enumerate(properties, vector_enumerator, &v);
 
 }
 

@@ -1411,6 +1411,12 @@ float trax_properties_get_float(const trax_properties* properties, const char* k
 
 }
 
+int trax_properties_count(const trax_properties* properties) {
+
+    return sm_get_count(properties->map);
+
+}
+
 void trax_properties_enumerate(trax_properties* properties, trax_enumerator enumerator, const void* object) {
     if (properties && enumerator) {
 

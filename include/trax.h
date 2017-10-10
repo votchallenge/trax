@@ -442,7 +442,7 @@ __TRAX_EXPORT void trax_properties_set(trax_properties* properties, const char* 
 __TRAX_EXPORT void trax_properties_set_int(trax_properties* properties, const char* key, int value);
 
 /**
- * Set an floating point value property. The value will be encoded as a string.
+ * Set a floating point value property. The value will be encoded as a string.
  **/
 __TRAX_EXPORT void trax_properties_set_float(trax_properties* properties, const char* key, float value);
 
@@ -459,10 +459,15 @@ __TRAX_EXPORT char* trax_properties_get(const trax_properties* properties, const
 __TRAX_EXPORT int trax_properties_get_int(const trax_properties* properties, const char* key, int def);
 
 /**
- * Get an floating point value property. A stored string value is converted to an integer. If this is not possible
+ * Get a floating point value property. A stored string value is converted to an integer. If this is not possible
  * or the property does not exist a given default value is returned.
  **/
 __TRAX_EXPORT float trax_properties_get_float(const trax_properties* properties, const char* key, float def);
+
+/**
+ * Get a number of all pairs in the properties object.
+ **/
+__TRAX_EXPORT int trax_properties_count(const trax_properties* properties);
 
 /**
  * Iterate over the property set using a callback function. An optional pointer can be given and is forwarded
@@ -475,6 +480,7 @@ __TRAX_EXPORT void trax_properties_enumerate(trax_properties* properties, trax_e
 
 #include <string>
 #include <map>
+#include <vector>
 #include <algorithm>
 #include <iostream>
 
@@ -511,7 +517,7 @@ public:
 
 protected:
     Wrapper();
-    
+
     Wrapper(const Wrapper& count);
 
     void swap(Wrapper& lhs);
@@ -525,7 +531,7 @@ protected:
     void acquire();
 
     /**
-     * Call instead of releasing memory to decrease reference count. If the 
+     * Call instead of releasing memory to decrease reference count. If the
      * reference count comes to zero then cleanup() is called.
     **/
     void release();
@@ -616,9 +622,9 @@ protected:
     void wrap(trax_handle* obj);
 
     Handle();
-    
+
     Handle(const Handle& original);
-    
+
     trax_handle* handle;
 };
 
@@ -903,6 +909,11 @@ public:
     virtual ~Properties();
 
     /**
+     * Return number of property pairs.
+     **/
+    int size() const;
+
+    /**
      * Clear a properties object.
      **/
     void clear();
@@ -918,36 +929,36 @@ public:
     void set(const std::string key, int value);
 
     /**
-     * Set an floating point value property. The value will be encoded as a string.
+     * Set a floating point value property. The value will be encoded as a string.
      **/
     void set(const std::string key, float value);
 
     /**
      * Get a string property.
      **/
-    std::string get(const std::string key, const std::string& def = std::string());
+    std::string get(const std::string key, const std::string& def = std::string()) const;
 
-    std::string get(const std::string key, const char* def = NULL);
+    std::string get(const std::string key, const char* def = NULL) const;
 
     /**
      * Get an integer property. A stored string value is converted to an integer. If this is not possible
      * or the property does not exist a given default value is returned.
      **/
-    int get(const std::string key, int def);
+    int get(const std::string key, int def) const;
 
     /**
-     * Get an floating point value property. A stored string value is converted to an float. If this is not possible
+     * Get a floating point value property. A stored string value is converted to a float. If this is not possible
      * or the property does not exist a given default value is returned.
      **/
-    float get(const std::string key, float def);
+    float get(const std::string key, float def) const;
 
-    double get(const std::string key, double def);
+    double get(const std::string key, double def) const;
 
     /**
-     * Get an boolean point value property. A stored string value is converted to an integer and checked if it is zero. If this is not possible
+     * Get a boolean point value property. A stored string value is converted to an integer and checked if it is zero. If this is not possible
      * or the property does not exist a given default value is returned.
      **/
-    bool get(const std::string key, bool def);
+    bool get(const std::string key, bool def) const;
 
     /**
      * Iterate over the property set using a callback function. An optional pointer can be given and is forwarded
@@ -959,10 +970,12 @@ public:
 
     void to_map(std::map<std::string, std::string>& m) const;
 
+    void to_vector(std::vector<std::string>& v) const;
+
     Properties& operator=(Properties lhs) throw();
 
     friend __TRAX_EXPORT std::ostream& operator<< (std::ostream& output, const Properties& properties);
-    
+
 protected:
 
     virtual void cleanup();

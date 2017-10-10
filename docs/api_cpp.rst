@@ -267,6 +267,10 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
       Destroy a properties object and clean up the memory.
 
+   .. cpp:function:: int size()
+
+      Return the number of elements.
+
    .. cpp:function:: void clear()
 
       Clear a properties object.
@@ -309,7 +313,11 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
    .. cpp:function:: void to_map(std::map<std::string, std::string>& m)
 
-      Copies values in the properties object into the given dictionary.
+      Copies key-value pairs in the properties object into the given dictionary.
+
+   .. cpp:function:: void to_vector(std::vector<std::string>& v)
+
+      Copies keys from the properties object into the given vector.
 
 
 Integration example
