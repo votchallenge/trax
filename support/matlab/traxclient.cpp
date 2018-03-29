@@ -104,7 +104,7 @@ bool must_exit() {
 		mexPrintf("User termination request detected. Stopping.\n");
 
 	return exit_cache;
-} 
+}
 
 class mexstream : public std::streambuf
 {
@@ -120,7 +120,7 @@ protected:
 	}
 
 	virtual std::streamsize xsputn(const char* s, std::streamsize num) {
-		
+
 		mexPrintf("%.*s", num, s);
 
 		return num;
@@ -248,7 +248,6 @@ command call_callback(const mxArray *callback, status& s, const mxArray* data) {
 		}
 	}
 
-	//cmd.parameters.set("wait", 3);
 	cmd.data = lhs[3];
 
 	return cmd;

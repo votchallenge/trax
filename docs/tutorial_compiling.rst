@@ -10,7 +10,7 @@ If you want to build optional OpenCV support, you will have to install OpenCV li
 Compiling using Make (Unix)
 ---------------------------
 
-Building the project using Make tool is the typical for Unix systems. After installing all the dependencies and obtaining TraX source code you can open the terminal, go to the library source root directory and type the following commands::
+Building the project using Make tool is the typical for Unix systems (e.g. Linux and Max OSX). After installing all the dependencies and obtaining TraX source code you can open the terminal, go to the library source root directory and type the following commands::
 
     $ mkdir build
     $ cd build
