@@ -147,7 +147,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         if (!reg) { MEX_ERROR("Illegal region format."); return; }
 
-        Properties prop = ( nrhs == 3 ) ? struct_to_parameters(prhs[2]) : Properties();
+        Properties prop = ( nrhs == 3 ) ? (mxIsStruct(prhs[2]) ? struct_to_parameters(prhs[2]) : cell_to_parameters(prhs[2])) : Properties();
 
         handle->reply(reg, prop);
 
