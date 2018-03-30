@@ -100,7 +100,7 @@ int __next_token(const char* str, int start, char* buffer, int len)
 char** parse_command(const char* command) {
 
     int length = (int)strlen(command);
-    char* buffer = new char[length];
+    char* buffer = new char[length+1];
     char** tokens = new char*[length];
     int position = 0;
     int i = 0;
