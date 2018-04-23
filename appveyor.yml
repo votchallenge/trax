@@ -33,9 +33,6 @@ clone_depth: 1                      # clone entire repository history if not def
 environment:
   INSTALL_DIR: c:\projects\trax\trax
   matrix:
-    - GENERATOR: "Visual Studio 12 2013"
-      BUILD_PLATFORM: windows32_vs12
-      OPENCV_VERSION: 2.4.13
 
     - GENERATOR: "Visual Studio 12 2013 Win64"
       BUILD_PLATFORM: windows64_vs12
