@@ -192,7 +192,7 @@ void struct_to_env(const mxArray * input, map<string, string>& env) {
 }
 
 
-command call_callback(const mxArray *callback, status& s, const mxArray* data) {
+command call_callback(const mxArray *callback, status& s, mxArray* data) {
 
 	mxArray *lhs[4], *rhs[3], *tracker_meta, *formats, *st;
 
@@ -234,11 +234,18 @@ command call_callback(const mxArray *callback, status& s, const mxArray* data) {
 
 	mexCallMATLAB(4, lhs, 3, rhs, "feval");
 
+    mxDestroyArray(st);
+    mxDestroyArray(data);
+
 	command cmd;
-	if (!mxIsEmpty(lhs[0]))
+	if (!mxIsEmpty(lhs[0])) {
 		cmd.image = array_to_image(lhs[0]);
-	if (!mxIsEmpty(lhs[1]))
+        mxDestroyArray(lhs[0]);
+    }
+	if (!mxIsEmpty(lhs[1])) {
 		cmd.region = array_to_region(lhs[1]);
+        mxDestroyArray(lhs[1]);
+    }
 	if (!mxIsEmpty(lhs[2])) {
 		if (mxIsStruct(lhs[2])) {
 			cmd.parameters = struct_to_parameters(lhs[2]);
@@ -246,6 +253,7 @@ command call_callback(const mxArray *callback, status& s, const mxArray* data) {
 		if (mxIsCell(lhs[2])) {
 			cmd.parameters = cell_to_parameters(lhs[2]);
 		}
+        mxDestroyArray(lhs[2]);
 	}
 
 	cmd.data = lhs[3];
