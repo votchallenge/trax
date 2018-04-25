@@ -135,6 +135,15 @@ void print_help() {
     cout << "\n";
 }
 
+static bool exit_cache = false;
+
+void handle_signal(int s) {
+
+    exit_cache = true;
+
+}
+
+
 void configure_signals() {
 
     #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
@@ -146,13 +155,28 @@ void configure_signals() {
     struct sigaction sa;
     sa.sa_handler = SIG_DFL;
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags =  SA_RESTART | SA_NOCLDSTOP; //SA_NOCLDWAIT;
+    sa.sa_flags = SA_RESTART | SA_NOCLDSTOP; //SA_NOCLDWAIT;
     if (sigaction(SIGCHLD, &sa, 0) == -1) {
       perror(0);
       exit(1);
     }
 
+    sa.sa_handler = handle_signal;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    if (sigaction(SIGINT, &sa, 0) == -1) {
+      perror(0);
+      exit(1);
+    }
+
     #endif
+
+}
+
+bool must_exit() {
+
+    return exit_cache;
 
 }
 
@@ -458,6 +482,9 @@ int main( int argc, char** argv) {
             // In the future we can also output some basic data about the tracker.
 
             TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
+
+            tracker.register_watchdog(must_exit);
+
             if (tracker.query()) {
 
                 Metadata metadata = tracker.metadata();
@@ -508,6 +535,8 @@ int main( int argc, char** argv) {
 
             TrackerProcess tracker(tracker_command, environment, timeout, connection, verbosity);
 
+            tracker.register_watchdog(must_exit);
+
             tracker.query();
 
             size_t frame = 0;
@@ -547,8 +576,6 @@ int main( int argc, char** argv) {
 
                     Region status;
                     Properties additional;
-
-                    //watchdog_reset(trackerProcess, timeout);
 
                     bool result = tracker.wait(status, additional);
 
