@@ -80,7 +80,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         handle = new Server(metadata, trax_no_log);
 
         if (nlhs == 1)
-            plhs[0] = mxCreateLogicalScalar(handle > 0);
+            plhs[0] = mxCreateLogicalScalar(handle != NULL);
 
     } else if (operation == "wait") {
 
@@ -152,7 +152,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         handle->reply(reg, prop);
 
         if (nlhs == 1)
-            plhs[0] = mxCreateLogicalScalar(handle > 0);
+            plhs[0] = mxCreateLogicalScalar(handle != NULL);
 
     } else if (operation == "quit") {
 
