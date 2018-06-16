@@ -4,6 +4,9 @@ import sys
 import re
 import collections
 
+if (sys.version_info > (3, 0)):
+    xrange = range
+
 from trax import MessageType, TraXError
 
 TRAX_PREFIX = '@@TRAX:'
@@ -42,17 +45,17 @@ class MessageParser(object):
 
     def _read_message(self):
         """ Read socket message and parse it
-         
-        Returns:  
+
+        Returns:
             msgArgs: list of message arguments
         """
         assert(self._opened)
 
         keyBuffer = ""
         valueBuffer = ""
-        
+
         complete = False
-        
+
         state = -len(TRAX_PREFIX)
         while not complete:
             val = self._fin.read(1)
@@ -79,7 +82,7 @@ class MessageParser(object):
                         complete = True
                     else:
                         state = PARSE_STATE_PASS
-                        keyBuffer = ""    
+                        keyBuffer = ""
                 except (TraXError):
                     state = PARSE_STATE_PASS
                     message = None
@@ -93,7 +96,7 @@ class MessageParser(object):
                     message = None
                     state = PARSE_STATE_PASS
                     keyBuffer = char
-                    valueBuffer = ""                        
+                    valueBuffer = ""
             elif state == PARSE_STATE_SPACE:
                 if char == ' ' or char == '\r':
                     # Do nothing
@@ -107,9 +110,9 @@ class MessageParser(object):
                 else:
                     state = PARSE_STATE_UNQUOTED_KEY
                     keyBuffer = char
-                    valueBuffer = ""                 
+                    valueBuffer = ""
 
-            elif state == PARSE_STATE_UNQUOTED_KEY: 
+            elif state == PARSE_STATE_UNQUOTED_KEY:
                 if char == '\\':
                     state = PARSE_STATE_UNQUOTED_ESCAPE_KEY
                 elif char == '\n': # append arg and finalize
@@ -124,7 +127,7 @@ class MessageParser(object):
                         state = PARSE_STATE_UNQUOTED_VALUE
                     else:
                         keyBuffer += char
-                else:                    
+                else:
                     keyBuffer += char
             elif state == PARSE_STATE_UNQUOTED_VALUE:
                 if char == '\\':
@@ -179,17 +182,17 @@ class MessageParser(object):
                     if _isValidKey(keyBuffer):
                         state = PARSE_STATE_QUOTED_VALUE
                     else:
-                        keyBuffer += char               
-                else:                    
+                        keyBuffer += char
+                else:
                     keyBuffer += char
             elif state == PARSE_STATE_QUOTED_VALUE:
                 if char == '\\':
                     state = PARSE_STATE_QUOTED_ESCAPE_VALUE
-                elif char == '"':                    
+                elif char == '"':
                     message.parameters[keyBuffer] = valueBuffer
                     state = PARSE_STATE_SPACE_EXPECT
                     keyBuffer = ""
-                    valueBuffer = ""            
+                    valueBuffer = ""
                 else:
                     valueBuffer += char
 
@@ -219,23 +222,23 @@ class MessageParser(object):
                     keyBuffer = ""
                     valueBuffer = ""
             elif state == PARSE_STATE_PASS:
-                if char == '\n': 
+                if char == '\n':
                     state = -len(TRAX_PREFIX)
             else: # Parsing prefix
-                if state < 0: 
+                if state < 0:
                     if char == TRAX_PREFIX[len(TRAX_PREFIX)+state]:
                         # When done, go to type parsing
-                        state += 1 
+                        state += 1
                     else: # Not a message
-                        state = -len(TRAX_PREFIX) if char == '\n' else PARSE_STATE_PASS 
+                        state = -len(TRAX_PREFIX) if char == '\n' else PARSE_STATE_PASS
         return message
 
     def _write_message(self, mtype, arguments, properties):
         """ Create the message string and send it
-        
-        Args: 
+
+        Args:
             mtype: message type identifier
-            arguments: message arguments  
+            arguments: message arguments
             properties: optional arguments. Format: "key:value"
         """
         assert(self._opened)
@@ -244,22 +247,22 @@ class MessageParser(object):
         assert(mtype in [MessageType.HELLO, MessageType.INITIALIZE, MessageType.FRAME, MessageType.QUIT, MessageType.STATUS])
 
         self._fout.write(TRAX_PREFIX)
-        self._fout.write(mtype)          
+        self._fout.write(mtype)
 
         for arg in arguments:
             self._fout.write(" ")
             if not isinstance(arg, str):
                 arg = str(arg)
             arg = arg.replace("\"", "\\\"").replace("\\", "\\\\").replace("\n", "\\n")
-            self._fout.write('\"' + arg + '\"') 
-                
+            self._fout.write('\"' + arg + '\"')
+
         # optional arguments
         if properties:
             for k, v in properties.items():
                 self._fout.write(" ")
                 arg = "{}={}".format(k, str(v)).replace("\"", "\\\"").replace("\\", "\\\\").replace("\n", "\\n")
-                self._fout.write('\"' + arg + '\"') 
+                self._fout.write('\"' + arg + '\"')
 
-        self._fout.write("\n")  
+        self._fout.write("\n")
         self._fout.flush()
 

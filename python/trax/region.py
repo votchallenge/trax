@@ -5,6 +5,9 @@ Region description classes.
 import os
 import sys
 
+if (sys.version_info > (3, 0)):
+    xrange = range
+
 SPECIAL = "special"
 """ Constant for special region type """
 
@@ -33,7 +36,7 @@ def convert(region, to):
             left = sys.float_info.min
             right = sys.float_info.max
 
-            for point in region.points: 
+            for point in region.points:
                 top = min(top, point[1])
                 bottom = max(bottom, point[1])
                 left = min(left, point[0])
@@ -42,7 +45,7 @@ def convert(region, to):
             return Rectangle(left, top, right - left, bottom - top)
 
         else:
-            return None  
+            return None
     if to == POLYGON:
 
         if isinstance(region, Rectangle):
@@ -56,7 +59,7 @@ def convert(region, to):
         elif isinstance(region, Polygon):
             return region.copy()
         else:
-            return None  
+            return None
 
     elif to == SPECIAL:
         if isinstance(region, Special):
@@ -67,7 +70,7 @@ def convert(region, to):
     return None
 
 def parse(string):
-    tokens = map(float, string.split(','))
+    tokens = list(map(float, string.split(',')))
     if len(tokens) == 1:
         return Special(tokens[0])
     if len(tokens) == 4:
@@ -77,7 +80,7 @@ def parse(string):
     return None
 
 class Region(object):
-    """ 
+    """
     Base class for all region containers
 
     :var type: type of the region
@@ -86,14 +89,14 @@ class Region(object):
         self.type = type
 
 class Special(Region):
-    """ 
-    Special region 
+    """
+    Special region
 
     :var code: Code value
     """
     def __init__(self, code):
         """ Constructor
-        
+
         :param code: Special code
         """
         super(Special, self).__init__(SPECIAL)
@@ -102,10 +105,10 @@ class Special(Region):
     def __str__(self):
         """ Create string from class to send to client """
         return '{}'.format(self.code)
- 
+
 class Rectangle(Region):
-    """ 
-    Rectangle region 
+    """
+    Rectangle region
 
     :var x: top left x coord of the rectangle region
     :var float y: top left y coord of the rectangle region
@@ -114,7 +117,7 @@ class Rectangle(Region):
     """
     def __init__(self, x=0, y=0, width=0, height=0):
         """ Constructor
-        
+
             :param float x: top left x coord of the rectangle region
             :param float y: top left y coord of the rectangle region
             :param float w: width of the rectangle region
@@ -126,30 +129,30 @@ class Rectangle(Region):
     def __str__(self):
         """ Create string from class to send to client """
         return '{},{},{},{}'.format(self.x, self.y, self.width, self.height)
-        
-class Polygon(Region):
-    """ 
-    Polygon region 
 
-    :var list points: List of points as tuples [(x1,y1), (x2,y2),...,(xN,yN)]  
+class Polygon(Region):
+    """
+    Polygon region
+
+    :var list points: List of points as tuples [(x1,y1), (x2,y2),...,(xN,yN)]
     :var int count: number of points
     """
     def __init__(self, points):
         """
         Constructor
-    
-        :param list points: List of points as tuples [(x1,y1), (x2,y2),...,(xN,yN)]  
+
+        :param list points: List of points as tuples [(x1,y1), (x2,y2),...,(xN,yN)]
         """
         super(Polygon, self).__init__(POLYGON)
         assert(isinstance(points, list))
         # do not allow empty list
         assert(len(points) > 0)
         assert(reduce(lambda x,y: x and y, [isinstance(p, tuple) for p in points]))
-        self.count = len(points) 
+        self.count = len(points)
         self.points = points
 
     def __str__(self):
         """ Create string from class to send to client """
         return ','.join(['{},{}'.format(p[0],p[1]) for p in self.points])
-        
-            
+
+
