@@ -117,7 +117,7 @@ class MemoryImage(Image):
     def __str__(self):
         """ Create string from image data """
         width = self.image.shape[1]
-        hegiht = self.image.shape[0]
+        height = self.image.shape[0]
         format = "test"
         return "image:{};{};{};{}".format(width, height, format, base64.b64encode(self.image.tobytes()))
 
