@@ -7,6 +7,7 @@ import sys
 
 if (sys.version_info > (3, 0)):
     xrange = range
+    import functools.reduce as reduce
 
 SPECIAL = "special"
 """ Constant for special region type """
