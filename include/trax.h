@@ -84,6 +84,10 @@
 #define TRAX_PARAMETER_REGION 3
 #define TRAX_PARAMETER_IMAGE 4
 
+#define TRAX_CHANNEL_COLOR 1
+#define TRAX_CHANNEL_DEPTH 2
+#define TRAX_CHANNEL_IR 4
+
 #define TRAX_LOCALHOST "127.0.0.1"
 
 #define TRAX_SUPPORTS(F, M) ((F & M) != 0)
@@ -143,6 +147,7 @@ typedef struct trax_logging {
 typedef struct trax_metadata {
     int format_region;
     int format_image;
+    int channels; // Encodes the number of channels (RGB, RGB+D, RGB+IR)
     char* tracker_name;
     char* tracker_description;
     char* tracker_family;
@@ -173,7 +178,7 @@ __TRAX_EXPORT const char* trax_version();
 /**
  * Create a tracker metadata structure.
 **/
-__TRAX_EXPORT trax_metadata* trax_metadata_create(int region_formats, int image_formats,
+__TRAX_EXPORT trax_metadata* trax_metadata_create(int region_formats, int image_formats, int channels,
     const char* tracker_name, const char* tracker_description, const char* tracker_family);
 
 /**

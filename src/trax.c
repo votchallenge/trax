@@ -475,12 +475,16 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     image_formats = image_formats_decode(tmp);
     free(tmp);
 
+    tmp = trax_properties_get(tmp_properties, "trax.channels");
+    channels = channels_decode(tmp); //TODO: Implement this function
+    free(tmp);
+
     tracker_name = trax_properties_get(tmp_properties, "trax.name");
     tracker_description = trax_properties_get(tmp_properties, "trax.description");
     tracker_family = trax_properties_get(tmp_properties, "trax.family");
 
-    client->metadata = trax_metadata_create(region_formats, image_formats, tracker_name, tracker_description,
-        tracker_family);
+    client->metadata = trax_metadata_create(region_formats, image_formats, channels,
+                                            tracker_name, tracker_description, tracker_family);
 
     trax_properties_release(&tmp_properties);
     list_destroy(&arguments);
@@ -519,6 +523,9 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
     image_formats_encode(metadata->format_image, tmp);
     trax_properties_set(properties, "trax.image", tmp);
 
+    channels_encode(metadata->channels, tmp); //TODO: Implement this function
+    trax_properties_set(properties, "trax.channels", tmp);
+
     if (metadata->tracker_name)
         trax_properties_set(properties, "trax.name", metadata->tracker_name);
 
@@ -529,7 +536,7 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
         trax_properties_set(properties, "trax.family", metadata->tracker_family);
 
 
-    server->metadata = trax_metadata_create(metadata->format_region, metadata->format_image,
+    server->metadata = trax_metadata_create(metadata->format_region, metadata->format_image, metadata->channels,
         metadata->tracker_name, metadata->tracker_description, metadata->tracker_family);
 
     arguments = list_create(1);
@@ -544,13 +551,14 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
 
 }
 
-trax_metadata* trax_metadata_create(int region_formats, int image_formats,
+trax_metadata* trax_metadata_create(int region_formats, int image_formats, int channels,
     const char* tracker_name, const char* tracker_description, const char* tracker_family) {
 
     trax_metadata* metadata = (trax_metadata*) malloc(sizeof(trax_metadata));
 
     metadata->format_region = region_formats;
     metadata->format_image = image_formats;
+    metadata->channels = channels;
 
     metadata->tracker_name = (tracker_name) ? strdup(tracker_name) : NULL;
     metadata->tracker_description = (tracker_description) ? strdup(tracker_description) : NULL;
