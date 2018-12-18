@@ -517,7 +517,7 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     free(tmp);
 
     tmp = trax_properties_get(tmp_properties, "trax.channels");
-    channels = channels_decode(tmp); //TODO: Implement this function
+    channels = channels_decode(tmp);
     free(tmp);
 
     tracker_name = trax_properties_get(tmp_properties, "trax.name");

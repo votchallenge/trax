@@ -166,6 +166,13 @@ typedef struct trax_handle {
     trax_metadata* metadata;
 } trax_handle;
 
+/**
+  * Array for keeping images (RGB, RGB+D or RGB + IR)
+**/
+typedef struct trax_image_list {
+    trax_image* image_list[4]; // The last element is null in case it's an RGB tracker
+} trax_image_list;
+
 __TRAX_EXPORT extern const trax_logging trax_no_log;
 
 __TRAX_EXPORT extern const trax_bounds trax_no_bounds;
