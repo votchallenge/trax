@@ -28,28 +28,28 @@
 #define REGION(VP) ((region_container*) (VP))
 
 #define REGION_TYPE(VP) ( \
-        (((region_container*) (VP))->type == RECTANGLE) ? TRAX_REGION_RECTANGLE : \
-        (((region_container*) (VP))->type == POLYGON) ? TRAX_REGION_POLYGON : \
-        (((region_container*) (VP))->type == MASK) ? TRAX_REGION_MASK : \
-        (((region_container*) (VP))->type == SPECIAL) ? TRAX_REGION_SPECIAL : \
-        EMPTY)
+    (((region_container*) (VP))->type == RECTANGLE) ? TRAX_REGION_RECTANGLE : \
+    (((region_container*) (VP))->type == POLYGON) ? TRAX_REGION_POLYGON : \
+    (((region_container*) (VP))->type == MASK) ? TRAX_REGION_MASK : \
+    (((region_container*) (VP))->type == SPECIAL) ? TRAX_REGION_SPECIAL : \
+    EMPTY)
 
 #define REGION_TYPE_BACK(T) (\
     ( T == TRAX_REGION_RECTANGLE ) ? RECTANGLE :\
     ( T == TRAX_REGION_POLYGON ) ? POLYGON :\
     ( T == TRAX_REGION_MASK ) ? MASK :\
     ( T == TRAX_REGION_SPECIAL ) ? SPECIAL :\
-     EMPTY)
+    EMPTY)
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <io.h>
 int get_shared_fd(int h, int read) {
-	return _open_osfhandle((intptr_t)h, read ? _O_RDONLY : 0);
+    return _open_osfhandle((intptr_t)h, read ? _O_RDONLY : 0);
 }
 #else
 #define strcmpi strcasecmp
 int get_shared_fd(int h, int read) {
-	return h;
+    return h;
 }
 #endif
 
@@ -234,11 +234,11 @@ char* image_encode(trax_image* image) {
     case TRAX_IMAGE_MEMORY: {
         int offset = 0;
         const char* format = image->format == TRAX_IMAGE_MEMORY_RGB ? "rgb" :
-            image->format == TRAX_IMAGE_MEMORY_GRAY8 ? "gray8" :
-            image->format == TRAX_IMAGE_MEMORY_GRAY16 ? "gray16" : NULL;
+                                                                      image->format == TRAX_IMAGE_MEMORY_GRAY8 ? "gray8" :
+                                                                      image->format == TRAX_IMAGE_MEMORY_GRAY16 ? "gray16" : NULL;
         int depth = image->format == TRAX_IMAGE_MEMORY_RGB ? 1 :
-            (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
-            (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+                                                             (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
+                                                              (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
         int channels = image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
         int length = (image->width * image->height * depth * channels);
         int encoded = base64encodelen(length);
@@ -254,7 +254,7 @@ char* image_encode(trax_image* image) {
         int offset = 0;
         int length = image->width;
         const char* format = (image->format == TRAX_IMAGE_BUFFER_JPEG) ? "image/jpeg" :
-            ((image->format == TRAX_IMAGE_BUFFER_PNG) ? "image/png" : NULL);
+                             ((image->format == TRAX_IMAGE_BUFFER_PNG) ? "image/png" : NULL);
         int body = base64encodelen(length);
         int header = snprintf(NULL, 0, "data:%s;", format);
         assert(format);
@@ -302,8 +302,8 @@ trax_image* image_decode(char* buffer) {
         outlen = base64decodelen(resource) - 1;
 
         depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 :
-            (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
-            (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+                                                  (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
+                                                  (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
         channels = format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
         allocated =  (width * height * depth * channels);
 
@@ -433,6 +433,47 @@ void region_formats_encode(int formats, char *key) {
 
 }
 
+int channels_decode(char *str){
+
+    int channels = 0;
+
+    char *pch;
+    pch = strtok (str," ;");
+    if (pch != NULL) {
+
+        if (strcmp(pch, "color") == 0)
+            channels = TRAX_CHANNEL_COLOR; // TODO: Should this be or'ed ?
+        else if (strcmp(pch, "depth") == 0)
+            channels = TRAX_CHANNEL_DEPTH;
+        else if (strcmp(pch, "ir") == 0)
+            channels = TRAX_CHANNEL_IR;
+        else if (strlen(pch) == 0)
+            continue; // Skip empty
+        else return -1;
+
+        pch = strtok (NULL, ";");
+    }
+
+    return channels;
+}
+
+void channels_encode(int channels, char *key) {
+
+    char* pch = key;
+
+    pch[0] = 0;
+
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_COLOR)) {
+        pch += sprintf(pch, "color;");
+    }
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_DEPTH)) {
+        pch += sprintf(pch, "depth;");
+    }
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_IR)) {
+        pch += sprintf(pch, "ir;");
+    }
+
+}
 
 void copy_properties(trax_properties* source, trax_properties* dest) {
 
@@ -446,7 +487,7 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     string_list* arguments;
     int version = 1;
     char *tmp, *tracker_name, *tracker_description, *tracker_family;
-    int region_formats, image_formats;
+    int region_formats, image_formats, channels;
 
     trax_handle* client = (trax_handle*) malloc(sizeof(trax_handle));
 
@@ -537,7 +578,7 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
 
 
     server->metadata = trax_metadata_create(metadata->format_region, metadata->format_image, metadata->channels,
-        metadata->tracker_name, metadata->tracker_description, metadata->tracker_family);
+                                            metadata->tracker_name, metadata->tracker_description, metadata->tracker_family);
 
     arguments = list_create(1);
 
@@ -552,7 +593,7 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
 }
 
 trax_metadata* trax_metadata_create(int region_formats, int image_formats, int channels,
-    const char* tracker_name, const char* tracker_description, const char* tracker_family) {
+                                    const char* tracker_name, const char* tracker_description, const char* tracker_family) {
 
     trax_metadata* metadata = (trax_metadata*) malloc(sizeof(trax_metadata));
 
@@ -595,7 +636,7 @@ trax_handle* trax_client_setup_socket(int server, int timeout, const trax_loggin
 
     message_stream* stream = create_message_stream_socket_accept(server, timeout);
 
-	if (!stream) return NULL;
+    if (!stream) return NULL;
 
     return client_setup(stream, log);
 
@@ -621,7 +662,7 @@ int trax_client_wait(trax_handle* client, trax_region** region, trax_properties*
 
     if (result == TRAX_STATE) {
 
-		region_container *_region = NULL;
+        region_container *_region = NULL;
 
         if (list_size(arguments) != 1)
             goto failure;
@@ -665,8 +706,8 @@ end:
 
 int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties) {
 
-	char* data = NULL;
-	region_container* _region;
+    char* data = NULL;
+    region_container* _region;
     string_list* arguments;
 
     VALIDATE_CLIENT_HANDLE(client);
@@ -674,7 +715,7 @@ int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* 
     if (!HANDLE_ALIVE(client))
         return TRAX_ERROR;
 
-	assert(image && region);
+    assert(image && region);
 
     _region = REGION(region);
 
@@ -692,11 +733,11 @@ int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* 
         trax_region* converted = NULL;
 
         if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_MASK)
-            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_MASK));
+                converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_MASK));
         else if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_POLYGON)
-            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_POLYGON));
+                converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_POLYGON));
         else if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_RECTANGLE)
-            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_RECTANGLE));
+                converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_RECTANGLE));
 
         assert(converted);
 
@@ -880,7 +921,7 @@ end:
 
 int trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties) {
 
-	char* data;
+    char* data;
     string_list* arguments;
 
     VALIDATE_SERVER_HANDLE(server);
@@ -962,15 +1003,15 @@ int trax_get_parameter(trax_handle* handle, int id, int* value) {
         return TRAX_ERROR;
 
     switch (id) {
-        case TRAX_PARAMETER_VERSION:
-            *value = handle->version;
-            return 1;
-        case TRAX_PARAMETER_CLIENT:
-            *value = !(handle->flags & TRAX_FLAG_SERVER);
-            return 1;
-        case TRAX_PARAMETER_SOCKET:
-            *value = (((message_stream*)handle->stream)->flags & TRAX_STREAM_SOCKET);
-            return 1;
+    case TRAX_PARAMETER_VERSION:
+        *value = handle->version;
+        return 1;
+    case TRAX_PARAMETER_CLIENT:
+        *value = !(handle->flags & TRAX_FLAG_SERVER);
+        return 1;
+    case TRAX_PARAMETER_SOCKET:
+        *value = (((message_stream*)handle->stream)->flags & TRAX_STREAM_SOCKET);
+        return 1;
     }
 
     return 0;
@@ -1021,11 +1062,11 @@ trax_image* trax_image_create_memory(int width, int height, int format) {
     trax_image* img;
 
     assert(format == TRAX_IMAGE_MEMORY_GRAY8 ||
-        format == TRAX_IMAGE_MEMORY_GRAY16 || format == TRAX_IMAGE_MEMORY_RGB);
+           format == TRAX_IMAGE_MEMORY_GRAY16 || format == TRAX_IMAGE_MEMORY_RGB);
 
     depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 :
-        (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
-        (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+                                              (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
+                                              (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
     channels = format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
 
     img = (trax_image*) malloc(sizeof(trax_image));
@@ -1062,7 +1103,7 @@ trax_image* trax_image_create_buffer(int length, const char* data) {
 
 }
 
- int trax_image_get_type(const trax_image* image) {
+int trax_image_get_type(const trax_image* image) {
 
     if (!image) return TRAX_IMAGE_EMPTY;
 
@@ -1096,8 +1137,8 @@ void trax_image_get_memory_header(const trax_image* image, int* width, int* heig
 }
 
 #define MEMORY_DEPTH(image) (image->format == TRAX_IMAGE_MEMORY_RGB ? 1 : \
-        (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : \
-        (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0))) \
+    (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 : \
+    (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0))) \
 
 #define MEMORY_CHANNELS(image) (image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1)
 
@@ -1370,7 +1411,7 @@ void trax_properties_set_float(trax_properties* properties, const char* key, flo
 
 char* trax_properties_get(const trax_properties* properties, const char* key) {
 
-	char* value;
+    char* value;
     int size = sm_get(properties->map, key, NULL, 0);
 
     if (size < 1) return NULL;
