@@ -100,7 +100,7 @@ void Wrapper::release() {
 
 Metadata::Metadata() {
 
-	wrap(trax_metadata_create(0, 0, NULL, NULL, NULL));
+    wrap(trax_metadata_create(0, 0, 0, NULL, NULL, NULL));
 }
 
 Metadata::Metadata(const Metadata& original) : Wrapper(original) {
@@ -108,10 +108,11 @@ Metadata::Metadata(const Metadata& original) : Wrapper(original) {
 	metadata = original.metadata;
 }
 
-Metadata::Metadata(int region_formats, int image_formats, std::string tracker_name,
-	std::string tracker_description, std::string tracker_family) {
+Metadata::Metadata(int region_formats, int image_formats, int channels,
+                   std::string tracker_name, std::string tracker_description,
+                   std::string tracker_family) {
 
-	wrap(trax_metadata_create(region_formats, image_formats,
+    wrap(trax_metadata_create(region_formats, image_formats, channels,
 		(tracker_name.empty()) ? NULL : tracker_name.c_str(),
 		(tracker_description.empty()) ? NULL : tracker_description.c_str(),
 		(tracker_family.empty()) ? NULL : tracker_family.c_str()
@@ -121,7 +122,7 @@ Metadata::Metadata(int region_formats, int image_formats, std::string tracker_na
 
 Metadata::Metadata(trax_metadata* metadata) {
 
-	wrap(trax_metadata_create(metadata->format_region, metadata->format_image,
+    wrap(trax_metadata_create(metadata->format_region, metadata->format_image, metadata->channels,
 		metadata->tracker_name, metadata->tracker_description, metadata->tracker_family));
 
 }

@@ -170,7 +170,7 @@ typedef struct trax_handle {
   * Array for keeping images (RGB, RGB+D or RGB + IR)
 **/
 typedef struct trax_image_list {
-    trax_image* image_list[4]; // The last element is null in case it's an RGB tracker
+    trax_image* image_list[4]; // The last element's data component is NULL in case it's only RGB
 } trax_image_list;
 
 __TRAX_EXPORT extern const trax_logging trax_no_log;
@@ -487,6 +487,26 @@ __TRAX_EXPORT int trax_properties_count(const trax_properties* properties);
  **/
 __TRAX_EXPORT void trax_properties_enumerate(trax_properties* properties, trax_enumerator enumerator, const void* object);
 
+/**
+* Allocate memory for storing the input images
+**/
+__TRAX_EXPORT trax_image_list* trax_image_list_create(int channels, int length, const char** data);
+
+/**
+* Release image list
+**/
+__TRAX_EXPORT void trax_image_list_release(trax_image_list* images);
+
+/**
+* Get image at a specific channel
+**/
+__TRAX_EXPORT trax_image* trax_image_list_get(trax_image_list* images, int channel_num);
+
+/**
+* Set image at a specific channel
+**/
+__TRAX_EXPORT void trax_image_list_set(trax_image_list* images, trax_image* image, int channel_num);
+
 #ifdef __cplusplus
 }
 
@@ -570,7 +590,7 @@ public:
 
     Metadata(const Metadata& original);
 
-    Metadata(int region_formats, int image_formats, std::string tracker_name = std::string(),
+    Metadata(int region_formats, int image_formats, int channels, std::string tracker_name = std::string(),
         std::string tracker_description = std::string(), std::string tracker_family = std::string());
 
     virtual ~Metadata();

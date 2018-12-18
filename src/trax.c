@@ -235,10 +235,10 @@ char* image_encode(trax_image* image) {
         int offset = 0;
         const char* format = image->format == TRAX_IMAGE_MEMORY_RGB ? "rgb" :
                                                                       image->format == TRAX_IMAGE_MEMORY_GRAY8 ? "gray8" :
-                                                                      image->format == TRAX_IMAGE_MEMORY_GRAY16 ? "gray16" : NULL;
+                                                                                                                 image->format == TRAX_IMAGE_MEMORY_GRAY16 ? "gray16" : NULL;
         int depth = image->format == TRAX_IMAGE_MEMORY_RGB ? 1 :
                                                              (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
-                                                              (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+                                                                                                         (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
         int channels = image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
         int length = (image->width * image->height * depth * channels);
         int encoded = base64encodelen(length);
@@ -254,7 +254,7 @@ char* image_encode(trax_image* image) {
         int offset = 0;
         int length = image->width;
         const char* format = (image->format == TRAX_IMAGE_BUFFER_JPEG) ? "image/jpeg" :
-                             ((image->format == TRAX_IMAGE_BUFFER_PNG) ? "image/png" : NULL);
+                                                                         ((image->format == TRAX_IMAGE_BUFFER_PNG) ? "image/png" : NULL);
         int body = base64encodelen(length);
         int header = snprintf(NULL, 0, "data:%s;", format);
         assert(format);
@@ -303,7 +303,7 @@ trax_image* image_decode(char* buffer) {
 
         depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 :
                                                   (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
-                                                  (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+                                                                                       (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
         channels = format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
         allocated =  (width * height * depth * channels);
 
@@ -439,7 +439,7 @@ int channels_decode(char *str){
 
     char *pch;
     pch = strtok (str," ;");
-    if (pch != NULL) {
+    while (pch != NULL) {
 
         if (strcmp(pch, "color") == 0)
             channels = TRAX_CHANNEL_COLOR; // TODO: Should this be or'ed ?
@@ -1066,7 +1066,7 @@ trax_image* trax_image_create_memory(int width, int height, int format) {
 
     depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 :
                                               (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
-                                              (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+                                                                                   (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
     channels = format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
 
     img = (trax_image*) malloc(sizeof(trax_image));
@@ -1473,3 +1473,37 @@ void trax_properties_enumerate(trax_properties* properties, trax_enumerator enum
     }
 }
 
+trax_image_list* trax_image_list_create(int channels, int length, const char** data){
+
+    trax_image_list* images = (trax_image_list*)malloc(sizeof(trax_image_list));
+
+    for(int i=0; i<4; i++)
+        images->image_list[i] = NULL;
+
+    for(int i=0; i<channels; i++)
+        images->image_list[i] = trax_image_create_buffer(length, data[i]);
+
+    return images;
+}
+
+void trax_image_list_release(trax_image_list* images){
+    // TODO: Ask Luka why trax_image_release requires 2D pointer.
+    // Ideally we should call that function for each element
+    for(int i=0; i<4; i++){
+        if(images->image_list[i]->data != NULL){
+            free(images->image_list[i]->data);
+            images->image_list[i]->data = 0;
+            images->image_list[i] = NULL;
+        }
+    }
+
+    images = NULL;
+}
+
+trax_image* trax_image_list_get(trax_image_list* images, int channel_num){
+    return images->image_list[channel_num];
+}
+
+void trax_image_list_set(trax_image_list* images, trax_image* image, int channel_num){
+    images->image_list[channel_num] = image;
+}
