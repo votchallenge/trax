@@ -564,7 +564,7 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
     image_formats_encode(metadata->format_image, tmp);
     trax_properties_set(properties, "trax.image", tmp);
 
-    channels_encode(metadata->channels, tmp); //TODO: Implement this function
+    channels_encode(metadata->channels, tmp);
     trax_properties_set(properties, "trax.channels", tmp);
 
     if (metadata->tracker_name)
@@ -1473,37 +1473,27 @@ void trax_properties_enumerate(trax_properties* properties, trax_enumerator enum
     }
 }
 
-trax_image_list* trax_image_list_create(int channels, int length, const char** data){
+trax_image_list* trax_image_list_create(int width, int height) {
 
     trax_image_list* images = (trax_image_list*)malloc(sizeof(trax_image_list));
 
-    for(int i=0; i<4; i++)
-        images->image_list[i] = NULL;
-
-    for(int i=0; i<channels; i++)
-        images->image_list[i] = trax_image_create_buffer(length, data[i]);
+    images->image_list[0] = trax_image_create_memory(width, height, TRAX_IMAGE_MEMORY_RGB); // Color
+    images->image_list[1] = trax_image_create_memory(width, height, TRAX_IMAGE_MEMORY_GRAY16); // Depth
+    images->image_list[2] = trax_image_create_memory(width, height, TRAX_IMAGE_MEMORY_GRAY16); // IR ([UK] I'm not sure if IR images are 16 bits)
 
     return images;
 }
 
-void trax_image_list_release(trax_image_list* images){
-    // TODO: Ask Luka why trax_image_release requires 2D pointer.
-    // Ideally we should call that function for each element
-    for(int i=0; i<4; i++){
-        if(images->image_list[i]->data != NULL){
-            free(images->image_list[i]->data);
-            images->image_list[i]->data = 0;
-            images->image_list[i] = NULL;
-        }
-    }
+void trax_image_list_release(trax_image_list* images) {
 
-    images = NULL;
+    for(int i=0; i<3; i++)
+        trax_image_release(&images->image_list[i]);
 }
 
-trax_image* trax_image_list_get(trax_image_list* images, int channel_num){
+trax_image* trax_image_list_get(const trax_image_list* images, int channel_num) {
     return images->image_list[channel_num];
 }
 
-void trax_image_list_set(trax_image_list* images, trax_image* image, int channel_num){
+void trax_image_list_set(trax_image_list* images, trax_image* image, int channel_num) {
     images->image_list[channel_num] = image;
 }

@@ -167,10 +167,10 @@ typedef struct trax_handle {
 } trax_handle;
 
 /**
-  * Array for keeping images (RGB, RGB+D or RGB + IR)
+ * Array for keeping images (RGB, Depth, IR)
 **/
 typedef struct trax_image_list {
-    trax_image* image_list[4]; // The last element's data component is NULL in case it's only RGB
+    trax_image* image_list[3];
 } trax_image_list;
 
 __TRAX_EXPORT extern const trax_logging trax_no_log;
@@ -490,7 +490,7 @@ __TRAX_EXPORT void trax_properties_enumerate(trax_properties* properties, trax_e
 /**
 * Allocate memory for storing the input images
 **/
-__TRAX_EXPORT trax_image_list* trax_image_list_create(int channels, int length, const char** data);
+__TRAX_EXPORT trax_image_list* trax_image_list_create(int width, int height);
 
 /**
 * Release image list
@@ -500,7 +500,7 @@ __TRAX_EXPORT void trax_image_list_release(trax_image_list* images);
 /**
 * Get image at a specific channel
 **/
-__TRAX_EXPORT trax_image* trax_image_list_get(trax_image_list* images, int channel_num);
+__TRAX_EXPORT trax_image* trax_image_list_get(const trax_image_list* images, int channel_num);
 
 /**
 * Set image at a specific channel
