@@ -704,7 +704,7 @@ end:
 
 }
 
-int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties) {
+int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_region* region, trax_properties* properties, int channels) {
 
     char* data = NULL;
     region_container* _region;
@@ -715,7 +715,7 @@ int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* 
     if (!HANDLE_ALIVE(client))
         return TRAX_ERROR;
 
-    assert(image && region);
+    assert(images && region);
 
     _region = REGION(region);
 
@@ -723,10 +723,36 @@ int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* 
 
     arguments = list_create(2);
 
-    if (TRAX_SUPPORTS(client->metadata->format_image, image->type)) {
-        char* buffer = image_encode(image);
-        list_append_direct(arguments, buffer);
-    } else goto failure;
+    if(channels == TRAX_CHANNEL_COLOR)
+    {
+        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
+            char* buffer = image_encode(images->image_list[0]);
+            list_append_direct(arguments, buffer);
+        } else goto failure;
+    }
+    else if(channels == TRAX_CHANNEL_DEPTH)
+    {
+        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
+            char* buffer = image_encode(images->image_list[0]);
+            list_append_direct(arguments, buffer);
+        } else goto failure;
+        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[1]->type)) {
+            char* buffer = image_encode(images->image_list[1]);
+            list_append_direct(arguments, buffer);
+        } else goto failure;
+    }
+    else if(channels == TRAX_CHANNEL_IR)
+    {
+        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
+            char* buffer = image_encode(images->image_list[0]);
+            list_append_direct(arguments, buffer);
+        } else goto failure;
+        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[2]->type)) {
+            char* buffer = image_encode(images->image_list[2]);
+            list_append_direct(arguments, buffer);
+        } else goto failure;
+    }
+    else goto failure;
 
     if (!TRAX_SUPPORTS(client->metadata->format_region, REGION_TYPE(region))) {
 
@@ -766,7 +792,7 @@ failure:
 
 }
 
-int trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties) {
+int trax_client_frame(trax_handle* client, trax_image_list* images, trax_properties* properties, int channels) {
 
     string_list* arguments;
     VALIDATE_CLIENT_HANDLE(client);
@@ -774,14 +800,52 @@ int trax_client_frame(trax_handle* client, trax_image* image, trax_properties* p
     if (!HANDLE_ALIVE(client))
         return TRAX_ERROR;
 
-    assert(TRAX_SUPPORTS(client->metadata->format_image, image->type));
+    if(channels == TRAX_CHANNEL_COLOR)
+    {
+        assert(TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type));
 
-    arguments = list_create(2);
+        arguments = list_create(2);
 
-    if (TRAX_SUPPORTS(client->metadata->format_image, image->type)) {
-        char* buffer = image_encode(image);
-        list_append_direct(arguments, buffer);
-    } else goto failure;
+        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
+            char* buffer = image_encode(images->image_list[0]);
+            list_append_direct(arguments, buffer);
+        } else goto failure;
+    }
+    else if(channels == TRAX_CHANNEL_DEPTH)
+    {
+        assert(TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type));
+        assert(TRAX_SUPPORTS(client->metadata->format_image, images->image_list[1]->type));
+
+        arguments = list_create(2);
+
+        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
+            char* buffer = image_encode(images->image_list[0]);
+            list_append_direct(arguments, buffer);
+        } else goto failure;
+
+        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[1]->type)) {
+            char* buffer = image_encode(images->image_list[1]);
+            list_append_direct(arguments, buffer);
+        } else goto failure;
+    }
+    else if(channels == TRAX_CHANNEL_IR)
+    {
+        assert(TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type));
+        assert(TRAX_SUPPORTS(client->metadata->format_image, images->image_list[2]->type));
+
+        arguments = list_create(2);
+
+        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
+            char* buffer = image_encode(images->image_list[0]);
+            list_append_direct(arguments, buffer);
+        } else goto failure;
+
+        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[2]->type)) {
+            char* buffer = image_encode(images->image_list[2]);
+            list_append_direct(arguments, buffer);
+        } else goto failure;
+    }
+    else goto failure;
 
     write_message((message_stream*)client->stream, &LOGGER(client), TRAX_FRAME, arguments, properties);
 
@@ -838,8 +902,9 @@ trax_handle* trax_server_setup_file(trax_metadata *metadata, int input, int outp
     return server_setup(metadata, stream, log);
 }
 
-int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties)
+int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region** region, trax_properties* properties, int channels)
 {
+    // "images" are assumed to be allocated before this function
 
     int result = TRAX_ERROR;
     string_list* arguments;
@@ -853,8 +918,6 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
     tmp_properties = trax_properties_create();
     arguments = list_create(8);
 
-    *image = NULL;
-
     result = read_message((message_stream*)server->stream, &LOGGER(server), arguments, tmp_properties);
 
     if (result == TRAX_FRAME) {
@@ -862,14 +925,54 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
         if (list_size(arguments) != 1)
             goto failure;
 
-        *image = image_decode(arguments->buffer[0]);
-        if (!*image || !TRAX_SUPPORTS(server->metadata->format_image, (*image)->type))
+        if(channels == TRAX_CHANNEL_COLOR) {
+            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
+            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
+                goto failure;
+
+            if (properties)
+                copy_properties(tmp_properties, properties);
+
+            goto end;
+        }
+        else if(channels == TRAX_CHANNEL_DEPTH){
+            // TODO: Buffer index should be moved accordingly
+            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
+            (*images)->image_list[1] = image_decode(arguments->buffer[0]);
+
+            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
+                goto failure;
+
+            if (!(*images)->image_list[1] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[1]->type))
+                goto failure;
+
+            if (properties)
+                copy_properties(tmp_properties, properties);
+
+            goto end;
+        }
+        else if(channels == TRAX_CHANNEL_IR){
+            // TODO: Buffer index should be moved accordingly
+            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
+            (*images)->image_list[2] = image_decode(arguments->buffer[0]);
+
+            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
+                goto failure;
+
+            if (!(*images)->image_list[2] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[2]->type))
+                goto failure;
+
+            if (properties)
+                copy_properties(tmp_properties, properties);
+
+            goto end;
+        }
+        else // Something is wrong with channels
+        {
             goto failure;
+        }
 
-        if (properties)
-            copy_properties(tmp_properties, properties);
 
-        goto end;
     } else if (result == TRAX_QUIT) {
 
         if (list_size(arguments) != 0)
@@ -886,10 +989,51 @@ int trax_server_wait(trax_handle* server, trax_image** image, trax_region** regi
         if (list_size(arguments) != 2)
             goto failure;
 
-        *image = image_decode(arguments->buffer[0]);
+        if(channels == TRAX_CHANNEL_COLOR) {
+            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
+            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
+                goto failure;
 
-        if (!*image || !TRAX_SUPPORTS(server->metadata->format_image, (*image)->type))
+            if (properties)
+                copy_properties(tmp_properties, properties);
+
+            goto end;
+        }
+        else if(channels == TRAX_CHANNEL_DEPTH){
+            // TODO: Buffer index should be moved accordingly
+            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
+            (*images)->image_list[1] = image_decode(arguments->buffer[0]);
+
+            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
+                goto failure;
+            if (!(*images)->image_list[1] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[1]->type))
+                goto failure;
+
+            if (properties)
+                copy_properties(tmp_properties, properties);
+
+            goto end;
+        }
+        else if(channels == TRAX_CHANNEL_IR){
+            // TODO: Buffer index should be moved accordingly
+            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
+            (*images)->image_list[2] = image_decode(arguments->buffer[0]);
+
+            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
+                goto failure;
+
+            if (!(*images)->image_list[2] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[2]->type))
+                goto failure;
+
+            if (properties)
+                copy_properties(tmp_properties, properties);
+
+            goto end;
+        }
+        else // Something is wrong with channels
+        {
             goto failure;
+        }
 
         if (!region_parse(arguments->buffer[1], (region_container**)region)) {
             goto failure;
@@ -905,8 +1049,8 @@ failure:
 
     result = TRAX_ERROR;
 
-    if (*image)
-        trax_image_release(image);
+    if (*images)
+        trax_image_list_release(*images);
 
     if (*region)
         trax_region_release(region);

@@ -221,12 +221,12 @@ __TRAX_EXPORT int trax_client_wait(trax_handle* client, trax_region** region, tr
 /**
  * Sends an initialize message.
 **/
-__TRAX_EXPORT int trax_client_initialize(trax_handle* client, trax_image* image, trax_region* region, trax_properties* properties);
+__TRAX_EXPORT int trax_client_initialize(trax_handle* client, trax_image_list* image, trax_region* region, trax_properties* properties, int channels);
 
 /**
  * Sends a frame message.
 **/
-__TRAX_EXPORT int trax_client_frame(trax_handle* client, trax_image* image, trax_properties* properties);
+__TRAX_EXPORT int trax_client_frame(trax_handle* client, trax_image_list* images, trax_properties* properties, int channels);
 
 /**
  * Setups the protocol for the server side and returns a handle object.
@@ -241,7 +241,8 @@ __TRAX_EXPORT trax_handle* trax_server_setup_file(trax_metadata *metadata, int i
 /**
  * Waits for a valid protocol message from the client.
 **/
-__TRAX_EXPORT int trax_server_wait(trax_handle* server, trax_image** image, trax_region** region, trax_properties* properties);
+__TRAX_EXPORT int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region** region, trax_properties* properties, int channels);
+
 
 /**
  * Sends a status reply to the client.

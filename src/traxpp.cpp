@@ -287,9 +287,13 @@ int Server::wait(Image& image, Region& region, Properties& properties) {
 	trax_image* timage = NULL;
 	trax_region* tregion = NULL;
 
+    trax_image_list* timagelist = NULL;
+
 	properties.ensure_unique();
 
-	int result = trax_server_wait(handle, &timage, &tregion, properties.properties);
+    int channels = TRAX_CHANNEL_DEPTH; // TODO: This should be set automatically from properties probably
+
+    int result = trax_server_wait(handle, &timagelist, &tregion, properties.properties, channels);
 
 	if (tregion)
 		region.wrap(tregion);
