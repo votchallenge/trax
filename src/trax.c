@@ -439,20 +439,22 @@ int channels_decode(char *str){
 
     char *pch;
     pch = strtok (str," ;");
-    while (pch != NULL) {
+    //    while (pch != NULL) {
 
-        if (strcmp(pch, "color") == 0)
-            channels |= TRAX_CHANNEL_COLOR;
-        else if (strcmp(pch, "depth") == 0)
-            channels |= TRAX_CHANNEL_DEPTH;
-        else if (strcmp(pch, "ir") == 0)
-            channels |= TRAX_CHANNEL_IR;
-        else if (strlen(pch) == 0)
-            continue; // Skip empty
-        else return -1;
+    if (strcmp(pch, "color") == 0)
+        channels |= TRAX_CHANNEL_COLOR;
+    else if (strcmp(pch, "depth") == 0)
+        channels |= TRAX_CHANNEL_DEPTH;
+    else if (strcmp(pch, "ir") == 0)
+        channels |= TRAX_CHANNEL_IR;
 
-        pch = strtok (NULL, ";");
-    }
+
+    //        else if (strlen(pch) == 0)
+    //            continue; // Skip empty
+    //        else return -1;
+
+    //        pch = strtok (NULL, ";");
+    //    }
 
     return channels;
 }
@@ -721,38 +723,27 @@ int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_re
 
     assert(_region->type != SPECIAL);
 
-    arguments = list_create(2);
+    int image_list_index = 0;
+    if(client->metadata->channels & TRAX_CHANNEL_COLOR)
+    {
+        arguments = list_create(1);
+        char* buffer = image_encode(images->image_list[image_list_index++]);
+        list_append_direct(arguments, buffer);
+    }else goto failure;
 
-    if(client->metadata->channels == TRAX_CHANNEL_COLOR)
+    if(client->metadata->channels & TRAX_CHANNEL_DEPTH)
     {
-        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
-            char* buffer = image_encode(images->image_list[0]);
-            list_append_direct(arguments, buffer);
-        } else goto failure;
-    }
-    else if(client->metadata->channels == TRAX_CHANNEL_DEPTH)
+        arguments = list_create(1);
+        char* buffer = image_encode(images->image_list[image_list_index++]);
+        list_append_direct(arguments, buffer);
+    }else goto failure;
+
+    if(client->metadata->channels & TRAX_CHANNEL_IR)
     {
-        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
-            char* buffer = image_encode(images->image_list[0]);
-            list_append_direct(arguments, buffer);
-        } else goto failure;
-        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[1]->type)) {
-            char* buffer = image_encode(images->image_list[1]);
-            list_append_direct(arguments, buffer);
-        } else goto failure;
-    }
-    else if(client->metadata->channels == TRAX_CHANNEL_IR)
-    {
-        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
-            char* buffer = image_encode(images->image_list[0]);
-            list_append_direct(arguments, buffer);
-        } else goto failure;
-        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[2]->type)) {
-            char* buffer = image_encode(images->image_list[2]);
-            list_append_direct(arguments, buffer);
-        } else goto failure;
-    }
-    else goto failure;
+        arguments = list_create(1);
+        char* buffer = image_encode(images->image_list[image_list_index]);
+        list_append_direct(arguments, buffer);
+    }else goto failure;
 
     if (!TRAX_SUPPORTS(client->metadata->format_region, REGION_TYPE(region))) {
 
@@ -800,52 +791,27 @@ int trax_client_frame(trax_handle* client, trax_image_list* images, trax_propert
     if (!HANDLE_ALIVE(client))
         return TRAX_ERROR;
 
-    if(client->metadata->channels == TRAX_CHANNEL_COLOR)
+    int image_list_index = 0;
+    if(client->metadata->channels & TRAX_CHANNEL_COLOR)
     {
-        assert(TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type));
+        arguments = list_create(1);
+        char* buffer = image_encode(images->image_list[image_list_index++]);
+        list_append_direct(arguments, buffer);
+    }else goto failure;
 
-        arguments = list_create(2);
-
-        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
-            char* buffer = image_encode(images->image_list[0]);
-            list_append_direct(arguments, buffer);
-        } else goto failure;
-    }
-    else if(client->metadata->channels == TRAX_CHANNEL_DEPTH)
+    if(client->metadata->channels & TRAX_CHANNEL_DEPTH)
     {
-        assert(TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type));
-        assert(TRAX_SUPPORTS(client->metadata->format_image, images->image_list[1]->type));
+        arguments = list_create(1);
+        char* buffer = image_encode(images->image_list[image_list_index++]);
+        list_append_direct(arguments, buffer);
+    }else goto failure;
 
-        arguments = list_create(2);
-
-        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
-            char* buffer = image_encode(images->image_list[0]);
-            list_append_direct(arguments, buffer);
-        } else goto failure;
-
-        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[1]->type)) {
-            char* buffer = image_encode(images->image_list[1]);
-            list_append_direct(arguments, buffer);
-        } else goto failure;
-    }
-    else if(client->metadata->channels == TRAX_CHANNEL_IR)
+    if(client->metadata->channels & TRAX_CHANNEL_IR)
     {
-        assert(TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type));
-        assert(TRAX_SUPPORTS(client->metadata->format_image, images->image_list[2]->type));
-
-        arguments = list_create(2);
-
-        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[0]->type)) {
-            char* buffer = image_encode(images->image_list[0]);
-            list_append_direct(arguments, buffer);
-        } else goto failure;
-
-        if (TRAX_SUPPORTS(client->metadata->format_image, images->image_list[2]->type)) {
-            char* buffer = image_encode(images->image_list[2]);
-            list_append_direct(arguments, buffer);
-        } else goto failure;
-    }
-    else goto failure;
+        arguments = list_create(1);
+        char* buffer = image_encode(images->image_list[image_list_index]);
+        list_append_direct(arguments, buffer);
+    }else goto failure;
 
     write_message((message_stream*)client->stream, &LOGGER(client), TRAX_FRAME, arguments, properties);
 
