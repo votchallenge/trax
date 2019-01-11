@@ -886,58 +886,28 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
 
     result = read_message((message_stream*)server->stream, &LOGGER(server), arguments, tmp_properties);
 
+    // Count the number of channels
+    unsigned int channels = server->metadata->channels; // Copy the channels just in case
+    unsigned int num_channels; // num_channels accumulates the total bits set in channels
+    for (num_channels = 0; channels; num_channels++)
+    {
+        channels &= channels - 1; // clear the least significant bit set
+    }
+
     if (result == TRAX_FRAME) {
 
-        if (list_size(arguments) != 1)
+        if (list_size(arguments) != num_channels)
             goto failure;
-
-        if(server->metadata->channels == TRAX_CHANNEL_COLOR) {
-            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
-            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
-                goto failure;
-
-            if (properties)
-                copy_properties(tmp_properties, properties);
-
-            goto end;
-        }
-        else if(server->metadata->channels == TRAX_CHANNEL_DEPTH){ // Just check if that bit is included
-            // TODO: Buffer index should be moved accordingly
-            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
-            (*images)->image_list[1] = image_decode(arguments->buffer[0]);
-
-            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
-                goto failure;
-
-            if (!(*images)->image_list[1] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[1]->type))
-                goto failure;
-
-            if (properties)
-                copy_properties(tmp_properties, properties);
-
-            goto end;
-        }
-        else if(server->metadata->channels == TRAX_CHANNEL_IR){
-            // TODO: Buffer index should be moved accordingly
-            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
-            (*images)->image_list[2] = image_decode(arguments->buffer[0]);
-
-            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
-                goto failure;
-
-            if (!(*images)->image_list[2] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[2]->type))
-                goto failure;
-
-            if (properties)
-                copy_properties(tmp_properties, properties);
-
-            goto end;
-        }
-        else // Something is wrong with channels
+        for(unsigned int c=0; c<num_channels; c++)
         {
-            goto failure;
-        }
+            (*images)->image_list[c] = image_decode(arguments->buffer[c]);
+            if (!(*images)->image_list[c] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[c]->type))
+                goto failure;
 
+            if (properties)
+                copy_properties(tmp_properties, properties);
+            goto end;
+        }
 
     } else if (result == TRAX_QUIT) {
 
@@ -950,58 +920,23 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
         server->flags |= TRAX_FLAG_TERMINATED;
 
         goto end;
+
     } else if (result == TRAX_INITIALIZE) {
 
-        if (list_size(arguments) != 2)
+        if (list_size(arguments) != (num_channels + 1)) // There's also the region info
             goto failure;
-
-        if(server->metadata->channels == TRAX_CHANNEL_COLOR) {
-            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
-            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
-                goto failure;
-
-            if (properties)
-                copy_properties(tmp_properties, properties);
-
-            goto end;
-        }
-        else if(server->metadata->channels == TRAX_CHANNEL_DEPTH){
-            // TODO: Buffer index should be moved accordingly
-            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
-            (*images)->image_list[1] = image_decode(arguments->buffer[0]);
-
-            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
-                goto failure;
-            if (!(*images)->image_list[1] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[1]->type))
-                goto failure;
-
-            if (properties)
-                copy_properties(tmp_properties, properties);
-
-            goto end;
-        }
-        else if(server->metadata->channels == TRAX_CHANNEL_IR){
-            // TODO: Buffer index should be moved accordingly
-            (*images)->image_list[0] = image_decode(arguments->buffer[0]);
-            (*images)->image_list[2] = image_decode(arguments->buffer[0]);
-
-            if (!(*images)->image_list[0] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[0]->type))
-                goto failure;
-
-            if (!(*images)->image_list[2] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[2]->type))
-                goto failure;
-
-            if (properties)
-                copy_properties(tmp_properties, properties);
-
-            goto end;
-        }
-        else // Something is wrong with channels
+        for(unsigned int c=0; c<num_channels; c++)
         {
-            goto failure;
+            (*images)->image_list[c] = image_decode(arguments->buffer[c]);
+            if (!(*images)->image_list[c] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[c]->type))
+                goto failure;
+
+            if (properties)
+                copy_properties(tmp_properties, properties);
+            goto end;
         }
 
-        if (!region_parse(arguments->buffer[1], (region_container**)region)) {
+        if (!region_parse(arguments->buffer[num_channels], (region_container**)region)) {
             goto failure;
         }
 
