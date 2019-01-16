@@ -745,7 +745,7 @@ bool TrackerProcess::query() {
 
 }
 
-bool TrackerProcess::initialize(const Image& image, const Region& region, const Properties& properties) {
+bool TrackerProcess::initialize(const ImageList& image, const Region& region, const Properties& properties) {
 
 	query();
 
@@ -793,7 +793,7 @@ bool TrackerProcess::wait(Region& region, Properties& properties) {
 
 }
 
-bool TrackerProcess::frame(const Image& image, const Properties& properties) {
+bool TrackerProcess::frame(const ImageList& image, const Properties& properties) {
 
 	if (!ready()) throw std::runtime_error("Tracker process not alive");
 

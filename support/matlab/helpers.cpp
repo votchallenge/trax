@@ -264,7 +264,6 @@ mxArray* region_to_array(const Region& region) {
     return val;
 }
 
-
 mxArray* image_to_array(const Image& img) {
 
     mxArray* val = NULL;
@@ -384,6 +383,24 @@ mxArray* image_to_array(const Image& img) {
     return val;
 }
 
+mxArray* images_to_array(const ImageList& img) {
+
+    mxArray* val = mxCreateCellMatrix(1, img.size());
+
+    int j = 0;
+
+    for (int i = 0; i < TRAX_CHANNELS; i++) {
+
+        if (img.has(TRAX_CHANNEL_ID(i))) {
+            mxSetCell(val, j++, image_to_array(img.get(TRAX_CHANNEL_ID(i))));
+        }
+
+    }
+    
+    return val;
+}
+
+
 Image array_to_image(const mxArray* arr) {
 
 	int ndims = mxGetNumberOfDimensions(arr);
@@ -465,6 +482,42 @@ Image array_to_image(const mxArray* arr) {
     return Image();
 }
 
+ImageList array_to_images(const mxArray* arr, int channels) {
+
+    ImageList list;
+
+    int length = max(mxGetM(arr), mxGetN(arr));
+    int cnum = trax_image_list_count(channels);
+
+    if (!mxIsCell(arr)) {
+        
+        if (cnum != 1) mexErrMsgTxt("More than one image required");
+
+        list.set(array_to_image(arr), channels);
+        return list;
+
+    }
+
+    if ( min(mxGetM(arr), mxGetN(arr)) != 1 )
+        mexErrMsgTxt("Image list cell array must be a vector");
+
+    if (length != cnum) 
+        mexErrMsgTxt("Image list cell array size does not match the number of required channels.");
+
+    int j = 0;
+
+    for (int i = 0; i < TRAX_CHANNELS; i++) {
+
+        if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_ID(i))) {
+            mxArray* val = mxGetCell (arr, j++);
+            list.set(array_to_image(val), TRAX_CHANNEL_ID(i));
+        }
+
+    }
+
+    return list;
+
+}
 
 int get_argument_code(string str) {
 
@@ -512,6 +565,10 @@ int get_argument_code(string str) {
 
     if (str == "log") {
         return ARGUMENT_LOG;
+    }
+
+    if (str == "channels") {
+        return ARGUMENT_CHANNELS;
     }
 
     MEX_ERROR("Illegal argument name");
@@ -562,6 +619,27 @@ int get_image_code(string str) {
     return TRAX_IMAGE_PATH;
 }
 
+int get_channel_code(string str) {
+
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+
+    if (str == "color") {
+        return TRAX_CHANNEL_COLOR;
+    }
+
+    if (str == "depth") {
+        return TRAX_CHANNEL_DEPTH;
+    }
+
+    if (str == "ir") {
+        return TRAX_CHANNEL_IR;
+    }
+
+    MEX_ERROR("Illegal channel type");
+    return TRAX_CHANNEL_COLOR;
+}
+
+
 int get_flags(const mxArray * input, code_parser parser) {
 
     if (!mxIsCell(input)) {
@@ -603,7 +681,7 @@ mxArray* decode_region(int formats) {
 
     mxArray* array = mxCreateCellMatrix(1, tmp.size());
 
-    for (int i = 0; i < tmp.size(); i++) {mxSetCell(array, i, tmp[i]); }
+    for (int i = 0; i < tmp.size(); i++) { mxSetCell(array, i, tmp[i]); }
 
     return array;
 
@@ -629,6 +707,30 @@ mxArray* decode_image(int formats) {
         tmp.push_back(set_string("memory"));
     }
 
+
+    mxArray* array = mxCreateCellMatrix(1, tmp.size());
+
+    for (int i = 0; i < tmp.size(); i++) {mxSetCell(array, i, tmp[i]); }
+
+    return array;
+
+}
+
+mxArray* decode_channels(int channels) {
+
+    vector<mxArray*> tmp;
+
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_COLOR)) {
+        tmp.push_back(set_string("color"));
+    }
+
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_DEPTH)) {
+        tmp.push_back(set_string("depth"));
+    }
+
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_IR)) {
+        tmp.push_back(set_string("ir"));
+    }
 
     mxArray* array = mxCreateCellMatrix(1, tmp.size());
 

@@ -191,48 +191,68 @@ typedef struct image_size {
 // Retrieve image size from image header
 image_size image_get_size(Image image) {
 
+    int len;
     image_size result;
-    const string filename = image.get_path();
-    int r;
-
-    result.width = -1;
-    result.height = -1;
-
-    FILE *f=fopen(filename.c_str(),"rb");
-    if ( f==0 ) return result;
-
-    fseek(f,0,SEEK_END);
-    long len=ftell(f);
-    fseek(f,0,SEEK_SET);
-
-    if (len<24) {fclose(f); return result;}
-
-    // Strategy:
-    // reading GIF dimensions requires the first 10 bytes of the file
-    // reading PNG dimensions requires the first 24 bytes of the file
-    // reading JPEG dimensions requires scanning through jpeg chunks
-    // In all formats, the file is at least 24 bytes big, so we'll read that always
     unsigned char buf[24];
-    r = fread(buf,1,24,f);
-    if (r == -1) {
+
+    if (image.type() == TRAX_IMAGE_MEMORY) {
+
+        image.get_memory_header(&result.width, &result.height, NULL);
         return result;
+
     }
 
-    // For JPEGs, we need to read the first 12 bytes of each chunk.
-    // We'll read those 12 bytes at buf+2...buf+14, i.e. overwriting the existing buf.
-    if (buf[0]==0xFF && buf[1]==0xD8 && buf[2]==0xFF && buf[3]==0xE0 && buf[6]=='J' && buf[7]=='F' && buf[8]=='I' && buf[9]=='F') {
-        long pos=2;
-        while (buf[2]==0xFF) {
-            if (buf[3]==0xC0 || buf[3]==0xC1 || buf[3]==0xC2 || buf[3]==0xC3 || buf[3]==0xC9 || buf[3]==0xCA || buf[3]==0xCB) break;
-            pos += 2+(buf[4]<<8)+buf[5];
-            if (pos+12>len) break;
-            fseek(f,pos,SEEK_SET);
-            r = fread(buf+2,1,12,f);
-            if (r == -1) { return result; }
+    if (image.type() == TRAX_IMAGE_PATH) {
+        const string filename = image.get_path();
+        int r;
+
+        result.width = -1;
+        result.height = -1;
+
+        FILE *f=fopen(filename.c_str(),"rb");
+        if ( f==0 ) return result;
+
+        fseek(f,0,SEEK_END);
+        int len=ftell(f);
+        fseek(f,0,SEEK_SET);
+
+        if (len<24) {fclose(f); return result;}
+
+        // Strategy:
+        // reading GIF dimensions requires the first 10 bytes of the file
+        // reading PNG dimensions requires the first 24 bytes of the file
+        // reading JPEG dimensions requires scanning through jpeg chunks
+        // In all formats, the file is at least 24 bytes big, so we'll read that always    
+        r = fread(buf,1,24,f);
+        if (r == -1) {
+            return result;
         }
-    }
 
-    fclose(f);
+        // For JPEGs, we need to read the first 12 bytes of each chunk.
+        // We'll read those 12 bytes at buf+2...buf+14, i.e. overwriting the existing buf.
+        if (buf[0]==0xFF && buf[1]==0xD8 && buf[2]==0xFF && buf[3]==0xE0 && buf[6]=='J' && buf[7]=='F' && buf[8]=='I' && buf[9]=='F') {
+            long pos=2;
+            while (buf[2]==0xFF) {
+                if (buf[3]==0xC0 || buf[3]==0xC1 || buf[3]==0xC2 || buf[3]==0xC3 || buf[3]==0xC9 || buf[3]==0xCA || buf[3]==0xCB) break;
+                pos += 2+(buf[4]<<8)+buf[5];
+                if (pos+12>len) break;
+                fseek(f,pos,SEEK_SET);
+                r = fread(buf+2,1,12,f);
+                if (r == -1) { return result; }
+            }
+        }
+
+        fclose(f);
+        
+    } else if (image.type() == TRAX_IMAGE_BUFFER) {
+
+        const char* src = image.get_buffer(&len, NULL);
+
+        if (len<24) { return result; }
+
+        memcpy(buf, src, 24);
+
+    }
 
     // JPEG: (first two bytes of buf are first two bytes of the jpeg file; rest of buf is the DCT frame
     if (buf[0]==0xFF && buf[1]==0xD8 && buf[2]==0xFF) {
@@ -256,7 +276,28 @@ image_size image_get_size(Image image) {
   return result;
 }
 
-void load_images(const string& file, vector<string>& list) {
+image_size image_get_size(ImageList image) {
+
+    if (image.has(TRAX_CHANNEL_COLOR)) {
+        return image_get_size(image.get(TRAX_CHANNEL_COLOR));
+    }
+
+    if (image.has(TRAX_CHANNEL_DEPTH)) {
+        return image_get_size(image.get(TRAX_CHANNEL_DEPTH));
+    }
+
+    if (image.has(TRAX_CHANNEL_IR)) {
+        return image_get_size(image.get(TRAX_CHANNEL_IR));
+    }
+
+    image_size size;
+    return size;
+}
+
+
+#define DELIMITER ";"
+
+void read_images(const string& file, vector<vector<string> >& list) {
 
     std::ifstream input;
 
@@ -265,11 +306,28 @@ void load_images(const string& file, vector<string>& list) {
     if (!input.is_open())
         throw std::runtime_error("Image list file not available.");
 
+    string delimiter(DELIMITER);
+
     while (true) {
         string line;
+        vector<string> images;
         getline(input, line);
         if (!input.good()) break;
-        list.push_back(line);
+
+        size_t pos = 0;
+        std::string token;
+        while ((pos = line.find(delimiter)) != std::string::npos) {
+            token = line.substr(0, pos);
+            images.push_back(token);
+            line.erase(0, pos + delimiter.length());
+        }
+        images.push_back(line);
+
+        if (images.size() < TRAX_CHANNELS) {
+            images.resize(TRAX_CHANNELS);
+        }
+
+        list.push_back(images);
     }
 
     input.close();
@@ -333,6 +391,26 @@ Image load_image(string& path, int formats) {
     }
 
     return image;
+
+}
+
+ImageList load_images(vector<string>& path, int channels, int formats) {
+
+    ImageList list;
+
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_COLOR)) {
+        list.set(load_image(path[0], formats), TRAX_CHANNEL_COLOR);
+    }
+
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_DEPTH)) {
+        list.set(load_image(path[1], formats), TRAX_CHANNEL_DEPTH);
+    }
+
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_IR)) {
+        list.set(load_image(path[2], formats), TRAX_CHANNEL_IR);
+    }
+
+    return list;
 
 }
 
@@ -502,13 +580,13 @@ int main( int argc, char** argv) {
 
             // Tracking mode: the default mode where the entire sequence is processed.
 
-            vector<string> images;
+            vector<vector<string> > images;
             vector<Region> groundtruth;
             vector<Region> initialization;
             vector<Region> output;
             vector<double> timings;
 
-            load_images(images_file, images);
+            read_images(images_file, images);
             load_trajectory(groundtruth_file, groundtruth);
 
             print_debug("Images loaded from file %s.\n", images_file.c_str());
@@ -521,7 +599,7 @@ int main( int argc, char** argv) {
 
             if (images.size() > groundtruth.size()) {
                 print_debug("Warning: Image sequence longer that groundtruth. Truncating.");
-                images = vector<string>(images.begin(), images.begin() + groundtruth.size());
+                images = vector<vector<string> >(images.begin(), images.begin() + groundtruth.size());
             }
 
             if (!initialization_file.empty()) {
@@ -554,12 +632,12 @@ int main( int argc, char** argv) {
                     throw std::runtime_error("Tracker process not alive anymore.");
                 }
 
-                print_debug("Loading initialization image: %s\n", images[frame].c_str());
+                print_debug("Loading initialization images.\n");
 
                 Metadata metadata = tracker.metadata();
 
                 Region initialize = initialization[frame];
-                Image image = load_image(images[frame], metadata.image_formats());
+                ImageList image = load_images(images[frame], metadata.image_formats(), metadata.channels());
 
                 // Start timing a frame
                 double timing_elapsed;
@@ -611,7 +689,6 @@ int main( int argc, char** argv) {
                             initialized = false;
                         }
 
-                        //timings.push_back(((timing_toc - timing_tic) * 1000) / CLOCKS_PER_SEC);
                         timings.push_back(timing_elapsed);
 
                     } else {
@@ -629,8 +706,8 @@ int main( int argc, char** argv) {
 
                     if (frame >= images.size()) break;
 
-                    print_debug("Loading image: %s\n", images[frame].c_str());
-                    Image image = load_image(images[frame], metadata.image_formats());
+                    print_debug("Loading frame images.\n");
+                    ImageList image = load_images(images[frame], metadata.image_formats(), metadata.channels());
 
                     // Start timing a frame
                     timing_start = timer_clock();

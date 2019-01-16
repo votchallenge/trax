@@ -242,7 +242,7 @@ int main(int argc, char** argv) {
 
         tracker.query();
 
-        Image image;
+        ImageList image;
 
         int image_formats = tracker.metadata().image_formats();
 
@@ -250,16 +250,17 @@ int main(int argc, char** argv) {
             size_t length;
             char* buffer = NULL;
             tester_copy_resource("static.jpg", &buffer, &length);
-            image = Image::create_buffer(length, buffer);
+            image.set(Image::create_buffer(length, buffer), TRAX_CHANNEL_COLOR);
             free(buffer);
         } else if TRAX_SUPPORTS(image_formats, TRAX_IMAGE_MEMORY) {
             size_t length;
             char* buffer = NULL;
             tester_copy_resource("static.bin", &buffer, &length);
-            image = Image::create_memory(320, 240, TRAX_IMAGE_MEMORY_RGB);
-            char* dst = image.write_memory_row(0);
+            Image tmp = Image::create_memory(320, 240, TRAX_IMAGE_MEMORY_RGB);
+            char* dst = tmp.write_memory_row(0);
             memcpy(dst, buffer, 320 * 240);
             free(buffer);
+            image.set(tmp, TRAX_CHANNEL_COLOR);
         } else if TRAX_SUPPORTS(image_formats, TRAX_IMAGE_PATH) {
             size_t length;
             char* buffer = NULL;
@@ -267,7 +268,7 @@ int main(int argc, char** argv) {
             string temp_path = get_temp_name("trax_testing.jpg");
             std::ofstream output(temp_path.c_str(), std::ios::out | std::ios::binary );
             output.write(buffer, length);
-            image = Image::create_path(temp_path);
+            image.set(Image::create_path(temp_path), TRAX_CHANNEL_COLOR);
             free(buffer);
         }
         else

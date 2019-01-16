@@ -217,28 +217,28 @@ char* image_encode(trax_image* image) {
 
     char* result = NULL;
 
-    switch(image->type) {
+    switch (image->type) {
     case TRAX_IMAGE_PATH: {
         int length = strlen(image->data);
         result = (char*) malloc(sizeof(char) * (length + 1 + 7));
         sprintf(result, "file://");
-        memcpy(result + 7, image->data, length+1);
+        memcpy(result + 7, image->data, length + 1);
         break;
     }
     case TRAX_IMAGE_URL: {
         int length = strlen(image->data);
         result = (char*) malloc(sizeof(char) * (length + 1));
-        memcpy(result, image->data, length+1);
+        memcpy(result, image->data, length + 1);
         break;
     }
     case TRAX_IMAGE_MEMORY: {
         int offset = 0;
         const char* format = image->format == TRAX_IMAGE_MEMORY_RGB ? "rgb" :
-                                                                      image->format == TRAX_IMAGE_MEMORY_GRAY8 ? "gray8" :
-                                                                                                                 image->format == TRAX_IMAGE_MEMORY_GRAY16 ? "gray16" : NULL;
+                             image->format == TRAX_IMAGE_MEMORY_GRAY8 ? "gray8" :
+                             image->format == TRAX_IMAGE_MEMORY_GRAY16 ? "gray16" : NULL;
         int depth = image->format == TRAX_IMAGE_MEMORY_RGB ? 1 :
-                                                             (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
-                                                                                                         (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+                    (image->format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
+                     (image->format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
         int channels = image->format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
         int length = (image->width * image->height * depth * channels);
         int encoded = base64encodelen(length);
@@ -254,7 +254,7 @@ char* image_encode(trax_image* image) {
         int offset = 0;
         int length = image->width;
         const char* format = (image->format == TRAX_IMAGE_BUFFER_JPEG) ? "image/jpeg" :
-                                                                         ((image->format == TRAX_IMAGE_BUFFER_PNG) ? "image/png" : NULL);
+                             ((image->format == TRAX_IMAGE_BUFFER_PNG) ? "image/png" : NULL);
         int body = base64encodelen(length);
         int header = snprintf(NULL, 0, "data:%s;", format);
         assert(format);
@@ -290,7 +290,7 @@ trax_image* image_decode(char* buffer) {
 
         width = strtol(resource, &resource, 10);
         if (resource[0] != ';') return result;
-        height = strtol(resource+1, &resource, 10);
+        height = strtol(resource + 1, &resource, 10);
         if (resource[0] != ';') return result;
 
         token = resource + 1;
@@ -302,8 +302,8 @@ trax_image* image_decode(char* buffer) {
         outlen = base64decodelen(resource) - 1;
 
         depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 :
-                                                  (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
-                                                                                       (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+                (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
+                 (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
         channels = format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
         allocated =  (width * height * depth * channels);
 
@@ -350,7 +350,7 @@ int image_formats_decode(char *str) {
     int formats = 0;
 
     char *pch;
-    pch = strtok (str," ;");
+    pch = strtok (str, " ;");
     while (pch != NULL) {
         if (strcmp(pch, "path") == 0)
             formats |= TRAX_IMAGE_PATH;
@@ -396,7 +396,7 @@ int region_formats_decode(char *str) {
     int formats = 0;
 
     char *pch;
-    pch = strtok (str," ;");
+    pch = strtok (str, " ;");
     while (pch != NULL) {
 
         if (strcmp(pch, "rectangle") == 0)
@@ -433,28 +433,27 @@ void region_formats_encode(int formats, char *key) {
 
 }
 
-int channels_decode(char *str){
+int channels_decode(char *str) {
 
     int channels = 0;
 
     char *pch;
-    pch = strtok (str," ;");
-    //    while (pch != NULL) {
+    pch = strtok (str, " ;");
+    while (pch != NULL) {
 
-    if (strcmp(pch, "color") == 0)
-        channels |= TRAX_CHANNEL_COLOR;
-    else if (strcmp(pch, "depth") == 0)
-        channels |= TRAX_CHANNEL_DEPTH;
-    else if (strcmp(pch, "ir") == 0)
-        channels |= TRAX_CHANNEL_IR;
+        if (strcmp(pch, "color") == 0)
+            channels |= TRAX_CHANNEL_COLOR;
+        else if (strcmp(pch, "depth") == 0)
+            channels |= TRAX_CHANNEL_DEPTH;
+        else if (strcmp(pch, "ir") == 0)
+            channels |= TRAX_CHANNEL_IR;
 
+        else if (strlen(pch) == 0)
+            continue; // Skip empty
+        else return -1;
 
-    //        else if (strlen(pch) == 0)
-    //            continue; // Skip empty
-    //        else return -1;
-
-    //        pch = strtok (NULL, ";");
-    //    }
+        pch = strtok (NULL, ";");
+    }
 
     return channels;
 }
@@ -518,9 +517,16 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     image_formats = image_formats_decode(tmp);
     free(tmp);
 
-    tmp = trax_properties_get(tmp_properties, "trax.channels");
-    channels = channels_decode(tmp);
-    free(tmp);
+    // Multiple channels are only supported in TraX version 2
+    if (client->version < 2) {
+        channels = TRAX_CHANNEL_COLOR;
+    } else {
+        tmp = trax_properties_get(tmp_properties, "trax.channels");
+        channels = channels_decode(tmp);
+        free(tmp);
+        if (channels == 0)
+            channels = TRAX_CHANNEL_COLOR;
+    }
 
     tracker_name = trax_properties_get(tmp_properties, "trax.name");
     tracker_description = trax_properties_get(tmp_properties, "trax.description");
@@ -596,6 +602,8 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
 
 trax_metadata* trax_metadata_create(int region_formats, int image_formats, int channels,
                                     const char* tracker_name, const char* tracker_description, const char* tracker_family) {
+
+    assert(channels != 0);
 
     trax_metadata* metadata = (trax_metadata*) malloc(sizeof(trax_metadata));
 
@@ -711,6 +719,7 @@ int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_re
     char* data = NULL;
     region_container* _region;
     string_list* arguments;
+    int i;
 
     VALIDATE_CLIENT_HANDLE(client);
 
@@ -723,38 +732,28 @@ int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_re
 
     assert(_region->type != SPECIAL);
 
-    int image_list_index = 0;
-    if(client->metadata->channels & TRAX_CHANNEL_COLOR)
-    {
-        arguments = list_create(1);
-        char* buffer = image_encode(images->image_list[image_list_index++]);
-        list_append_direct(arguments, buffer);
-    }else goto failure;
+    arguments = list_create(1);
 
-    if(client->metadata->channels & TRAX_CHANNEL_DEPTH)
-    {
-        arguments = list_create(1);
-        char* buffer = image_encode(images->image_list[image_list_index++]);
-        list_append_direct(arguments, buffer);
-    }else goto failure;
+    for (i = 0; i < TRAX_CHANNELS; i++) {
+        if (TRAX_SUPPORTS(client->metadata->channels, TRAX_CHANNEL_ID(i))) {
 
-    if(client->metadata->channels & TRAX_CHANNEL_IR)
-    {
-        arguments = list_create(1);
-        char* buffer = image_encode(images->image_list[image_list_index]);
-        list_append_direct(arguments, buffer);
-    }else goto failure;
+            if (!images->image_list[i]) goto failure;
+            char* buffer = image_encode(images->image_list[i]);
+            list_append_direct(arguments, buffer);
+
+        }
+    }
 
     if (!TRAX_SUPPORTS(client->metadata->format_region, REGION_TYPE(region))) {
 
         trax_region* converted = NULL;
 
         if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_MASK)
-                converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_MASK));
+            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_MASK));
         else if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_POLYGON)
-                converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_POLYGON));
+            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_POLYGON));
         else if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_RECTANGLE)
-                converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_RECTANGLE));
+            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_RECTANGLE));
 
         assert(converted);
 
@@ -785,33 +784,22 @@ failure:
 
 int trax_client_frame(trax_handle* client, trax_image_list* images, trax_properties* properties) {
 
+    int i;
     string_list* arguments;
     VALIDATE_CLIENT_HANDLE(client);
 
     if (!HANDLE_ALIVE(client))
         return TRAX_ERROR;
 
-    int image_list_index = 0;
-    if(client->metadata->channels & TRAX_CHANNEL_COLOR)
-    {
-        arguments = list_create(1);
-        char* buffer = image_encode(images->image_list[image_list_index++]);
-        list_append_direct(arguments, buffer);
-    }else goto failure;
+    arguments = list_create(1);
 
-    if(client->metadata->channels & TRAX_CHANNEL_DEPTH)
-    {
-        arguments = list_create(1);
-        char* buffer = image_encode(images->image_list[image_list_index++]);
-        list_append_direct(arguments, buffer);
-    }else goto failure;
-
-    if(client->metadata->channels & TRAX_CHANNEL_IR)
-    {
-        arguments = list_create(1);
-        char* buffer = image_encode(images->image_list[image_list_index]);
-        list_append_direct(arguments, buffer);
-    }else goto failure;
+    for (i = 0; i < TRAX_CHANNELS; i++) {
+        if (TRAX_SUPPORTS(client->metadata->channels, TRAX_CHANNEL_ID(i))) {
+            if (!images->image_list[i]) goto failure;
+            char* buffer = image_encode(images->image_list[i]);
+            list_append_direct(arguments, buffer);
+        } 
+    }
 
     write_message((message_stream*)client->stream, &LOGGER(client), TRAX_FRAME, arguments, properties);
 
@@ -868,11 +856,10 @@ trax_handle* trax_server_setup_file(trax_metadata *metadata, int input, int outp
     return server_setup(metadata, stream, log);
 }
 
-int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region** region, trax_properties* properties)
-{
-    // "images" are assumed to be allocated before this function
+int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region** region, trax_properties* properties) {
 
     int result = TRAX_ERROR;
+    int i, j = 0;
     string_list* arguments;
     trax_properties* tmp_properties;
 
@@ -881,33 +868,36 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
     if (!HANDLE_ALIVE(server))
         return TRAX_ERROR;
 
+    int argument_count = trax_image_list_count(server->metadata->channels);
+
     tmp_properties = trax_properties_create();
     arguments = list_create(8);
 
     result = read_message((message_stream*)server->stream, &LOGGER(server), arguments, tmp_properties);
 
-    // Count the number of channels
-    unsigned int channels = server->metadata->channels; // Copy the channels just in case
-    unsigned int num_channels; // num_channels accumulates the total bits set in channels
-    for (num_channels = 0; channels; num_channels++)
-    {
-        channels &= channels - 1; // clear the least significant bit set
-    }
-
     if (result == TRAX_FRAME) {
 
-        if (list_size(arguments) != num_channels)
+        if (list_size(arguments) != argument_count)
             goto failure;
-        for(unsigned int c=0; c<num_channels; c++)
-        {
-            (*images)->image_list[c] = image_decode(arguments->buffer[c]);
-            if (!(*images)->image_list[c] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[c]->type))
-                goto failure;
 
-            if (properties)
-                copy_properties(tmp_properties, properties);
-            goto end;
+        *images = trax_image_list_create();
+
+        for (i = 0; i < TRAX_CHANNELS; i++) {
+
+            if (TRAX_SUPPORTS(server->metadata->channels, TRAX_CHANNEL_ID(i))) {
+
+                (*images)->image_list[i] = image_decode(arguments->buffer[j]);
+                if (!(*images)->image_list[i] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[i]->type))
+                    goto failure;
+                j++;
+
+            }
+
         }
+
+        if (properties)
+            copy_properties(tmp_properties, properties);
+        goto end;
 
     } else if (result == TRAX_QUIT) {
 
@@ -923,20 +913,25 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
 
     } else if (result == TRAX_INITIALIZE) {
 
-        if (list_size(arguments) != (num_channels + 1)) // There's also the region info
+        if (list_size(arguments) != (argument_count + 1)) // There's also the region info
             goto failure;
-        for(unsigned int c=0; c<num_channels; c++)
-        {
-            (*images)->image_list[c] = image_decode(arguments->buffer[c]);
-            if (!(*images)->image_list[c] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[c]->type))
-                goto failure;
 
-            if (properties)
-                copy_properties(tmp_properties, properties);
-            goto end;
+        *images = trax_image_list_create();
+
+        for (i = 0; i < TRAX_CHANNELS; i++) {
+
+            if (TRAX_SUPPORTS(server->metadata->channels, TRAX_CHANNEL_ID(i))) {
+
+                (*images)->image_list[i] = image_decode(arguments->buffer[j]);
+                if (!(*images)->image_list[i] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[i]->type))
+                    goto failure;
+                j++;
+
+            }
+
         }
 
-        if (!region_parse(arguments->buffer[num_channels], (region_container**)region)) {
+        if (!region_parse(arguments->buffer[j], (region_container**)region)) {
             goto failure;
         }
 
@@ -950,8 +945,12 @@ failure:
 
     result = TRAX_ERROR;
 
-    if (*images)
-        trax_image_list_release(*images);
+    if (*images) {
+        for (i = 0; i < TRAX_CHANNELS; i++) {
+            if ((*images)->image_list[i]) trax_image_release(&(*images)->image_list[i]);
+        }
+        trax_image_list_release(images);
+    }
 
     if (*region)
         trax_region_release(region);
@@ -1024,7 +1023,7 @@ int trax_cleanup(trax_handle** handle) {
 
     trax_metadata_release(&(*handle)->metadata);
 
-    destroy_message_stream((message_stream**) &(*handle)->stream);
+    destroy_message_stream((message_stream**) & (*handle)->stream);
 
     free(*handle);
     *handle = 0;
@@ -1110,8 +1109,8 @@ trax_image* trax_image_create_memory(int width, int height, int format) {
            format == TRAX_IMAGE_MEMORY_GRAY16 || format == TRAX_IMAGE_MEMORY_RGB);
 
     depth = format == TRAX_IMAGE_MEMORY_RGB ? 1 :
-                                              (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
-                                                                                   (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
+            (format == TRAX_IMAGE_MEMORY_GRAY8 ? 1 :
+             (format == TRAX_IMAGE_MEMORY_GRAY16 ? 2 : 0));
     channels = format == TRAX_IMAGE_MEMORY_RGB ? 3 : 1;
 
     img = (trax_image*) malloc(sizeof(trax_image));
@@ -1476,9 +1475,9 @@ int trax_properties_get_int(const trax_properties* properties, const char* key, 
 
     if (value == NULL) return def;
 
-    if (value[0]!='\0') {
+    if (value[0] != '\0') {
         ret = (int) strtod(value, &end);
-        ret = (*end=='\0' && end!=value) ? ret : def;
+        ret = (*end == '\0' && end != value) ? ret : def;
     }
 
     free(value);
@@ -1495,9 +1494,9 @@ float trax_properties_get_float(const trax_properties* properties, const char* k
 
     if (value == NULL) return def;
 
-    if (value[0]!='\0') {
+    if (value[0] != '\0') {
         ret = (float) strtod(value, &end);
-        ret = (*end=='\0' && end!=value) ? ret : def;
+        ret = (*end == '\0' && end != value) ? ret : def;
     }
 
     free(value);
@@ -1518,27 +1517,53 @@ void trax_properties_enumerate(trax_properties* properties, trax_enumerator enum
     }
 }
 
-trax_image_list* trax_image_list_create(int width, int height) {
+trax_image_list* trax_image_list_create() {
 
-    trax_image_list* images = (trax_image_list*)malloc(sizeof(trax_image_list));
+    int i;
 
-    images->image_list[0] = trax_image_create_memory(width, height, TRAX_IMAGE_MEMORY_RGB); // Color
-    images->image_list[1] = trax_image_create_memory(width, height, TRAX_IMAGE_MEMORY_GRAY16); // Depth
-    images->image_list[2] = trax_image_create_memory(width, height, TRAX_IMAGE_MEMORY_GRAY16); // IR ([UK] I'm not sure if IR images are 16 bits)
+    trax_image_list* list = (trax_image_list*)malloc(sizeof(trax_image_list));
 
-    return images;
+    for (i = 0; i < TRAX_CHANNELS; i++)
+        list->image_list[i] = NULL;
+
+    return list;
 }
 
-void trax_image_list_release(trax_image_list* images) {
+void trax_image_list_clear(trax_image_list* list) {
 
-    for(int i=0; i<3; i++)
-        trax_image_release(&images->image_list[i]);
+    int i;
+
+    for (i = 0; i < TRAX_CHANNELS; i++) {
+        if (!list->image_list[i]) continue;
+
+        trax_image_release(&list->image_list[i]);
+
+    }
+
 }
 
-trax_image* trax_image_list_get(const trax_image_list* images, int channel_num) {
-    return images->image_list[channel_num];
+void trax_image_list_release(trax_image_list** list) {
+
+    free(*list);
+
+    *list = NULL;
 }
 
-void trax_image_list_set(trax_image_list* images, trax_image* image, int channel_num) {
-    images->image_list[channel_num] = image;
+trax_image* trax_image_list_get(const trax_image_list* list, int channel) {
+    return list->image_list[TRAX_CHANNEL_INDEX(channel)];
+}
+
+void trax_image_list_set(trax_image_list* list, trax_image* image, int channel) {
+    list->image_list[TRAX_CHANNEL_INDEX(channel)] = image;
+}
+
+int trax_image_list_count(int channels) {
+
+    // Count the number of channels
+    int count; // argument_count accumulates the total bits set in channels
+    for (count = 0; channels; count++) {
+        channels &= channels - 1; // clear the least significant bit set
+    }
+
+    return count;
 }

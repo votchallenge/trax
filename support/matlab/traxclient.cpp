@@ -81,7 +81,7 @@ typedef struct status {
 } status;
 
 typedef struct command {
-	Image image;
+	ImageList image;
 	Region region;
 	Properties parameters;
 	mxArray* data;
@@ -218,7 +218,7 @@ command call_callback(const mxArray *callback, status& s, mxArray* data) {
 	}
 
 	{
-		const char* fieldnames[] = {"region", "time", "properties", "tracker", "formats"};
+		const char* fieldnames[] = {"region", "time", "properties", "tracker", "formats", "channels"};
 		st = mxCreateStructMatrix(1, 1, 5, (const char **) fieldnames);
 
 		mxSetFieldByNumber(st, 0, 0, region_to_array(s.region));
@@ -226,6 +226,7 @@ command call_callback(const mxArray *callback, status& s, mxArray* data) {
 		mxSetFieldByNumber(st, 0, 2, parameters_to_struct(s.properties));
 		mxSetFieldByNumber(st, 0, 3, tracker_meta);
 		mxSetFieldByNumber(st, 0, 4, formats);
+		mxSetFieldByNumber(st, 0, 5, decode_channels(s.metadata.channels()));
 	}
 
 	rhs[0] = const_cast<mxArray *>(callback);
@@ -239,7 +240,7 @@ command call_callback(const mxArray *callback, status& s, mxArray* data) {
 
 	command cmd;
 	if (!mxIsEmpty(lhs[0])) {
-		cmd.image = array_to_image(lhs[0]);
+		cmd.image = array_to_images(lhs[0]);
         mxDestroyArray(lhs[0]);
     }
 	if (!mxIsEmpty(lhs[1])) {

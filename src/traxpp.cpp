@@ -144,6 +144,12 @@ int Metadata::region_formats() const {
 
 }
 
+int Metadata::channels() const {
+
+	return metadata->channels;
+
+}
+
 std::string Metadata::tracker_name() const {
 
 	return (metadata->tracker_name) ? std::string(metadata->tracker_name) : std::string();
@@ -256,17 +262,17 @@ int Client::wait(Region& region, Properties& properties) {
 
 }
 
-int Client::initialize(const Image& image, const Region& region, const Properties& properties) {
+int Client::initialize(const ImageList& image, const Region& region, const Properties& properties) {
 	if (!claims()) return -1;
 
-	return trax_client_initialize(handle, image.image, region.region, properties.properties);
+	return trax_client_initialize(handle, image.list, region.region, properties.properties);
 
 }
 
-int Client::frame(const Image& image, const Properties& properties) {
+int Client::frame(const ImageList& image, const Properties& properties) {
 	if (!claims()) return -1;
 
-	return trax_client_frame(handle, image.image, properties.properties);
+	return trax_client_frame(handle, image.list, properties.properties);
 
 }
 
@@ -280,25 +286,24 @@ Server::~Server() {
 	// Cleanup done in Handle
 }
 
-int Server::wait(Image& image, Region& region, Properties& properties) {
+int Server::wait(ImageList& image, Region& region, Properties& properties) {
 
 	if (!claims()) return -1;
 
-	trax_image* timage = NULL;
 	trax_region* tregion = NULL;
 
     trax_image_list* timagelist = NULL;
 
 	properties.ensure_unique();
 
-    int channels = TRAX_CHANNEL_DEPTH; // TODO: This should be set automatically from properties probably
-
-    int result = trax_server_wait(handle, &timagelist, &tregion, properties.properties, channels);
+    int result = trax_server_wait(handle, &timagelist, &tregion, properties.properties);
 
 	if (tregion)
 		region.wrap(tregion);
-	if (timage)
-		image.wrap(timage);
+
+	if (timagelist) {
+		image.wrap(timagelist);		
+	}
 
 	return result;
 
@@ -397,6 +402,80 @@ Image& Image::operator=(Image lhs) throw() {
 	swap(lhs);
 	return *this;
 }
+
+ImageList::ImageList()  {
+	list = trax_image_list_create();
+	images.resize(TRAX_CHANNELS);
+}
+
+ImageList::ImageList(const ImageList& original)  : Wrapper(original) {
+	if (original.list) acquire();
+	list = original.list;
+	images = original.images;
+}
+
+ImageList::~ImageList() {
+	release();
+}
+
+Image ImageList::get(int channel) const {
+
+	return images[TRAX_CHANNEL_INDEX(channel)];
+
+}
+
+bool ImageList::has(int channel) const {
+
+	return !images[TRAX_CHANNEL_INDEX(channel)].empty();
+
+}
+
+void ImageList::set(Image image, int channel) {
+
+	images[TRAX_CHANNEL_INDEX(channel)] = image;
+	list->image_list[TRAX_CHANNEL_INDEX(channel)] = image.image;
+
+}
+
+int ImageList::size() const {
+
+	int count = 0;
+
+	for (int i = 0; i < TRAX_CHANNELS; i++) {
+
+		if (!images[i].empty())
+			count++;
+
+	}
+
+	return count;
+}
+
+ImageList& ImageList::operator=(ImageList lhs) throw() {
+	std::swap(list, lhs.list);
+	std::swap(images, lhs.images);
+	swap(lhs);
+	return *this;
+}
+
+void ImageList::cleanup() {
+
+	trax_image_list_release(&list);
+
+}
+
+void ImageList::wrap(trax_image_list* obj) {
+
+	if (!obj) return;
+	release();
+	list = obj;
+	if (list) acquire();
+
+	for (int i = 0; i < TRAX_CHANNELS; i++)
+		images[i].wrap(obj->image_list[i]);
+
+}
+
 
 Region::Region() {
 	region = NULL;

@@ -57,7 +57,7 @@ int main( int argc, char** argv)
     FILE* log;
     int run;
     float wait = 0;
-    trax_image* img = NULL;
+    trax_image_list* img = NULL;
     trax_region* reg = NULL;
     trax_region* mem = NULL;
 
@@ -66,7 +66,7 @@ int main( int argc, char** argv)
     // *****************************************
 
     trax_handle* trax;
-    trax_metadata* metadata = trax_metadata_create(TRAX_REGION_ANY, TRAX_IMAGE_ANY,
+    trax_metadata* metadata = trax_metadata_create(TRAX_REGION_ANY, TRAX_IMAGE_ANY, TRAX_CHANNEL_COLOR,
                               "Static", "Static demo tracker", "Demo");
 
     log = argc > 1 ? fopen(argv[1], "w") : NULL;
@@ -134,7 +134,7 @@ int main( int argc, char** argv)
 
             }
 
-        if (img) trax_image_release(&img);
+        if (img) {trax_image_list_clear(img); trax_image_list_release(&img);}
         if (reg) trax_region_release(&reg);
 
         fflush(stdout);

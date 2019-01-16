@@ -39,7 +39,7 @@
 #define TRAX_NO_LOG -1
 #endif
 
-#define TRAX_VERSION 1
+#define TRAX_VERSION 2
 
 #define TRAX_ERROR -1
 #define TRAX_OK 0
@@ -84,13 +84,24 @@
 #define TRAX_PARAMETER_REGION 3
 #define TRAX_PARAMETER_IMAGE 4
 
+#define TRAX_CHANNELS 3
 #define TRAX_CHANNEL_COLOR 1
 #define TRAX_CHANNEL_DEPTH 2
 #define TRAX_CHANNEL_IR 4
 
+#define TRAX_CHANNEL_INDEX(I) ( \
+    (I) == TRAX_CHANNEL_COLOR ? 0 : ( \
+    (I) == TRAX_CHANNEL_DEPTH ? 1 : ( \
+    (I) == TRAX_CHANNEL_IR ? 2 : -1)))
+
+#define TRAX_CHANNEL_ID(I) ( \
+    (I) == 0 ? TRAX_CHANNEL_COLOR : ( \
+    (I) == 1 ? TRAX_CHANNEL_DEPTH : ( \
+    (I) == 2 ? TRAX_CHANNEL_IR : -1)))
+
 #define TRAX_LOCALHOST "127.0.0.1"
 
-#define TRAX_SUPPORTS(F, M) ((F & M) != 0)
+#define TRAX_SUPPORTS(F, M) (((F) & (M)) != 0)
 
 #ifdef __cplusplus
 extern "C" {
@@ -491,22 +502,32 @@ __TRAX_EXPORT void trax_properties_enumerate(trax_properties* properties, trax_e
 /**
 * Allocate memory for storing the input images
 **/
-__TRAX_EXPORT trax_image_list* trax_image_list_create(int width, int height);
+__TRAX_EXPORT trax_image_list* trax_image_list_create();
 
 /**
-* Release image list
+* Release image list structure, does not release any channel images
 **/
-__TRAX_EXPORT void trax_image_list_release(trax_image_list* images);
+__TRAX_EXPORT void trax_image_list_release(trax_image_list** list);
+
+/**
+* Cleans image list, releases all allocated channel images
+**/
+__TRAX_EXPORT void trax_image_list_clear(trax_image_list* list);
 
 /**
 * Get image at a specific channel
 **/
-__TRAX_EXPORT trax_image* trax_image_list_get(const trax_image_list* images, int channel_num);
+__TRAX_EXPORT trax_image* trax_image_list_get(const trax_image_list* list, int channel);
 
 /**
 * Set image at a specific channel
 **/
-__TRAX_EXPORT void trax_image_list_set(trax_image_list* images, trax_image* image, int channel_num);
+__TRAX_EXPORT void trax_image_list_set(trax_image_list* list, trax_image* image, int channel);
+
+/**
+* Count the channels in descriptor bit-set
+**/
+__TRAX_EXPORT int trax_image_list_count(int channels);
 
 #ifdef __cplusplus
 }
@@ -520,6 +541,7 @@ __TRAX_EXPORT void trax_image_list_set(trax_image_list* images, trax_image* imag
 namespace trax {
 
 class Image;
+class ImageList;
 class Region;
 class Properties;
 
@@ -591,14 +613,17 @@ public:
 
     Metadata(const Metadata& original);
 
-    Metadata(int region_formats, int image_formats, int channels, std::string tracker_name = std::string(),
-        std::string tracker_description = std::string(), std::string tracker_family = std::string());
+    Metadata(int region_formats, int image_formats, int channels = TRAX_CHANNEL_COLOR,
+        std::string tracker_name = std::string(), std::string tracker_description = std::string(),
+        std::string tracker_family = std::string());
 
     virtual ~Metadata();
 
     int image_formats() const;
 
     int region_formats() const;
+
+    int channels() const;
 
     std::string tracker_name() const;
 
@@ -683,12 +708,12 @@ public:
     /**
     * Sends an initialize message.
     **/
-    int initialize(const Image& image, const Region& region, const Properties& properties);
+    int initialize(const ImageList& image, const Region& region, const Properties& properties);
 
     /**
     * Sends a frame message.
     **/
-    int frame(const Image& image, const Properties& properties);
+    int frame(const ImageList& image, const Properties& properties);
 
 protected:
 
@@ -713,7 +738,7 @@ public:
     /**
      * Waits for a valid protocol message from the client.
     **/
-    int wait(Image& image, Region& region, Properties& properties);
+    int wait(ImageList& image, Region& region, Properties& properties);
 
     /**
      * Sends a status reply to the client.
@@ -728,6 +753,7 @@ private:
 class __TRAX_EXPORT Image : public Wrapper {
 friend class Client;
 friend class Server;
+friend class ImageList;
 public:
 
     Image();
@@ -815,6 +841,55 @@ private:
     trax_image* image;
 
 };
+
+class __TRAX_EXPORT ImageList : public Wrapper {
+friend class Client;
+friend class Server;
+public:
+
+    ImageList();
+
+    ImageList(const ImageList& original);
+
+    /**
+     * Releases image list structure, frees allocated memory.
+    **/
+    virtual ~ImageList();
+
+    /**
+    * Get image at a specific channel
+    **/
+    Image get(int channel_num) const;
+
+    /**
+    * Test if list contains a specific channel
+    **/
+    bool has(int channel_num) const;
+
+    /**
+    * Set image at a specific channel
+    **/
+    void set(Image image, int channel_num);
+
+    ImageList& operator=(ImageList lhs) throw();
+
+    int size() const;
+
+protected:
+
+    virtual void cleanup();
+
+    void wrap(trax_image_list* obj);
+
+private:
+
+    std::vector<Image> images;
+
+    trax_image_list* list;
+
+};
+
+
 
 class __TRAX_EXPORT Region : public Wrapper {
 friend class Client;

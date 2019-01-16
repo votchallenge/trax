@@ -13,7 +13,7 @@ int main( int argc, char** argv) {
 
   while (true) {
 
-    trax::Image image;
+    trax::ImageList image;
     trax::Region region;
     trax::Properties properties;
 

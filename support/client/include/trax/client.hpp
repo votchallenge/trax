@@ -57,9 +57,9 @@ public:
 
 	bool query();
 
-	bool initialize(const Image& image, const Region& region, const Properties& properties = Properties());
+	bool initialize(const ImageList& image, const Region& region, const Properties& properties = Properties());
 	bool wait(Region& region, Properties& properties);
-	bool frame(const Image& image, const Properties& properties = Properties());
+	bool frame(const ImageList& image, const Properties& properties = Properties());
 
 	bool reset();
 

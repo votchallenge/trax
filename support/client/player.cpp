@@ -326,7 +326,8 @@ int main(int argc, char** argv) {
 
             Metadata metadata = tracker.metadata();
 
-            Image image = convert_image(cvimage, metadata.image_formats());
+            ImageList image;
+            image.set(convert_image(cvimage, metadata.image_formats()), TRAX_CHANNEL_COLOR);
 
             if (!tracker.initialize(image, initialization_region, properties)) {
                 throw std::runtime_error("Unable to initialize tracker.");
@@ -370,7 +371,7 @@ int main(int argc, char** argv) {
                     break;
                 }
 
-                image = convert_image(cvimage, metadata.image_formats());
+                image.set(convert_image(cvimage, metadata.image_formats()), TRAX_CHANNEL_COLOR);
 
                 Properties no_properties;
                 if (!tracker.frame(image, no_properties))

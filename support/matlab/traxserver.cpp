@@ -47,6 +47,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         std::string tracker_name, tracker_description, tracker_family;
 
+        int channels = TRAX_CHANNEL_COLOR;
+
         if ( nrhs > 3 ) {
 
             for (int i = 3; i < std::floor((float)nrhs/2) * 2; i+=2) {
@@ -54,6 +56,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 case ARGUMENT_TRACKERNAME: tracker_name = get_string(prhs[i+1]); break;
                 case ARGUMENT_TRACKERDESCRIPTION: tracker_description = get_string(prhs[i+1]); break;
                 case ARGUMENT_TRACKERFAMILY: tracker_family = get_string(prhs[i+1]); break;
+                case ARGUMENT_CHANNELS: channels = get_flags(prhs[i+1], get_channel_code); break;
                 default:
                     MEX_ERROR("Illegal argument.");
                     return;
@@ -65,7 +68,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int region_formats = get_flags(prhs[1], get_region_code);
         int image_formats = get_flags(prhs[2], get_image_code);
 
-        Metadata metadata(region_formats, image_formats,
+        Metadata metadata(region_formats, image_formats, channels,
             tracker_name, tracker_description, tracker_family);
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
@@ -103,20 +106,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         if ( nlhs > 3 ) { MEX_ERROR("At most three output argument supported."); return; }
 
-        Image img;
+        ImageList img;
         Region reg;
         Properties prop;
 
         int tr = handle->wait(img, reg, prop);
 
         if (tr == TRAX_INITIALIZE) {
-            if (nlhs > 0) plhs[0] = image_to_array(img);
+            if (nlhs > 0) plhs[0] = images_to_array(img);
             if (nlhs > 1) plhs[1] = region_to_array(reg);
             if (nlhs > 2) plhs[2] = (propstruct) ? parameters_to_struct(prop) : parameters_to_cell(prop);
 
         } else if (tr == TRAX_FRAME) {
 
-            if (nlhs > 0) plhs[0] = image_to_array(img);
+            if (nlhs > 0) plhs[0] = images_to_array(img);
             if (nlhs > 1) plhs[1] = MEX_CREATE_EMTPY;
             if (nlhs > 2) plhs[2] = (propstruct) ? parameters_to_struct(prop) : parameters_to_cell(prop);
 

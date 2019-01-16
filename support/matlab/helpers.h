@@ -34,6 +34,7 @@ using namespace trax;
 #define ARGUMENT_CONNECTION 8
 #define ARGUMENT_DIRECTORY 9
 #define ARGUMENT_LOG 10
+#define ARGUMENT_CHANNELS 11
 
 string get_string(const mxArray *arg);
 
@@ -53,13 +54,19 @@ mxArray* region_to_array(const Region& region);
 
 mxArray* image_to_array(const Image& img);
 
+mxArray* images_to_array(const ImageList& img);
+
 Image array_to_image(const mxArray* arr);
+
+ImageList array_to_images(const mxArray* arr);
 
 int get_argument_code(string str);
 
 int get_region_code(string str);
 
 int get_image_code(string str);
+
+int get_channel_code(string str);
 
 typedef int(*code_parser)(string name);
 
@@ -68,6 +75,8 @@ int get_flags(const mxArray* input, code_parser parser);
 mxArray* decode_region(int formats);
 
 mxArray* decode_image(int formats);
+
+mxArray* decode_channels(int channels);
 
 #endif
 
