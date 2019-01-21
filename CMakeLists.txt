@@ -64,7 +64,7 @@ SET (BUILD_TESTS FALSE CACHE BOOL "Build test trackers")
 SET (BUILD_OPENCV FALSE CACHE BOOL "Build with OpenCV support")
 SET (BUILD_CLIENT FALSE CACHE BOOL "Build with client support library and executable")
 SET (BUILD_MATLAB FALSE CACHE BOOL "Build Matlab/Octave bindings")
-SET (BUILD_PYTHON FALSE CACHE BOOL "Build Python implementation")
+SET (BUILD_PYTHON FALSE CACHE BOOL "Build Python wrapper")
 
 IF (BUILD_OPENCV)
 	FIND_PACKAGE(OpenCV REQUIRED)
@@ -95,37 +95,7 @@ IF (BUILD_TESTS)
 ENDIF (BUILD_TESTS)
 
 IF (BUILD_PYTHON)
-	FIND_PACKAGE(PythonInterp REQUIRED)
-
-    SET(SETUP_PY_IN "${CMAKE_CURRENT_SOURCE_DIR}/python/setup.py.in")
-    SET(SETUP_PY "${CMAKE_CURRENT_BINARY_DIR}/python/setup.py")
-    SET(DEPS "${CMAKE_CURRENT_SOURCE_DIR}/python/trax/__init__.py")
-    SET(OUTPUT "${CMAKE_BINARY_DIR}/distutils_timestamp")
-	SET(BUILD_PYTHON_DIR "${CMAKE_CURRENT_BINARY_DIR}/python")
-
-    CONFIGURE_FILE(${SETUP_PY_IN} ${SETUP_PY})
-
-    ADD_CUSTOM_COMMAND(OUTPUT ${OUTPUT}
-                       COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} build ${DISTUTILS_BUILD_FLAGS}
-                       COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT}
-                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python/
-                       DEPENDS ${DEPS} ${SETUP_PY} COMMENT "Running Distutils")
-
-    ADD_CUSTOM_TARGET(traxpython ALL DEPENDS ${OUTPUT})
-
-    IF (DEFINED DESTDIR)
-        SET(PYTHON_ROOT "${DESTDIR}")
-    ELSE()
-        SET(PYTHON_ROOT "${CMAKE_INSTALL_PREFIX}")
-    ENDIF()
-
-	IF (WIN32 OR WIN64)
-	# commenting out untill we figure out how to correctly install on Windows
-	#SET(DISTUTILS_INSTALL_FLAGS --root="%DESTDIR%" ${DISTUTILS_INSTALL_FLAGS})
-	ELSE()
-	SET(DISTUTILS_INSTALL_FLAGS "--root=${PYTHON_ROOT}" ${DISTUTILS_INSTALL_FLAGS})
-	ENDIF()
-    INSTALL(CODE "EXECUTE_PROCESS(COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install ${DISTUTILS_INSTALL_FLAGS} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python/)" )
+    ADD_SUBDIRECTORY(support/python)	
 ENDIF (BUILD_PYTHON)
 
 # CMake config file

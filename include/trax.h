@@ -181,7 +181,7 @@ typedef struct trax_handle {
  * Array for keeping images (RGB, Depth, IR)
 **/
 typedef struct trax_image_list {
-    trax_image* image_list[3];
+    trax_image* images[3];
 } trax_image_list;
 
 __TRAX_EXPORT extern const trax_logging trax_no_log;
@@ -253,7 +253,6 @@ __TRAX_EXPORT trax_handle* trax_server_setup_file(trax_metadata *metadata, int i
  * Waits for a valid protocol message from the client.
 **/
 __TRAX_EXPORT int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region** region, trax_properties* properties);
-
 
 /**
  * Sends a status reply to the client.

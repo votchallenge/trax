@@ -737,8 +737,8 @@ int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_re
     for (i = 0; i < TRAX_CHANNELS; i++) {
         if (TRAX_SUPPORTS(client->metadata->channels, TRAX_CHANNEL_ID(i))) {
 
-            if (!images->image_list[i]) goto failure;
-            char* buffer = image_encode(images->image_list[i]);
+            if (!images->images[i]) goto failure;
+            char* buffer = image_encode(images->images[i]);
             list_append_direct(arguments, buffer);
 
         }
@@ -795,8 +795,8 @@ int trax_client_frame(trax_handle* client, trax_image_list* images, trax_propert
 
     for (i = 0; i < TRAX_CHANNELS; i++) {
         if (TRAX_SUPPORTS(client->metadata->channels, TRAX_CHANNEL_ID(i))) {
-            if (!images->image_list[i]) goto failure;
-            char* buffer = image_encode(images->image_list[i]);
+            if (!images->images[i]) goto failure;
+            char* buffer = image_encode(images->images[i]);
             list_append_direct(arguments, buffer);
         } 
     }
@@ -886,8 +886,8 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
 
             if (TRAX_SUPPORTS(server->metadata->channels, TRAX_CHANNEL_ID(i))) {
 
-                (*images)->image_list[i] = image_decode(arguments->buffer[j]);
-                if (!(*images)->image_list[i] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[i]->type))
+                (*images)->images[i] = image_decode(arguments->buffer[j]);
+                if (!(*images)->images[i] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->images[i]->type))
                     goto failure;
                 j++;
 
@@ -922,8 +922,8 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
 
             if (TRAX_SUPPORTS(server->metadata->channels, TRAX_CHANNEL_ID(i))) {
 
-                (*images)->image_list[i] = image_decode(arguments->buffer[j]);
-                if (!(*images)->image_list[i] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->image_list[i]->type))
+                (*images)->images[i] = image_decode(arguments->buffer[j]);
+                if (!(*images)->images[i] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->images[i]->type))
                     goto failure;
                 j++;
 
@@ -947,7 +947,7 @@ failure:
 
     if (*images) {
         for (i = 0; i < TRAX_CHANNELS; i++) {
-            if ((*images)->image_list[i]) trax_image_release(&(*images)->image_list[i]);
+            if ((*images)->images[i]) trax_image_release(&(*images)->images[i]);
         }
         trax_image_list_release(images);
     }
@@ -1524,7 +1524,7 @@ trax_image_list* trax_image_list_create() {
     trax_image_list* list = (trax_image_list*)malloc(sizeof(trax_image_list));
 
     for (i = 0; i < TRAX_CHANNELS; i++)
-        list->image_list[i] = NULL;
+        list->images[i] = NULL;
 
     return list;
 }
@@ -1534,9 +1534,9 @@ void trax_image_list_clear(trax_image_list* list) {
     int i;
 
     for (i = 0; i < TRAX_CHANNELS; i++) {
-        if (!list->image_list[i]) continue;
+        if (!list->images[i]) continue;
 
-        trax_image_release(&list->image_list[i]);
+        trax_image_release(&list->images[i]);
 
     }
 
@@ -1544,17 +1544,28 @@ void trax_image_list_clear(trax_image_list* list) {
 
 void trax_image_list_release(trax_image_list** list) {
 
+    int i;
+
+    for (i = 0; i < TRAX_CHANNELS; i++)
+        (*list)->images[i] = NULL;
+
     free(*list);
 
     *list = NULL;
 }
 
 trax_image* trax_image_list_get(const trax_image_list* list, int channel) {
-    return list->image_list[TRAX_CHANNEL_INDEX(channel)];
+    int i = TRAX_CHANNEL_INDEX(channel);
+    if (i < 0 || i > TRAX_CHANNELS) return NULL;
+
+    return list->images[i];
 }
 
 void trax_image_list_set(trax_image_list* list, trax_image* image, int channel) {
-    list->image_list[TRAX_CHANNEL_INDEX(channel)] = image;
+    int i = TRAX_CHANNEL_INDEX(channel);
+    if (i < 0 || i > TRAX_CHANNELS) return;
+
+    list->images[i] = image;
 }
 
 int trax_image_list_count(int channels) {

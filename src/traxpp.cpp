@@ -433,7 +433,7 @@ bool ImageList::has(int channel) const {
 void ImageList::set(Image image, int channel) {
 
 	images[TRAX_CHANNEL_INDEX(channel)] = image;
-	list->image_list[TRAX_CHANNEL_INDEX(channel)] = image.image;
+	list->images[TRAX_CHANNEL_INDEX(channel)] = image.image;
 
 }
 
@@ -472,7 +472,7 @@ void ImageList::wrap(trax_image_list* obj) {
 	if (list) acquire();
 
 	for (int i = 0; i < TRAX_CHANNELS; i++)
-		images[i].wrap(obj->image_list[i]);
+		images[i].wrap(obj->images[i]);
 
 }
 
