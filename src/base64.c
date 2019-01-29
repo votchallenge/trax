@@ -86,17 +86,16 @@ static const unsigned char pr2six[256] =
 };
 
 int base64decodelen(const char *bufcoded) {
-    int nbytesdecoded;
-    register const unsigned char *bufin;
-    register int nprbytes;
 
-    bufin = (const unsigned char *) bufcoded;
-    while (pr2six[*(bufin++)] <= 63);
+    size_t len = strlen(bufcoded),
+        padding = 0;
 
-    nprbytes = (bufin - (const unsigned char *) bufcoded) - 1;
-    nbytesdecoded = ((nprbytes + 3) / 4) * 3;
+    if (bufcoded[len-1] == '=' && bufcoded[len-2] == '=') //last two chars are =
+        padding = 2;
+    else if (bufcoded[len-1] == '=') //last char is =
+        padding = 1;
 
-    return nbytesdecoded + 1;
+    return ((len*3)/4 - padding) + 1;
 }
 
 int base64decode(unsigned char *bufplain, const char *bufcoded) {
