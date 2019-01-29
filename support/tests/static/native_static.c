@@ -34,6 +34,7 @@
  *
  */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
 #include "trax.h"
@@ -52,8 +53,8 @@ void sleep_seconds(float seconds) {
 }
 #endif
 
-int main( int argc, char** argv)
-{
+int main( int argc, char** argv) {
+
     FILE* log;
     int run;
     float wait = 0;
@@ -61,12 +62,22 @@ int main( int argc, char** argv)
     trax_region* reg = NULL;
     trax_region* mem = NULL;
 
+    int channels = TRAX_CHANNEL_COLOR;
+
+    if (getenv("TRAX_TEST_USE_DEPTH")) {
+        channels |= TRAX_CHANNEL_DEPTH;
+    }
+
+    if (getenv("TRAX_TEST_USE_IR")) {
+        channels |= TRAX_CHANNEL_IR;
+    }
+
     // *****************************************
     // TraX: Call trax_server_setup at the beginning
     // *****************************************
 
     trax_handle* trax;
-    trax_metadata* metadata = trax_metadata_create(TRAX_REGION_ANY, TRAX_IMAGE_ANY, TRAX_CHANNEL_COLOR,
+    trax_metadata* metadata = trax_metadata_create(TRAX_REGION_ANY, TRAX_IMAGE_ANY, channels,
                               "Static", "Static demo tracker", "Demo");
 
     log = argc > 1 ? fopen(argv[1], "w") : NULL;
@@ -134,7 +145,10 @@ int main( int argc, char** argv)
 
             }
 
-        if (img) {trax_image_list_clear(img); trax_image_list_release(&img);}
+        if (img) {
+            trax_image_list_clear(img); // Also delete individual images
+            trax_image_list_release(&img);
+        }
         if (reg) trax_region_release(&reg);
 
         fflush(stdout);

@@ -1,7 +1,5 @@
 function [] = badtracker()
 
-%cleanup = onCleanup(@() exit() );
-
 traxserver('setup', 'polygon', {'path', 'memory', 'buffer'});
 
 memory = [0 0 0 0];
