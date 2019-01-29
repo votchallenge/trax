@@ -8,7 +8,7 @@ import sys
 import traceback
 import weakref
 from abc import abstractmethod
-from ctypes import memmove, byref, c_int
+from ctypes import memmove, byref, c_int, string_at
 
 from .internal import *
 from .wrapper import ImageWrapper
@@ -242,4 +242,4 @@ class BufferImage(Image):
         length = c_int()
         format = c_int()
         data = trax_image_get_buffer(self._ref.reference(), byref(length), byref(format))
-        buffer = bytearray(data, length)
+        return string_at(data, length.value)
