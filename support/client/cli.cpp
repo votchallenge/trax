@@ -366,6 +366,9 @@ Image load_image(string& path, int formats) {
 
     Image image;
 
+    if (path.empty())
+        return image;
+
     switch (image_format) {
     case TRAX_IMAGE_PATH: {
         return Image::create_path(path);
