@@ -14,3 +14,11 @@ IF (OCTAVE)
 ADD_TEST(NAME test_octave_nonexisting COMMAND traxtest -d -t 3 -- ${OCTAVE} --no-window-system --no-gui --path ${CMAKE_CURRENT_SOURCE_DIR} --eval "idonotexist" WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set_tests_properties(test_octave_nonexisting PROPERTIES TIMEOUT 5 WILL_FAIL TRUE)
 ENDIF()
+
+IF (BUILD_PYTHON)
+    ADD_SUBDIRECTORY(python)
+ENDIF (BUILD_PYTHON)
+
+IF (BUILD_CLIENT)
+    ADD_SUBDIRECTORY(client)
+ENDIF (BUILD_CLIENT)

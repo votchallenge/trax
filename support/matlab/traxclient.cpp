@@ -219,7 +219,7 @@ command call_callback(const mxArray *callback, status& s, mxArray* data) {
 
 	{
 		const char* fieldnames[] = {"region", "time", "properties", "tracker", "formats", "channels"};
-		st = mxCreateStructMatrix(1, 1, 5, (const char **) fieldnames);
+		st = mxCreateStructMatrix(1, 1, 6, (const char **) fieldnames);
 
 		mxSetFieldByNumber(st, 0, 0, region_to_array(s.region));
 		mxSetFieldByNumber(st, 0, 1, mxCreateDoubleScalar(s.time));
@@ -240,7 +240,7 @@ command call_callback(const mxArray *callback, status& s, mxArray* data) {
 
 	command cmd;
 	if (!mxIsEmpty(lhs[0])) {
-		cmd.image = array_to_images(lhs[0]);
+		cmd.image = array_to_images(lhs[0], s.metadata.channels());
         mxDestroyArray(lhs[0]);
     }
 	if (!mxIsEmpty(lhs[1])) {
@@ -363,9 +363,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 			data = cmd.data;
 
-			if (!cmd.image)
+			if (cmd.image.size() == 0)
 				break;
-
 
 			if (cmd.region) {
 

@@ -58,7 +58,7 @@ mxArray* images_to_array(const ImageList& img);
 
 Image array_to_image(const mxArray* arr);
 
-ImageList array_to_images(const mxArray* arr);
+ImageList array_to_images(const mxArray* arr, int channels);
 
 int get_argument_code(string str);
 
