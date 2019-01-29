@@ -100,7 +100,7 @@ void Wrapper::release() {
 
 Metadata::Metadata() {
 
-    wrap(trax_metadata_create(0, 0, 0, NULL, NULL, NULL));
+    wrap(trax_metadata_create(0, 0, TRAX_CHANNEL_COLOR, NULL, NULL, NULL));
 }
 
 Metadata::Metadata(const Metadata& original) : Wrapper(original) {
