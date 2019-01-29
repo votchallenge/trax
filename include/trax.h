@@ -591,7 +591,7 @@ protected:
     void release();
 
     virtual void cleanup() = 0;
-
+    
 private:
 
     long* pn;

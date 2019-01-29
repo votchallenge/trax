@@ -41,6 +41,8 @@
     ( T == TRAX_REGION_SPECIAL ) ? SPECIAL :\
     EMPTY)
 
+#define PING(X) {printf("%s %d : %s\n", __FILE__, __LINE__, (X));}
+
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <io.h>
 int get_shared_fd(int h, int read) {
@@ -244,7 +246,6 @@ char* image_encode(trax_image* image) {
         int encoded = base64encodelen(length);
         int header = snprintf(NULL, 0, "image:%d;%d;%s;", image->width, image->height, format);
         assert(format);
-
         result = (char*) malloc(sizeof(char) * (encoded + header + 1));
         offset += sprintf(result, "image:%d;%d;%s;", image->width, image->height, format);
         base64encode(result + offset, (unsigned char*)image->data, length);
@@ -292,7 +293,6 @@ trax_image* image_decode(char* buffer) {
         if (resource[0] != ';') return result;
         height = strtol(resource + 1, &resource, 10);
         if (resource[0] != ';') return result;
-
         token = resource + 1;
         resource = strntok(token, ';', 32);
 
