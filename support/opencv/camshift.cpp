@@ -64,7 +64,7 @@ int main( int argc, char** argv )
     // Call trax_server_setup to initialize trax protocol
     trax::Server handle(config, trax_no_log);
 
-    trax::Image img;
+    trax::ImageList img;
     trax::Region rect;
 
     Mat frame, hsv, hue, mask, hist, backproj;
@@ -119,7 +119,7 @@ int main( int argc, char** argv )
 
         // In trax mode images are read from the disk. The master program tells the
         // tracker where to get them.
-        Mat frame = trax::image_to_mat(img);
+        Mat frame = trax::image_to_mat(img.get(TRAX_CHANNEL_COLOR));
 
         if( frame.empty() )
             break;

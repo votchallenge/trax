@@ -65,7 +65,7 @@ void on_mouse(int event, int x, int y, int, void* data) {
 
 int main( int argc, char** argv)
 { 
-    trax::Image img;
+    trax::ImageList img;
     trax::Region reg;
 
     trax::Configuration config(TRAX_IMAGE_PATH | TRAX_IMAGE_MEMORY | TRAX_IMAGE_BUFFER, TRAX_REGION_RECTANGLE);
@@ -88,11 +88,11 @@ int main( int argc, char** argv)
          if (tr == TRAX_INITIALIZE) {
 
             rectangle = trax::region_to_rect(reg);
-            frame = trax::image_to_mat(img);
+            frame = trax::image_to_mat(img.get(TRAX_CHANNEL_COLOR));
 
         } else if (tr == TRAX_FRAME) {
 
-            frame = trax::image_to_mat(img);
+            frame = trax::image_to_mat(img.get(TRAX_CHANNEL_COLOR));
 
         } else {
             break;

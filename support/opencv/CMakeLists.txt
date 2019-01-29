@@ -22,12 +22,10 @@ ELSE ()
 		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 ENDIF()
 
-IF (BUILD_EXAMPLES)
-	ADD_EXECUTABLE(camshift camshift.cpp)
-	ADD_EXECUTABLE(interactive interactive.cpp)
-	TARGET_LINK_LIBRARIES(camshift trax trax_opencv ${OpenCV_LIBS})
-	TARGET_LINK_LIBRARIES(interactive trax trax_opencv ${OpenCV_LIBS})
-ENDIF (BUILD_EXAMPLES)
+#ADD_EXECUTABLE(camshift camshift.cpp)
+ADD_EXECUTABLE(interactive interactive.cpp)
+#TARGET_LINK_LIBRARIES(camshift trax trax_opencv ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(interactive trax trax_opencv ${OpenCV_LIBS})
 
 INSTALL(EXPORT opencv DESTINATION ${CONFIG_INSTALL_DIR} FILE trax-component-opencv.cmake)
 
