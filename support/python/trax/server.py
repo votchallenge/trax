@@ -47,7 +47,7 @@ class Server(object):
 
         mdata = trax_metadata_create(Region.encode_list(region_formats),
             Image.encode_list(image_formats), ImageChannel.encode_list(image_channels),
-            trackerName, trackerDescription, trackerFamily)
+            trackerName.encode('utf-8'), trackerDescription.encode('utf-8'), trackerFamily.encode('utf-8'))
 
         logger = trax_logger_setup(None, None, 0)
 
@@ -85,7 +85,7 @@ class Server(object):
             log.info('Received frame message.')
             image = _wrap_image_list(timage)
             trax_image_list_release(byref(timage))
-            properties = Properties(tproperties)            
+            properties = Properties(tproperties)
             return Request(status, image, None, properties)
 
         else:
@@ -101,7 +101,7 @@ class Server(object):
         assert(isinstance(region, Region))
         tproperties = Properties(properties)
         status = TraxStatus.decode(trax_server_reply(self._ref.reference(), cast(region._ref.reference(), trax_region_p), tproperties._ref.reference()))
-        
+
     def __enter__(self):
         """ To support instantiation with 'with' statement. """
         return self
