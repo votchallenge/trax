@@ -1,7 +1,6 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <assert.h>
 
 #include "region.h"
@@ -11,6 +10,7 @@
 
 #else
 
+#include <unistd.h>
 #define strcmpi strcasecmp
 
 #endif

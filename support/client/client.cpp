@@ -556,7 +556,7 @@ public:
 			}
 
 			if (terminate) {
-				state->print_debug("Termination requested externally ...");
+				//state->print_debug("Termination requested externally ...");
 				state->stop_process();
 			} else {
 
@@ -565,7 +565,7 @@ public:
 					state->watchdog_timeout--;
 
 					if (state->watchdog_timeout == 0) {
-						state->print_debug("Timeout reached. Stopping tracker process ...");
+						//state->print_debug("Timeout reached. Stopping tracker process ...");
 						state->stop_process();
 					}
 
@@ -576,7 +576,7 @@ public:
 
 		}
 
-		state->print_debug("Stopping watchdog thread");
+		//state->print_debug("Stopping watchdog thread");
 
 		return 0;
 

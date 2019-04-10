@@ -8,13 +8,32 @@
 #include <ostream>
 #include <cmath>
 #include <stdexcept>
+#include <sstream>
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <io.h>
+#include <windows.h>
+
+#define THREAD_MUTEX HANDLE
+
+#define MUTEX_LOCK(M) WaitForSingleObject(M, INFINITE)
+#define MUTEX_UNLOCK(M) ReleaseMutex(M)
+#define MUTEX_INIT(M) (M = CreateMutex(NULL, FALSE, NULL))
+#define MUTEX_DESTROY(M) WaitForSingleObject(M, INFINITE); CloseHandle(M)
+
 #else
 #include <unistd.h>
 #include <errno.h>
+#include <pthread.h>
+
+#define THREAD_MUTEX pthread_mutex_t
+#define MUTEX_LOCK(M) pthread_mutex_lock(&M)
+#define MUTEX_UNLOCK(M) pthread_mutex_unlock(&M)
+#define MUTEX_INIT(M) pthread_mutex_init(&M, NULL)
+#define MUTEX_DESTROY(M) pthread_mutex_destroy(&M)
+
 #endif
+
 #include <fcntl.h>
 #include <ctype.h>
 
@@ -98,7 +117,19 @@ bool must_exit() {
 	if (exit_cache)
 		return true;
 
+#ifdef OCTAVE
+
 	exit_cache = IS_INTERRUPTED;
+
+#else
+
+#if MATLABVER < 904 // Disable real-time interruption check on matlab 2018a and above because it results in immediate crash
+
+	exit_cache = IS_INTERRUPTED;
+
+#endif
+
+#endif
 
 	if (exit_cache)
 		mexPrintf("User termination request detected. Stopping.\n");
@@ -109,37 +140,57 @@ bool must_exit() {
 class mexstream : public std::streambuf
 {
 public:
-	mexstream() {}
+	mexstream() {
+		MUTEX_INIT(mutex);
+	}
+
+	virtual ~mexstream() {
+		MUTEX_DESTROY(mutex);
+	};
+
+	void push() {
+
+		MUTEX_LOCK(mutex);
+
+		std::string r ((istreambuf_iterator<char>(this)),
+			istreambuf_iterator<char>());
+
+		MUTEX_UNLOCK(mutex);
+
+		mexPrintf("%s", r.c_str());
+
+	}
 
 protected:
+	THREAD_MUTEX mutex;
+
 	virtual int_type overflow(int_type c) {
-	    if (c != EOF) {
-	      mexPrintf("%.1s",&c);
-	    }
-	    return 1;
+		MUTEX_LOCK(mutex);
+
+		int_type r = std::streambuf::overflow(c);
+
+		MUTEX_UNLOCK(mutex);
+
+		return r;
 	}
 
 	virtual std::streamsize xsputn(const char* s, std::streamsize num) {
 
-		mexPrintf("%.*s", num, s);
+		MUTEX_LOCK(mutex);
 
-		return num;
+		std::streamsize r = std::streambuf::xsputn(s, num);
+
+		MUTEX_UNLOCK(mutex);
+
+		return r;
 	}
+
 };
 
 class nullbuffer : public std::streambuf
 {
 public:
   int overflow(int c) { return c; }
-};
-
-class mexostream : public std::ostream
-{
-protected:
-	mexstream buf;
-
-public:
-	mexostream() : std::ostream(&buf) {}
 };
 
 class nullostream : public std::ostream
@@ -321,16 +372,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 	string tracker_command = get_string(prhs[0]);
 
+	mexstream* mexbuffer = NULL;
 	std::ostream *log = NULL;
 
 	if (!logfile.empty()) {
-		if (logfile.compare("#") == 0)
-			log = new mexostream();
+		if (logfile.compare("#") == 0) {
+			mexbuffer = new mexstream();
+			log = new ostream(mexbuffer);
+		}
 		else
 			log = new std::ofstream(logfile.c_str(), std::ofstream::out);
 	} else {
 			log = new nullostream();
 	}
+
+#define LOGPUSH { if (mexbuffer) { (mexbuffer)->push();  } }
 
 	try {
 
@@ -353,6 +409,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				interrupted = true;
 				throw std::runtime_error("Tracking interrupted by user");
 			}
+
+			LOGPUSH;
 
 			if (!tracker.ready()) {
 				throw std::runtime_error("Tracker process not alive anymore");
@@ -396,15 +454,25 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 			st.time = timer_elapsed(begin);
 
+			LOGPUSH;
+
 		}
 
+		LOGPUSH;
+
 	} catch (const std::runtime_error &e) {
+
+		LOGPUSH;
 
 		if (log) {
 			delete log;
 			log = NULL;
 		}
 
+		if (mexbuffer) {
+			delete mexbuffer;
+			mexbuffer = NULL;
+		}
 
 #ifdef OCTAVE
 		if (interrupted) octave_handle_signal();
@@ -416,6 +484,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	if (log) {
 		delete log;
 		log = NULL;
+	}
+
+	if (mexbuffer) {
+		delete mexbuffer;
+		mexbuffer = NULL;
 	}
 
 	if (nlhs > 0) plhs[0] = data;
