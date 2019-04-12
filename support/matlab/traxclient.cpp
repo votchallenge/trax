@@ -152,37 +152,41 @@ public:
 
 		MUTEX_LOCK(mutex);
 
-		std::string r ((istreambuf_iterator<char>(this)),
-			istreambuf_iterator<char>());
-
-		MUTEX_UNLOCK(mutex);
+		std::string r = buffer.str();
 
 		mexPrintf("%s", r.c_str());
+
+		buffer.str("");
+
+		MUTEX_UNLOCK(mutex);
 
 	}
 
 protected:
+
+	stringstream buffer;
+
 	THREAD_MUTEX mutex;
 
 	virtual int_type overflow(int_type c) {
 		MUTEX_LOCK(mutex);
 
-		int_type r = std::streambuf::overflow(c);
+		buffer.put((char)c);
 
 		MUTEX_UNLOCK(mutex);
 
-		return r;
+		return c;
 	}
 
 	virtual std::streamsize xsputn(const char* s, std::streamsize num) {
 
 		MUTEX_LOCK(mutex);
 
-		std::streamsize r = std::streambuf::xsputn(s, num);
+		buffer.write(s, num);
 
 		MUTEX_UNLOCK(mutex);
 
-		return r;
+		return num;
 	}
 
 };
