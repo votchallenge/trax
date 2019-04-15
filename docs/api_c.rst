@@ -86,7 +86,11 @@ Communication
 
    :return: Version string as a constant character array
 
-.. c:function:: trax_metadata* trax_metadata_create(int region_formats, int image_formats, const char* tracker_name, const char* tracker_description, const char* tracker_family)
+.. c:function:: trax_metadata* trax_metadata_create(int region_formats, int image_formats, int channels, const char* tracker_name, const char* tracker_description, const char* tracker_family)
+
+   :param region_formats: Supported regions formats bit-set.
+   :param image_formats: Supported image formats bit-set.
+   :param channels: Required image channels bit-set. If empty then only `TRAX_CHANNEL_VISIBLE` is assumed.
 
    Create a tracker metadata structure returning its pointer
 
@@ -219,6 +223,75 @@ Communication
 
    Gets the parameter of the client or server instance.
 
+
+ImageList
+~~~~~~~~~
+
+.. c:macro::  TRAX_CHANNEL_VISIBLE
+
+    Visible light channel identifier.
+
+.. c:macro::  TRAX_CHANNEL_DEPTH
+
+    Depth channel identifier.
+
+.. c:macro::  TRAX_CHANNEL_IR
+
+    IR channel identifier.
+
+.. c:macro::  TRAX_CHANNELS
+
+    Number of available channels.
+
+.. c:macro::  TRAX_CHANNEL_INDEX(I)
+
+    Convert channel identifier into index.
+
+.. c:macro::  TRAX_CHANNEL_ID(I)
+
+    Convert channel index into identifier.
+
+.. c:function:: trax_image_list* trax_image_list_create()
+
+    Create an emptry image list
+
+   :returns: Pointer to image list container
+
+.. c:function:: void trax_image_list_release(trax_image_list** list)
+
+    Release image list structure, does not release any channel images
+
+   :param list: Image list container pointer
+
+.. c:function:: void trax_image_list_clear(trax_image_list* list)
+
+    Cleans image list, releases all allocated channel images
+
+   :param list: Image list container pointer
+
+.. c:function:: trax_image* trax_image_list_get(const trax_image_list* list, int channel)
+
+    Get image for a specific channel
+
+   :param list: Image list structure pointer
+   :param channel: Channel idenfifier
+   :returns: Image structure pointer
+
+.. c:function:: void trax_image_list_set(trax_image_list* list, trax_image* image, int channel)
+
+    Set image for a specific channel
+
+   :param list: Image list structure pointer
+   :param image: Image structure pointer
+   :param channel: Channel idenfifier
+   :returns: Pointer to null-terminated character array
+
+.. c:function:: int trax_image_list_count(int channels)
+
+     Count available channels in provided bit-set
+
+   :param channels: Bit-set of channel identifiers
+   :returns: Number of on bits.
 
 Image
 ~~~~~
@@ -681,12 +754,12 @@ The code above can be modified to use the TraX protocol by including the C libra
   int main( int argc, char** argv)
   {
       int run = 1;
-      trax_image* img = NULL;
+      trax_image_list* img = NULL;
       trax_region* reg = NULL;
 
       // Call trax_server_setup at the beginning
       trax_handle* handle;
-      trax_metadata* meta = trax_metadata_create(TRAX_REGION_RECTANGLE, TRAX_IMAGE_PATH, "Name", NULL, NULL);
+      trax_metadata* meta = trax_metadata_create(TRAX_REGION_RECTANGLE, TRAX_IMAGE_PATH, TRAX_CHANNEL_VISIBLE, "Name", NULL, NULL);
 
       handle = trax_server_setup(meta, trax_no_log);
 
@@ -708,7 +781,7 @@ The code above can be modified to use the TraX protocol by including the C libra
           // The second one is TRAX_FRAME that tells the tracker what to process next.
           if (tr == TRAX_FRAME) {
 
-              rectangle_type region = update_tracker(load_image(img));
+              rectangle_type region = update_tracker(load_image(trax_image_list_get(img, TRAX_CHANNEL_VISIBLE)));
               trax_server_reply(handle, rectangle_to_region(region), NULL);
 
           }
@@ -717,7 +790,10 @@ The code above can be modified to use the TraX protocol by including the C libra
               run = 0;
           }
 
-          if (img) trax_image_release(&img);
+          if (img) {
+              trax_image_list_clear(img); // Also delete individual images
+              trax_image_list_release(&img);
+          }
           if (reg) trax_region_release(&reg);
 
       }

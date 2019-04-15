@@ -44,10 +44,11 @@ Below we list the valid messages of the protocol as well as the states of the cl
   * ``trax.name`` (string): Specifies the name of the tracker. The name can be used by the client to verify that the correct algorithm is executed.
   * ``trax.identifier`` (string): Specifies the identifier of the current implementation. The identifier can be used to determine the version of the tracker.
   * ``trax.image`` (string): Specifies the supported image format. See Section `Image formats`_ for the list of supported formats. By default it is assumed that the tracker can accept file paths as image source.
-  * ``trax.region`` (string): Specifies the supported region format. See Section `Region formats`_ for the list of supported formats. By default it is assumed that the tracker can accept rectangles as region specification.
- 
- - ``initialize`` (client): This message is sent by the client to initialize the tracker. The message contains the image data and the region of the object. The actual format of the required arguments is determined by the image and region formats specified by the server.
- - ``frame`` (client): This message is sent by the client to request processing of a new image. The message contains the image data. The actual format of the required argument is determined by the image format specified by the server.
+  * ``trax.region`` (string): Specifies the supported region format. See Section `Region formats`_ for the list of supported formats. By default it is assumed that the tracker can accept rectangles as region specification. 
+  * ``trax.channels`` (string, version 2+): Specifies support for multi-modal images. See Section `Image channels`_ for more information.
+
+ - ``initialize`` (client): This message is sent by the client to initialize the tracker. The message contains the image data (for one or more images) and the region of the object. The actual format of the required arguments is determined by the image and region formats specified by the server.
+ - ``frame`` (client): This message is sent by the client to request processing of a new image (or multiple images). The message contains the image data. The actual format of the required argument is determined by the image format specified by the server.
  - ``state`` (server): This message is used by the server to send the new region to the client. The message contains region data in arbitrary supported format (most commonly the same format that the server proposed in the introduction message).
  - ``quit`` (client, server): This message can be sent by both parties to terminate the session. The server process should exit after the message is sent or received. This message specifies no mandatory arguments.
 
@@ -95,3 +96,15 @@ The image can be encoded in a form of Uniform Resource Identifiers. Currently th
  - **URL** (``url``): Image is specified by a general URL for the image resource which does not fall into any of the above categories. Tipically HTTP remote resources, such as ``http://example.com/sequence/0001.jpg``. 
 
 
+Image channels
+--------------
+
+Version 2 of the protocol also specifies support for multi-modal images, encoded in multiple image planes. To use this feature, the server must sent the ``trax.channels`` argument in the introduction message. The content of this argument is a comma-separated list of channels that are required. Currently supported channels are:
+
+    - **Visible light** (``visible``): Image is in visible light spectrum, by default only this channel is available.
+
+    - **Depth** (``depth``): Channel contains depth information, useful for RGBD data.
+
+    - **Infra Red** (``ir``): Infra red information, useful for IR sequences or for RGB + IR seqences.
+
+Upon receiving the intorduction, the client evaluates if it can provide the data in requested format. If it proceeds, each channel is sent to the server as one or more arguments, encoded as specified in Section `Image formats`_. The order of the images is always the same as the order of the identifier list elements. 
