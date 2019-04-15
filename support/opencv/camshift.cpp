@@ -119,7 +119,7 @@ int main( int argc, char** argv )
 
         // In trax mode images are read from the disk. The master program tells the
         // tracker where to get them.
-        Mat frame = trax::image_to_mat(img.get(TRAX_CHANNEL_COLOR));
+        Mat frame = trax::image_to_mat(img.get(TRAX_CHANNEL_VISIBLE));
 
         if( frame.empty() )
             break;

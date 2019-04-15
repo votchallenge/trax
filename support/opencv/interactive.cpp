@@ -88,11 +88,11 @@ int main( int argc, char** argv)
          if (tr == TRAX_INITIALIZE) {
 
             rectangle = trax::region_to_rect(reg);
-            frame = trax::image_to_mat(img.get(TRAX_CHANNEL_COLOR));
+            frame = trax::image_to_mat(img.get(TRAX_CHANNEL_VISIBLE));
 
         } else if (tr == TRAX_FRAME) {
 
-            frame = trax::image_to_mat(img.get(TRAX_CHANNEL_COLOR));
+            frame = trax::image_to_mat(img.get(TRAX_CHANNEL_VISIBLE));
 
         } else {
             break;

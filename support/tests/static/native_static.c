@@ -62,7 +62,7 @@ int main( int argc, char** argv) {
     trax_region* reg = NULL;
     trax_region* mem = NULL;
 
-    int channels = TRAX_CHANNEL_COLOR;
+    int channels = TRAX_CHANNEL_VISIBLE;
 
     if (getenv("TRAX_TEST_USE_DEPTH")) {
         channels |= TRAX_CHANNEL_DEPTH;

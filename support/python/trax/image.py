@@ -15,14 +15,14 @@ from .wrapper import ImageWrapper
 from trax import TraxException
 
 class ImageChannel(object):
-    COLOR = "color"
+    VISIBLE = "visible"
     DEPTH = "depth"
     IR = "ir"
 
     @staticmethod
     def decode(intcode):
         if intcode == 1:
-            return ImageChannel.COLOR
+            return ImageChannel.VISIBLE
         elif intcode == 2:
             return ImageChannel.DEPTH           
         elif intcode == 4:
@@ -31,7 +31,7 @@ class ImageChannel(object):
 
     @staticmethod
     def encode(strcode):
-        if strcode == ImageChannel.COLOR:
+        if strcode == ImageChannel.VISIBLE:
             return 1
         elif strcode == ImageChannel.DEPTH:
             return 2      

@@ -623,8 +623,8 @@ int get_channel_code(string str) {
 
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 
-    if (str == "color") {
-        return TRAX_CHANNEL_COLOR;
+    if (str == "visible") {
+        return TRAX_CHANNEL_VISIBLE;
     }
 
     if (str == "depth") {
@@ -636,7 +636,7 @@ int get_channel_code(string str) {
     }
 
     MEX_ERROR("Illegal channel type");
-    return TRAX_CHANNEL_COLOR;
+    return TRAX_CHANNEL_VISIBLE;
 }
 
 
@@ -720,8 +720,8 @@ mxArray* decode_channels(int channels) {
 
     vector<mxArray*> tmp;
 
-    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_COLOR)) {
-        tmp.push_back(set_string("color"));
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_VISIBLE)) {
+        tmp.push_back(set_string("visible"));
     }
 
     if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_DEPTH)) {

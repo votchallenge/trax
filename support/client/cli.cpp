@@ -278,8 +278,8 @@ image_size image_get_size(Image image) {
 
 image_size image_get_size(ImageList image) {
 
-    if (image.has(TRAX_CHANNEL_COLOR)) {
-        return image_get_size(image.get(TRAX_CHANNEL_COLOR));
+    if (image.has(TRAX_CHANNEL_VISIBLE)) {
+        return image_get_size(image.get(TRAX_CHANNEL_VISIBLE));
     }
 
     if (image.has(TRAX_CHANNEL_DEPTH)) {
@@ -401,8 +401,8 @@ ImageList load_images(vector<string>& path, int channels, int formats) {
 
     ImageList list;
 
-    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_COLOR)) {
-        list.set(load_image(path[0], formats), TRAX_CHANNEL_COLOR);
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_VISIBLE)) {
+        list.set(load_image(path[0], formats), TRAX_CHANNEL_VISIBLE);
     }
 
     if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_DEPTH)) {

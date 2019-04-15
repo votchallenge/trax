@@ -47,7 +47,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         std::string tracker_name, tracker_description, tracker_family;
 
-        int channels = TRAX_CHANNEL_COLOR;
+        int channels = TRAX_CHANNEL_VISIBLE;
 
         if ( nrhs > 3 ) {
 
