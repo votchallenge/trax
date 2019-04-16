@@ -101,7 +101,7 @@ Image channels
 
 Version 2 of the protocol also specifies support for multi-modal images, encoded in multiple image planes. To use this feature, the server must sent the ``trax.channels`` argument in the introduction message. The content of this argument is a comma-separated list of channels that are required. Currently supported channels are:
 
-    - **Visible light** (``visible``): Image is in visible light spectrum, by default only this channel is available.
+    - **Visible light** (``color``): Image is in visible light spectrum, by default only this channel is available.
 
     - **Depth** (``depth``): Channel contains depth information, useful for RGBD data.
 
