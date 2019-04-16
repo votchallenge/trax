@@ -22,7 +22,7 @@ class Request(collections.namedtuple('Request', ['type', 'image', 'region', 'pro
 
 def _wrap_image_list(list):
 
-    channels = [ImageChannel.VISIBLE, ImageChannel.DEPTH, ImageChannel.IR]
+    channels = [ImageChannel.COLOR, ImageChannel.DEPTH, ImageChannel.IR]
     wrapped = {}
 
     for channel in channels:
@@ -43,7 +43,7 @@ class Server(object):
 
     """ TraX server."""
 
-    def __init__(self, region_formats, image_formats, image_channels = ["visible"], trackerName="", trackerDescription="", trackerFamily="", verbose=False):
+    def __init__(self, region_formats, image_formats, image_channels = ["color"], trackerName="", trackerDescription="", trackerFamily="", verbose=False):
 
         mdata = trax_metadata_create(Region.encode_list(region_formats),
             Image.encode_list(image_formats), ImageChannel.encode_list(image_channels),

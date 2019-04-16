@@ -441,8 +441,8 @@ int channels_decode(char *str) {
     pch = strtok (str, " ;");
     while (pch != NULL) {
 
-        if (strcmp(pch, "visible") == 0)
-            channels |= TRAX_CHANNEL_VISIBLE;
+        if (strcmp(pch, "color") == 0)
+            channels |= TRAX_CHANNEL_COLOR;
         else if (strcmp(pch, "depth") == 0)
             channels |= TRAX_CHANNEL_DEPTH;
         else if (strcmp(pch, "ir") == 0)
@@ -464,8 +464,8 @@ void channels_encode(int channels, char *key) {
 
     pch[0] = 0;
 
-    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_VISIBLE)) {
-        pch += sprintf(pch, "visible;");
+    if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_COLOR)) {
+        pch += sprintf(pch, "color;");
     }
     if (TRAX_SUPPORTS(channels, TRAX_CHANNEL_DEPTH)) {
         pch += sprintf(pch, "depth;");
@@ -519,13 +519,13 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
 
     // Multiple channels are only supported in TraX version 2
     if (client->version < 2) {
-        channels = TRAX_CHANNEL_VISIBLE;
+        channels = TRAX_CHANNEL_COLOR;
     } else {
         tmp = trax_properties_get(tmp_properties, "trax.channels");
         channels = channels_decode(tmp);
         free(tmp);
         if (channels == 0)
-            channels = TRAX_CHANNEL_VISIBLE;
+            channels = TRAX_CHANNEL_COLOR;
     }
 
     tracker_name = trax_properties_get(tmp_properties, "trax.name");

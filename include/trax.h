@@ -85,17 +85,17 @@
 #define TRAX_PARAMETER_IMAGE 4
 
 #define TRAX_CHANNELS 3
-#define TRAX_CHANNEL_VISIBLE 1
+#define TRAX_CHANNEL_COLOR 1
 #define TRAX_CHANNEL_DEPTH 2
 #define TRAX_CHANNEL_IR 4
 
 #define TRAX_CHANNEL_INDEX(I) ( \
-    (I) == TRAX_CHANNEL_VISIBLE ? 0 : ( \
+    (I) == TRAX_CHANNEL_COLOR ? 0 : ( \
     (I) == TRAX_CHANNEL_DEPTH ? 1 : ( \
     (I) == TRAX_CHANNEL_IR ? 2 : -1)))
 
 #define TRAX_CHANNEL_ID(I) ( \
-    (I) == 0 ? TRAX_CHANNEL_VISIBLE : ( \
+    (I) == 0 ? TRAX_CHANNEL_COLOR : ( \
     (I) == 1 ? TRAX_CHANNEL_DEPTH : ( \
     (I) == 2 ? TRAX_CHANNEL_IR : -1)))
 
@@ -612,7 +612,7 @@ public:
 
     Metadata(const Metadata& original);
 
-    Metadata(int region_formats, int image_formats, int channels = TRAX_CHANNEL_VISIBLE,
+    Metadata(int region_formats, int image_formats, int channels = TRAX_CHANNEL_COLOR,
         std::string tracker_name = std::string(), std::string tracker_description = std::string(),
         std::string tracker_family = std::string());
 
