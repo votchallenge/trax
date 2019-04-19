@@ -41,7 +41,7 @@ class Properties(object):
         elif isinstance(data, trax_properties_p):
             self._ref = PropertiesWrapper(data)
         elif isinstance(data, dict):
-            self._ref = PropertiesWrapper(data)
+            self._ref = PropertiesWrapper(trax_properties_create())
             for key, value in data.items():
                 trax_properties_set(self._ref.reference(), key, str(value))
 
