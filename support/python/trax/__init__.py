@@ -43,13 +43,13 @@ class Properties(object):
         elif isinstance(data, dict):
             self._ref = PropertiesWrapper(trax_properties_create())
             for key, value in data.items():
-                trax_properties_set(self._ref.reference(), key, str(value))
+                trax_properties_set(self._ref.reference(), key.encode('utf8'), str(value).encode('utf8'))
 
     def __getitem__(self, key):
         return trax_properties_get(self._ref.reference(), key)
 
     def __setitem__(self, key, value):
-        trax_properties_set(self._ref.reference(), key, str(value))
+        trax_properties_set(self._ref.reference(), key.encode('utf8'), str(value).encode('utf8'))
 
     def get(self, key, default = None):
         value = trax_properties_get(self._ref.reference(), key)
@@ -58,7 +58,7 @@ class Properties(object):
         return value
 
     def set(self, key, value):
-        trax_properties_set(self._ref.reference(), key, str(value))
+        trax_properties_set(self._ref.reference(), key.encode('utf8'), str(value).encode('utf8'))
 
 from .server import Server
 from .region import *
