@@ -57,14 +57,14 @@ else:
     c_long_double_t = ctypes.c_ubyte*16
 
 _libraries = {}
-if sys.platform in ['linux1', 'linux2']:
+if sys.platform.startswith('linux'):
     _libraries['trax'] = ctypes.CDLL('libtrax.so')
 elif sys.platform in ['darwin']:
     _libraries['trax'] = ctypes.CDLL('libtrax.dynlib')
 elif sys.platform in ['win32']:
     _libraries['trax'] = ctypes.CDLL('trax.dll')
 else:
-    RuntimeError('Unsupported platform')
+    raise RuntimeError('Unsupported platform')
 
 class struct_trax_image(ctypes.Structure):
     _pack_ = True # source:False
