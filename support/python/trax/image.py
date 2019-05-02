@@ -116,7 +116,7 @@ class FileImage(Image):
         return Image.PATH
 
     def path(self):
-        return trax_image_get_path(self._ref.reference())
+        return trax_image_get_path(self._ref.reference()).decode('utf8')
 
 class URLImage(Image):
     """ 
