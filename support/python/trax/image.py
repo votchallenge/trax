@@ -135,7 +135,7 @@ class URLImage(Image):
         return Image.URL
 
     def url(self):
-        return trax_image_get_url(self._ref.reference())
+        return trax_image_get_url(self._ref.reference()).decode('utf8')
 
 try:
     import numpy as np
