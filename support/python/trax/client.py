@@ -1,0 +1,124 @@
+"""
+Bindings for the TraX sever.
+"""
+
+import os
+import sys
+import logging as log
+import collections
+
+from ctypes import byref, cast, py_object
+
+from . import TraxException, TraxStatus, Properties
+from .internal import \
+    trax_image_list_set, trax_client_initialize, \
+    trax_client_wait, trax_region_p, trax_properties_p, \
+    trax_image_create_path, trax_client_frame, \
+    trax_client_setup_file, trax_client_setup_socket, \
+    trax_image_list_create, trax_logger_setup, trax_logger
+from .wrapper import HandleWrapper, ImageListWrapper
+from .image import ImageChannel, Image
+from .region import Region
+
+class Request(collections.namedtuple('Request', ['type', 'image', 'region', 'properties'])):
+
+    """ A container class for client requests. Contains fileds type, image, region and parameters. """
+
+def wrap_images(images):
+
+    channels = [ImageChannel.COLOR, ImageChannel.DEPTH, ImageChannel.IR]
+    tlist = ImageListWrapper(trax_image_list_create())
+
+    for channel in channels:
+        if not channel in images:
+            continue
+
+        trax_image_list_set(tlist.reference, images[channel].reference, ImageChannel.encode(channel))
+
+    return tlist
+
+def console_logger(buffer, length, object):
+    print(buffer[:length].decode("utf-8"), end = '')
+
+class Client(object):
+
+    """ TraX client."""
+
+    def __init__(self, streams = None, port = None, timeout = None):
+
+        self._logger = trax_logger(console_logger)
+
+        logger = trax_logger_setup(self._logger, 0, 0)
+
+        if (streams and not (port or timeout)):
+            
+            handle = trax_client_setup_file(
+                streams[1],
+                streams[0],
+                logger)
+
+        elif (port and timeout and not streams):
+
+            handle = trax_client_setup_socket(
+                port,
+                timeout,
+                logger)
+
+        else:
+            raise TraxException("Invalid parameters, use streams or port and timeout")
+
+        if not handle:
+            raise TraxException("Unable to connect to tracker")
+
+        self._handle = HandleWrapper(handle)
+
+    def initialize(self, images, region, properties):
+
+        timage = wrap_images(images)
+        tregion = region.reference
+        tproperties = Properties(properties)
+
+        status = TraxStatus.decode(trax_client_initialize(self._handle.reference, timage.reference, tregion, tproperties.reference))
+
+        if status == TraxStatus.ERROR:
+            raise TraxException("Exception when initializing tracker")
+
+        tregion = trax_region_p()
+        tproperties = trax_properties_p()
+
+        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), tproperties))
+
+        if status == TraxStatus.ERROR:
+            raise TraxException("Exception when waiting for response")
+
+        region = Region.wrap(tregion)
+        properties = Properties(tproperties)
+
+        return region, properties
+
+    def frame(self, images, properties = dict()):
+
+        timage = wrap_images(images)
+        tproperties = Properties(properties)
+
+        status = TraxStatus.decode(trax_client_frame(self._handle.reference, timage.reference, tproperties.reference))
+
+        if status == TraxStatus.ERROR:
+            raise TraxException("Exception when sending frame to tracker")
+
+        tregion = trax_region_p()
+        tproperties = trax_properties_p()
+
+        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), tproperties))
+
+        if status == TraxStatus.ERROR:
+            raise TraxException("Exception when waiting for response")
+
+        region = Region.wrap(tregion)
+        properties = Properties(tproperties)
+
+        return region, properties
+
+    def quit(self):
+        """ Sends quit message and end terminates communication. """
+        self._handle = None

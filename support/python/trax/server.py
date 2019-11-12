@@ -10,17 +10,18 @@ import collections
 from ctypes import byref, cast, py_object
 
 from . import TraxException, TraxStatus, Properties
-from .internal import *
+from .internal import \
+        trax_metadata_create, trax_server_setup, \
+        trax_logger_setup, trax_image_list_p, \
+        trax_image_list_get, trax_metadata_release, \
+        trax_server_wait, trax_server_reply, \
+        trax_image_list_release, trax_region_p, \
+        trax_properties_p
 from .wrapper import HandleWrapper
 from .image import ImageChannel, Image
 from .region import Region
 
-class Request(collections.namedtuple('Request', ['type', 'image', 'region', 'properties'])):
-
-    """ A container class for client requests. Contains fileds type, image, region and parameters. """
-
-
-def _wrap_image_list(list):
+def wrap_image_list(list):
 
     channels = [ImageChannel.COLOR, ImageChannel.DEPTH, ImageChannel.IR]
     wrapped = {}
@@ -32,6 +33,10 @@ def _wrap_image_list(list):
         wrapped[channel] = Image.wrap(img)
 
     return wrapped
+
+class Request(collections.namedtuple('Request', ['type', 'image', 'region', 'properties'])):
+
+    """ A container class for client requests. Contains fileds type, image, region and parameters. """
 
 def _logger(buf, len, obj):
 
@@ -51,7 +56,7 @@ class Server(object):
 
         logger = trax_logger_setup(None, None, 0)
 
-        self._ref = HandleWrapper(trax_server_setup(mdata, logger))
+        self._handle = HandleWrapper(trax_server_setup(mdata, logger))
 
         trax_metadata_release(byref(mdata))
 
@@ -66,7 +71,7 @@ class Server(object):
         tregion = trax_region_p()
         tproperties = trax_properties_p()
 
-        status = TraxStatus.decode(trax_server_wait(self._ref.reference(), byref(timage), byref(tregion), tproperties))
+        status = TraxStatus.decode(trax_server_wait(self._handle.reference, byref(timage), byref(tregion), tproperties))
 
         if status == TraxStatus.QUIT:
             log.info('Received quit message from client.')
@@ -75,7 +80,7 @@ class Server(object):
 
         if status == TraxStatus.INITIALIZE:
             log.info('Received initialize message.')
-            image = _wrap_image_list(timage)
+            image = wrap_image_list(timage)
             trax_image_list_release(byref(timage))
             region = Region.wrap(tregion)
             properties = Properties(tproperties)
@@ -83,7 +88,7 @@ class Server(object):
 
         if status == TraxStatus.FRAME:
             log.info('Received frame message.')
-            image = _wrap_image_list(timage)
+            image = wrap_image_list(timage)
             trax_image_list_release(byref(timage))
             properties = Properties(tproperties)
             return Request(status, image, None, properties)
@@ -100,7 +105,7 @@ class Server(object):
         """
         assert(isinstance(region, Region))
         tproperties = Properties(properties)
-        status = TraxStatus.decode(trax_server_reply(self._ref.reference(), cast(region._ref.reference(), trax_region_p), tproperties._ref.reference()))
+        return TraxStatus.decode(trax_server_reply(self._handle.reference, cast(region.reference, trax_region_p), tproperties.reference))
 
     def __enter__(self):
         """ To support instantiation with 'with' statement. """
@@ -112,4 +117,4 @@ class Server(object):
 
     def quit(self):
         """ Sends quit message and end terminates communication. """
-        self._ref = None
+        self._handle = None

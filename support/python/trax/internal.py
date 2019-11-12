@@ -56,9 +56,13 @@ if ctypes.sizeof(ctypes.c_longdouble) == 16:
 else:
     c_long_double_t = ctypes.c_ubyte*16
 
+from ctypes.util import find_library
+
+libname = find_library("trax")
+
 _libraries = {}
 if sys.platform.startswith('linux'):
-    _libraries['trax'] = ctypes.CDLL('libtrax.so')
+    _libraries['trax'] = ctypes.CDLL('/usr/local/lib/libtrax.so')
 elif sys.platform in ['darwin']:
     _libraries['trax'] = ctypes.CDLL('libtrax.dynlib')
 elif sys.platform in ['win32']:
@@ -93,8 +97,8 @@ class struct_trax_bounds(ctypes.Structure):
      ]
 
 trax_bounds = struct_trax_bounds
-trax_logger = ctypes.CFUNCTYPE(None, POINTER_T(ctypes.c_char), ctypes.c_int32, POINTER_T(None))
-trax_enumerator = POINTER_T(ctypes.CFUNCTYPE(None, POINTER_T(ctypes.c_char), POINTER_T(ctypes.c_char), POINTER_T(None)))
+trax_logger = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_char), ctypes.c_int32, ctypes.c_void_p)
+trax_enumerator = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p)
 class struct_trax_logging(ctypes.Structure):
     pass
 
@@ -103,7 +107,7 @@ struct_trax_logging._fields_ = [
     ('flags', ctypes.c_int32),
     ('PADDING_0', ctypes.c_ubyte * 4),
     ('callback', POINTER_T(trax_logger)),
-    ('data', POINTER_T(None)),
+    ('data', ctypes.c_void_p),
 ]
 
 trax_logging = struct_trax_logging
@@ -126,21 +130,21 @@ class struct_trax_handle(ctypes.Structure):
     _fields_ = [
     ('flags', ctypes.c_int32),
     ('version', ctypes.c_int32),
-    ('stream', POINTER_T(None)),
+    ('stream', ctypes.c_void_p),
     ('logging', trax_logging),
-    ('metadata', POINTER_T(struct_trax_metadata)),
+    ('metadata', ctypes.POINTER(struct_trax_metadata)),
      ]
 
 trax_handle = struct_trax_handle
 class struct_trax_image_list(ctypes.Structure):
     _pack_ = True # source:False
     _fields_ = [
-    ('images', POINTER_T(struct_trax_image) * 3),
+    ('images', ctypes.POINTER(struct_trax_image) * 3),
      ]
 
 trax_image_p = POINTER_T(struct_trax_image)
 trax_image_list_p = POINTER_T(struct_trax_image_list)
-trax_region_p = POINTER_T(None)
+trax_region_p = ctypes.c_void_p
 trax_properties_p = POINTER_T(struct_trax_properties)
 
 trax_image_list = struct_trax_image_list
@@ -152,7 +156,7 @@ trax_version.restype = ctypes.c_char_p
 trax_version.argtypes = []
 
 trax_metadata_create = _libraries['trax'].trax_metadata_create
-trax_metadata_create.restype = POINTER_T(struct_trax_metadata)
+trax_metadata_create.restype = ctypes.POINTER(struct_trax_metadata)
 trax_metadata_create.argtypes = [ctypes.c_int32, ctypes.c_int32, ctypes.c_int32, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
 
 trax_metadata_release = _libraries['trax'].trax_metadata_release
@@ -161,7 +165,7 @@ trax_metadata_release.argtypes = [POINTER_T(POINTER_T(struct_trax_metadata))]
 
 trax_logger_setup = _libraries['trax'].trax_logger_setup
 trax_logger_setup.restype = trax_logging
-trax_logger_setup.argtypes = [POINTER_T(trax_logger), POINTER_T(None), ctypes.c_int32]
+trax_logger_setup.argtypes = [trax_logger, ctypes.c_void_p, ctypes.c_int32]
 
 trax_client_setup_file = _libraries['trax'].trax_client_setup_file
 trax_client_setup_file.restype = POINTER_T(struct_trax_handle)
@@ -173,11 +177,11 @@ trax_client_setup_socket.argtypes = [ctypes.c_int32, ctypes.c_int32, trax_loggin
 
 trax_client_wait = _libraries['trax'].trax_client_wait
 trax_client_wait.restype = ctypes.c_int32
-trax_client_wait.argtypes = [POINTER_T(struct_trax_handle), POINTER_T(POINTER_T(None)), POINTER_T(struct_trax_properties)]
+trax_client_wait.argtypes = [POINTER_T(struct_trax_handle), POINTER_T(ctypes.c_void_p), POINTER_T(struct_trax_properties)]
 
 trax_client_initialize = _libraries['trax'].trax_client_initialize
 trax_client_initialize.restype = ctypes.c_int32
-trax_client_initialize.argtypes = [POINTER_T(struct_trax_handle), POINTER_T(struct_trax_image_list), POINTER_T(None), POINTER_T(struct_trax_properties)]
+trax_client_initialize.argtypes = [POINTER_T(struct_trax_handle), POINTER_T(struct_trax_image_list), ctypes.c_void_p, POINTER_T(struct_trax_properties)]
 
 trax_client_frame = _libraries['trax'].trax_client_frame
 trax_client_frame.restype = ctypes.c_int32
@@ -193,11 +197,11 @@ trax_server_setup_file.argtypes = [POINTER_T(struct_trax_metadata), ctypes.c_int
 
 trax_server_wait = _libraries['trax'].trax_server_wait
 trax_server_wait.restype = ctypes.c_int32
-trax_server_wait.argtypes = [POINTER_T(struct_trax_handle), POINTER_T(POINTER_T(struct_trax_image_list)), POINTER_T(POINTER_T(None)), POINTER_T(struct_trax_properties)]
+trax_server_wait.argtypes = [POINTER_T(struct_trax_handle), POINTER_T(POINTER_T(struct_trax_image_list)), POINTER_T(ctypes.c_void_p), POINTER_T(struct_trax_properties)]
 
 trax_server_reply = _libraries['trax'].trax_server_reply
 trax_server_reply.restype = ctypes.c_int32
-trax_server_reply.argtypes = [POINTER_T(struct_trax_handle), POINTER_T(None), POINTER_T(struct_trax_properties)]
+trax_server_reply.argtypes = [POINTER_T(struct_trax_handle), ctypes.c_void_p, POINTER_T(struct_trax_properties)]
 
 trax_terminate = _libraries['trax'].trax_terminate
 trax_terminate.restype = ctypes.c_int32
@@ -221,11 +225,11 @@ trax_image_release.argtypes = [POINTER_T(POINTER_T(struct_trax_image))]
 
 trax_image_create_path = _libraries['trax'].trax_image_create_path
 trax_image_create_path.restype = POINTER_T(struct_trax_image)
-trax_image_create_path.argtypes = [POINTER_T(ctypes.c_char)]
+trax_image_create_path.argtypes = [ctypes.c_char_p]
 
 trax_image_create_url = _libraries['trax'].trax_image_create_url
 trax_image_create_url.restype = POINTER_T(struct_trax_image)
-trax_image_create_url.argtypes = [POINTER_T(ctypes.c_char)]
+trax_image_create_url.argtypes = [ctypes.c_char_p]
 
 trax_image_create_memory = _libraries['trax'].trax_image_create_memory
 trax_image_create_memory.restype = POINTER_T(struct_trax_image)
@@ -265,11 +269,11 @@ trax_image_get_buffer.argtypes = [POINTER_T(struct_trax_image), POINTER_T(ctypes
 
 trax_region_release = _libraries['trax'].trax_region_release
 trax_region_release.restype = None
-trax_region_release.argtypes = [POINTER_T(POINTER_T(None))]
+trax_region_release.argtypes = [POINTER_T(ctypes.c_void_p)]
 
 trax_region_get_type = _libraries['trax'].trax_region_get_type
 trax_region_get_type.restype = ctypes.c_int32
-trax_region_get_type.argtypes = [POINTER_T(None)]
+trax_region_get_type.argtypes = [ctypes.c_void_p]
 
 trax_region_create_special = _libraries['trax'].trax_region_create_special
 trax_region_create_special.restype = ctypes.c_void_p
@@ -277,66 +281,66 @@ trax_region_create_special.argtypes = [ctypes.c_int32]
 
 trax_region_set_special = _libraries['trax'].trax_region_set_special
 trax_region_set_special.restype = None
-trax_region_set_special.argtypes = [POINTER_T(None), ctypes.c_int32]
+trax_region_set_special.argtypes = [ctypes.c_void_p, ctypes.c_int32]
 
 trax_region_get_special = _libraries['trax'].trax_region_get_special
 trax_region_get_special.restype = ctypes.c_int32
-trax_region_get_special.argtypes = [POINTER_T(None)]
+trax_region_get_special.argtypes = [ctypes.c_void_p]
 
 trax_region_create_rectangle = _libraries['trax'].trax_region_create_rectangle
-trax_region_create_rectangle.restype = POINTER_T(None)
+trax_region_create_rectangle.restype = ctypes.c_void_p
 trax_region_create_rectangle.argtypes = [ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float]
 
 trax_region_set_rectangle = _libraries['trax'].trax_region_set_rectangle
 trax_region_set_rectangle.restype = None
-trax_region_set_rectangle.argtypes = [POINTER_T(None), ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float]
+trax_region_set_rectangle.argtypes = [ctypes.c_void_p, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float]
 
 trax_region_get_rectangle = _libraries['trax'].trax_region_get_rectangle
 trax_region_get_rectangle.restype = None
-trax_region_get_rectangle.argtypes = [POINTER_T(None), POINTER_T(ctypes.c_float), POINTER_T(ctypes.c_float), POINTER_T(ctypes.c_float), POINTER_T(ctypes.c_float)]
+trax_region_get_rectangle.argtypes = [ctypes.c_void_p, POINTER_T(ctypes.c_float), POINTER_T(ctypes.c_float), POINTER_T(ctypes.c_float), POINTER_T(ctypes.c_float)]
 
 trax_region_create_polygon = _libraries['trax'].trax_region_create_polygon
-trax_region_create_polygon.restype = POINTER_T(None)
+trax_region_create_polygon.restype = ctypes.c_void_p
 trax_region_create_polygon.argtypes = [ctypes.c_int32]
 
 trax_region_set_polygon_point = _libraries['trax'].trax_region_set_polygon_point
 trax_region_set_polygon_point.restype = None
-trax_region_set_polygon_point.argtypes = [POINTER_T(None), ctypes.c_int32, ctypes.c_float, ctypes.c_float]
+trax_region_set_polygon_point.argtypes = [ctypes.c_void_p, ctypes.c_int32, ctypes.c_float, ctypes.c_float]
 
 trax_region_get_polygon_point = _libraries['trax'].trax_region_get_polygon_point
 trax_region_get_polygon_point.restype = None
-trax_region_get_polygon_point.argtypes = [POINTER_T(None), ctypes.c_int32, POINTER_T(ctypes.c_float), POINTER_T(ctypes.c_float)]
+trax_region_get_polygon_point.argtypes = [ctypes.c_void_p, ctypes.c_int32, POINTER_T(ctypes.c_float), POINTER_T(ctypes.c_float)]
 
 trax_region_get_polygon_count = _libraries['trax'].trax_region_get_polygon_count
 trax_region_get_polygon_count.restype = ctypes.c_int32
-trax_region_get_polygon_count.argtypes = [POINTER_T(None)]
+trax_region_get_polygon_count.argtypes = [ctypes.c_void_p]
 
 trax_region_bounds = _libraries['trax'].trax_region_bounds
 trax_region_bounds.restype = trax_bounds
-trax_region_bounds.argtypes = [POINTER_T(None)]
+trax_region_bounds.argtypes = [ctypes.c_void_p]
 
 trax_region_contains = _libraries['trax'].trax_region_contains
 trax_region_contains.restype = ctypes.c_int32
-trax_region_contains.argtypes = [POINTER_T(None), ctypes.c_float, ctypes.c_float]
+trax_region_contains.argtypes = [ctypes.c_void_p, ctypes.c_float, ctypes.c_float]
 
 trax_region_clone = _libraries['trax'].trax_region_clone
-trax_region_clone.restype = POINTER_T(None)
-trax_region_clone.argtypes = [POINTER_T(None)]
+trax_region_clone.restype = ctypes.c_void_p
+trax_region_clone.argtypes = [ctypes.c_void_p]
 
 trax_region_convert = _libraries['trax'].trax_region_convert
-trax_region_convert.restype = POINTER_T(None)
-trax_region_convert.argtypes = [POINTER_T(None), ctypes.c_int32]
+trax_region_convert.restype = ctypes.c_void_p
+trax_region_convert.argtypes = [ctypes.c_void_p, ctypes.c_int32]
 
 trax_region_overlap = _libraries['trax'].trax_region_overlap
 trax_region_overlap.restype = ctypes.c_float
-trax_region_overlap.argtypes = [POINTER_T(None), POINTER_T(None), trax_bounds]
+trax_region_overlap.argtypes = [ctypes.c_void_p, ctypes.c_void_p, trax_bounds]
 
 trax_region_encode = _libraries['trax'].trax_region_encode
 trax_region_encode.restype = POINTER_T(ctypes.c_char)
-trax_region_encode.argtypes = [POINTER_T(None)]
+trax_region_encode.argtypes = [ctypes.c_void_p]
 
 trax_region_decode = _libraries['trax'].trax_region_decode
-trax_region_decode.restype = POINTER_T(None)
+trax_region_decode.restype = ctypes.c_void_p
 trax_region_decode.argtypes = [POINTER_T(ctypes.c_char)]
 
 trax_properties_release = _libraries['trax'].trax_properties_release
@@ -381,7 +385,7 @@ trax_properties_count.argtypes = [POINTER_T(struct_trax_properties)]
 
 trax_properties_enumerate = _libraries['trax'].trax_properties_enumerate
 trax_properties_enumerate.restype = None
-trax_properties_enumerate.argtypes = [POINTER_T(struct_trax_properties), trax_enumerator, POINTER_T(None)]
+trax_properties_enumerate.argtypes = [POINTER_T(struct_trax_properties), trax_enumerator, ctypes.c_void_p]
 
 trax_image_list_create = _libraries['trax'].trax_image_list_create
 trax_image_list_create.restype = trax_image_list_p

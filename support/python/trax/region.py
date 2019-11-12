@@ -6,9 +6,13 @@ import sys
 import traceback
 import weakref
 from abc import abstractmethod
-from ctypes import memmove, byref, c_int, c_float
+from ctypes import memmove, byref, c_int, c_float, cast, c_void_p
+from functools import reduce
 
-from .internal import *
+from .internal import trax_region_bounds, trax_region_create_polygon, \
+    trax_region_create_rectangle, trax_region_get_polygon_count, trax_region_get_polygon_point, \
+    trax_region_get_special, trax_region_get_type, trax_region_get_rectangle, \
+    trax_region_set_polygon_point, trax_region_create_special
 from .wrapper import RegionWrapper
 from trax import TraxException
 
@@ -23,6 +27,10 @@ class Region(object):
 
     def __init__(self, internal):
         self._ref = RegionWrapper(internal)
+
+    @property
+    def reference(self):
+        return self._ref.reference
 
     @staticmethod
     def wrap(internal):
@@ -59,15 +67,6 @@ class Region(object):
 
         return encoded
 
-def encode_region_formats(list):
-
-    encoded = 0
-
-    for format in list:
-        encoded = encoded | _region_format_map_code[format]
-
-    return encoded
-
 class Special(Region):
     """
     Special region
@@ -77,16 +76,16 @@ class Special(Region):
 
     @staticmethod
     def create(code):
-        return Special(trax_region_create_special(code))
+        return Special(cast(trax_region_create_special(code), c_void_p))
 
     def __str__(self):
-        return 'Special region (code {})'.format(trax_region_get_special(self._ref.reference()))
+        return 'Special region (code {})'.format(trax_region_get_special(self.reference.reference()))
 
     def type(self):
-        return SPECIAL
+        return Region.SPECIAL
 
     def code(self):
-        return trax_region_get_special(self._ref.reference())
+        return trax_region_get_special(self.reference.reference())
 
 class Rectangle(Region):
     """
@@ -107,25 +106,25 @@ class Rectangle(Region):
             :param float w: width of the rectangle region
             :param float h: height of the rectangle region
         """
-        return Rectangle(trax_region_create_rectangle(x, y, width, height))
+        return Rectangle(cast(trax_region_create_rectangle(x, y, width, height), c_void_p))
 
     def __str__(self):
         x = c_float()
         y = c_float()
         width = c_float()
         height = c_float()
-        trax_region_get_rectangle(self._ref.reference(), byref(x), byref(y), byref(width), byref(height))
+        trax_region_get_rectangle(self.reference.reference(), byref(x), byref(y), byref(width), byref(height))
         return 'Rectangle {},{} {}x{}'.format(x.value, y.value, width.value, height.value)
 
     def type(self):
-        return RECTANGLE
+        return Region.RECTANGLE
 
     def bounds(self):
         x = c_float()
         y = c_float()
         width = c_float()
         height = c_float()
-        trax_region_get_rectangle(self._ref.reference(), byref(x), byref(y), byref(width), byref(height))
+        trax_region_get_rectangle(self.reference.reference(), byref(x), byref(y), byref(width), byref(height))
         return x.value, y.value, width.value, height.value
 
 if (sys.version_info > (3, 0)):
@@ -175,7 +174,7 @@ class Polygon(Region):
         assert(len(points) > 2)
         assert(reduce(lambda x,y: x and y, [isinstance(p, tuple) for p in points]))
 
-        poly = trax_region_create_polygon(len(points))
+        poly = cast(trax_region_create_polygon(len(points)), c_void_p)
 
         for i in xrange(0, len(points)):
             trax_region_set_polygon_point(poly, i, points[i][0], points[i][1])
@@ -186,10 +185,10 @@ class Polygon(Region):
         return 'Polygon with {} points'.format(self.size())
 
     def type(self):
-        return POLYGON
+        return Region.POLYGON
 
     def size(self):
-        return trax_region_get_polygon_count(self._ref.reference())
+        return trax_region_get_polygon_count(self.reference.reference())
 
     def __getitem__(self, i):
         return self.get(i)
@@ -199,7 +198,7 @@ class Polygon(Region):
             raise IndexError("Index {} is invalid".format(i))
         x = c_float()
         y = c_float()
-        trax_region_get_polygon_point(self._ref.reference(), i, byref(x), byref(y))
+        trax_region_get_polygon_point(self.reference.reference(), i, byref(x), byref(y))
         return x.value, y.value
 
     def __iter__(self):

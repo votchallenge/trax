@@ -1,6 +1,10 @@
 
+from ctypes import py_object, c_void_p, cast, byref
+
 from .wrapper import PropertiesWrapper
-from .internal import *
+from .internal import \
+    trax_properties_enumerate, trax_properties_create, trax_enumerator, \
+    trax_properties_get, trax_properties_set, trax_properties_p
 
 class TraxException(Exception):
     pass
@@ -43,22 +47,32 @@ class Properties(object):
         elif isinstance(data, dict):
             self._ref = PropertiesWrapper(trax_properties_create())
             for key, value in data.items():
-                trax_properties_set(self._ref.reference(), key.encode('utf8'), str(value).encode('utf8'))
+                trax_properties_set(self._ref.reference, key.encode('utf8'), str(value).encode('utf8'))
+
+    @property
+    def reference(self):
+        return self._ref.reference
 
     def __getitem__(self, key):
-        return trax_properties_get(self._ref.reference(), key)
+        return trax_properties_get(self._ref.reference, key)
 
     def __setitem__(self, key, value):
-        trax_properties_set(self._ref.reference(), key.encode('utf8'), str(value).encode('utf8'))
+        trax_properties_set(self._ref.reference, key.encode('utf8'), str(value).encode('utf8'))
 
     def get(self, key, default = None):
-        value = trax_properties_get(self._ref.reference(), key)
+        value = trax_properties_get(self._ref.reference, key)
         if value == None:
             return default
         return value
 
     def set(self, key, value):
-        trax_properties_set(self._ref.reference(), key.encode('utf8'), str(value).encode('utf8'))
+        trax_properties_set(self._ref.reference, key.encode('utf8'), str(value).encode('utf8'))
+
+    def dict(self):
+        result = dict()
+        fun = lambda key, value, obj: obj.set(key, value)
+        trax_properties_enumerate(self._ref.reference, trax_enumerator(fun), byref(py_object(result)))
+        return result
 
 from .server import Server
 from .region import *

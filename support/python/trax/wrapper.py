@@ -1,7 +1,10 @@
 import sys
 import traceback
 import weakref
-from .internal import trax_image_release, trax_region_release, trax_cleanup, trax_properties_release
+from .internal import trax_image_release, trax_region_release, \
+    trax_cleanup, trax_properties_release, trax_image_list_release, \
+    struct_trax_handle, struct_trax_image, struct_trax_image_list, \
+    struct_trax_metadata, struct_trax_properties, POINTER_T
 
 from ctypes import byref, cast, c_void_p
 
@@ -36,29 +39,45 @@ def _track_for_finalization(owner, item, finalizer):
 
 class Wrapper(object):
 
-	def __init__(self, reference, finalizer):
-		self.ref = _track_for_finalization(self, reference, finalizer)
+    def __init__(self, ctype, reference, finalizer):
+        if not reference is None:
+            if not isinstance(reference, ctype):
+                print(type(reference))
+                raise RuntimeError("Not a ctype {}".format(type(ctype)))
+            self.ref = _track_for_finalization(self, reference, finalizer)
+        else:
+            self.ref = None
 
-	def reference(self):
-		return self.ref.item
+    @property
+    def reference(self):
+        if not self.ref:
+            return None
+        return self.ref.item
 
+    def __nonzero__(self):
+        return not self.ref is None 
 
 class ImageWrapper(Wrapper):
 
-	def __init__(self, reference):
-		super(ImageWrapper, self).__init__(reference, lambda x: trax_image_release(byref(x)))
+    def __init__(self, reference):
+        super(ImageWrapper, self).__init__(POINTER_T(struct_trax_image), reference, lambda x: trax_image_release(byref(x)))
+
+class ImageListWrapper(Wrapper):
+
+    def __init__(self, reference):
+        super(ImageListWrapper, self).__init__(POINTER_T(struct_trax_image_list), reference, lambda x: trax_image_list_release(byref(x)))
 
 class RegionWrapper(Wrapper):
 
-	def __init__(self, reference):
-		super(RegionWrapper, self).__init__(reference, lambda x: trax_region_release(byref(cast(x, c_void_p))))
+    def __init__(self, reference):
+        super(RegionWrapper, self).__init__(c_void_p, reference, lambda x: trax_region_release(byref(cast(x, c_void_p))))
 
 class PropertiesWrapper(Wrapper):
 
-	def __init__(self, reference):
-		super(PropertiesWrapper, self).__init__(reference, lambda x: trax_properties_release(byref(x)))
+    def __init__(self, reference):
+        super(PropertiesWrapper, self).__init__(POINTER_T(struct_trax_properties), reference, lambda x: trax_properties_release(byref(x)))
 
 class HandleWrapper(Wrapper):
 
-	def __init__(self, reference):
-		super(HandleWrapper, self).__init__(reference, lambda x: trax_cleanup(byref(x)))
+    def __init__(self, reference):
+        super(HandleWrapper, self).__init__(POINTER_T(struct_trax_handle), reference, lambda x: trax_cleanup(byref(x)))
