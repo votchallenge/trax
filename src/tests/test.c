@@ -18,6 +18,36 @@
 
 #endif
 
+void print_raster(char* raster, int x, int y, int width, int height) {
+
+    int i, j;
+
+    fprintf(stdout, "Raster (origin pixel is x=%d, y=%d) %dx%d:\n", x, y, width, height);
+
+    fputc('o', stdout);
+    for (i = 0; i < width; i++) fputc('-', stdout);
+    fputc('o', stdout); fputc('\n', stdout);
+
+    for (j = 0; j < height; j++) {
+        fputc('|', stdout);
+        for (i = 0; i < width; i++) {
+            fputc(raster[j * width + i] ? 219 : 32, stdout);
+        }
+        fprintf(stdout, "|\n");
+    }
+
+    fputc('o', stdout);
+    for (i = 0; i < width; i++) fputc('-', stdout);
+    fputc('o', stdout); fputc('\n', stdout);
+
+}
+
+void print_mask(region_container* region) {
+
+    print_raster(region->data.mask.data, region->data.mask.x, region->data.mask.y, region->data.mask.width, region->data.mask.height);
+
+}
+
 int main( int argc, char** argv) {
 
     if (argc < 2) return 0;
@@ -106,7 +136,7 @@ int main( int argc, char** argv) {
         region_container* a;
         char* raster;
         region_bounds bounds;
-        int width, height, i, j;
+        int width, height;
 
         if (argc != 3) return 0;
 
@@ -117,35 +147,45 @@ int main( int argc, char** argv) {
 	    bounds.left = floor(bounds.left);
 	    bounds.right = ceil(bounds.right);
 
-        width = (int) (bounds.right - bounds.left + 1) + 1;
-        height = (int) (bounds.bottom - bounds.top + 1) + 1;
+        fprintf(stdout, "Region: ");
+        region_print(stdout, a);
+        fprintf(stdout, "\n");
+
+        width = (int) (bounds.right - bounds.left + 1);
+        height = (int) (bounds.bottom - bounds.top + 1);
 
         raster = (char*) malloc(sizeof(char) * width * height);
         region_get_mask_offset(a, raster, (int) bounds.left, (int) bounds.top, width, height);
 
-        fprintf(stdout, "Region: ");
-        region_print(stdout, a);
-        fprintf(stdout, "\n");
-        fprintf(stdout, "Raster (origin pixel is x=%d, y=%d) %dx%d:\n", (int) bounds.left, (int) bounds.top, width, height);
-
-        fputc('o', stdout);
-        for (i = 0; i < width; i++) fputc('-', stdout);
-        fputc('o', stdout); fputc('\n', stdout);
-
-        for (j = 0; j < height; j++) {
-            fputc('|', stdout);
-            for (i = 0; i < width; i++) {
-                fputc(raster[j * width + i] ? 219 : 32, stdout);
-            }
-            fprintf(stdout, "|\n");
-        }
-
-        fputc('o', stdout);
-        for (i = 0; i < width; i++) fputc('-', stdout);
-        fputc('o', stdout); fputc('\n', stdout);
+        print_raster(raster, (int) bounds.left, (int) bounds.top, width, height);
 
         region_release(&a);
         free(raster);
+    } else if (strcmpi(argv[1], "mask") == 0) {
+
+        region_container* a, *b, *c;
+
+        if (argc != 3) return 0;
+
+        region_parse(argv[2], &a);
+
+        b = region_convert(a, MASK);
+        c = region_convert(b, RECTANGLE);
+
+        fprintf(stdout, "Region: ");
+        region_print(stdout, a);
+        fprintf(stdout, "\n");
+        fprintf(stdout, "Mask: ");
+        region_print(stdout, b);
+        fprintf(stdout, "\n");
+        print_mask(b);        
+        fprintf(stdout, "\n");
+        fprintf(stdout, "Region: ");
+        region_print(stdout, c);
+        fprintf(stdout, "\n");
+
+        region_release(&a);
+        region_release(&b);
     }
 }
 

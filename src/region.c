@@ -61,6 +61,178 @@ int __is_valid_sequence(float* sequence, int len) {
 	return 1;
 }
 
+void free_polygon(region_polygon* polygon) {
+
+	free(polygon->x);
+	free(polygon->y);
+
+	polygon->x = NULL;
+	polygon->y = NULL;
+
+	polygon->count = 0;
+
+}
+
+region_polygon* allocate_polygon(int count) {
+
+	region_polygon* polygon = (region_polygon*) malloc(sizeof(region_polygon));
+
+	polygon->count = count;
+
+	polygon->x = (float*) malloc(sizeof(float) * count);
+	polygon->y = (float*) malloc(sizeof(float) * count);
+
+	memset(polygon->x, 0, sizeof(float) * count);
+	memset(polygon->y, 0, sizeof(float) * count);
+
+	return polygon;
+}
+
+region_polygon* clone_polygon(const region_polygon* polygon) {
+
+	region_polygon* clone = allocate_polygon(polygon->count);
+
+	memcpy(clone->x, polygon->x, sizeof(float) * polygon->count);
+	memcpy(clone->y, polygon->y, sizeof(float) * polygon->count);
+
+	return clone;
+}
+
+region_polygon* offset_polygon(const region_polygon* polygon, float x, float y) {
+
+	int i;
+	region_polygon* clone = clone_polygon(polygon);
+
+	for (i = 0; i < clone->count; i++) {
+		clone->x[i] += x;
+		clone->y[i] += y;
+	}
+
+	return clone;
+}
+
+region_polygon* round_polygon(const region_polygon* polygon) {
+
+	int i;
+	region_polygon* clone = clone_polygon(polygon);
+
+	for (i = 0; i < clone->count; i++) {
+		clone->x[i] = round(clone->x[i]);
+		clone->y[i] = round(clone->y[i]);
+	}
+
+	return clone;
+}
+
+
+region_bounds compute_bounds_polygon(const region_polygon* polygon) {
+
+	int i;
+	region_bounds bounds;
+	bounds.top = FLT_MAX;
+	bounds.bottom = -FLT_MAX;
+	bounds.left = FLT_MAX;
+	bounds.right = -FLT_MAX;
+
+	for (i = 0; i < polygon->count; i++) {
+		bounds.top = MIN(bounds.top, polygon->y[i]);
+		bounds.bottom = MAX(bounds.bottom, polygon->y[i]);
+		bounds.left = MIN(bounds.left, polygon->x[i]);
+		bounds.right = MAX(bounds.right, polygon->x[i]);
+	}
+
+	return bounds;
+
+}
+
+region_bounds compute_bounds_mask(const region_mask* mask) {
+
+	int i, j;
+	region_bounds bounds;
+	bounds.top = FLT_MAX;
+	bounds.bottom = -FLT_MAX;
+	bounds.left = FLT_MAX;
+	bounds.right = -FLT_MAX;
+
+	for (i = 0; i < mask->height; i++) {
+		for (j = 0; j < mask->width; j++) {
+			if (mask->data[j + i * mask->width]) {
+				bounds.top = MIN(bounds.top, i);
+				bounds.bottom = MAX(bounds.bottom, i);
+				bounds.left = MIN(bounds.left, j);
+				bounds.right = MAX(bounds.right, j);
+			}
+		}
+	}
+
+	bounds.top += mask->y;
+	bounds.bottom += mask->y;
+	bounds.left += mask->x;
+	bounds.right += mask->x;
+
+	return bounds;
+
+}
+
+
+region_bounds bounds_round(region_bounds bounds) {
+
+	bounds.top = floor(bounds.top);
+	bounds.bottom = ceil(bounds.bottom);
+	bounds.left = floor(bounds.left);
+	bounds.right = ceil(bounds.right);
+
+	return bounds;
+
+}
+
+region_bounds bounds_intersection(region_bounds a, region_bounds b) {
+
+	region_bounds result;
+
+	result.top = MAX(a.top, b.top);
+	result.bottom = MIN(a.bottom, b.bottom);
+	result.left = MAX(a.left, b.left);
+	result.right = MIN(a.right, b.right);
+
+	return result;
+
+}
+
+region_bounds bounds_union(region_bounds a, region_bounds b) {
+
+	region_bounds result;
+
+	result.top = MIN(a.top, b.top);
+	result.bottom = MAX(a.bottom, b.bottom);
+	result.left = MIN(a.left, b.left);
+	result.right = MAX(a.right, b.right);
+
+	return result;
+
+}
+
+float bounds_overlap(region_bounds a, region_bounds b) {
+
+	region_bounds rintersection = bounds_intersection(a, b);
+	float intersection = (rintersection.right - rintersection.left) * (rintersection.bottom - rintersection.top);
+
+	return MAX(0, intersection / (((a.right - a.left) * (a.bottom - a.top)) + ((b.right - b.left) * (b.bottom - b.top)) - intersection));
+
+}
+
+region_bounds region_create_bounds(float left, float top, float right, float bottom) {
+
+	region_bounds result;
+
+	result.top = top;
+	result.bottom = bottom;
+	result.left = left;
+	result.right = right;
+
+	return result;
+}
+
 
 #define MAX_URI_SCHEME 16
 
@@ -238,38 +410,49 @@ int region_parse(const char* buffer, region_container** region) {
 		free(data);
 		return 1;
 	}
-		/*	    case MASK: {
+	case MASK: {
 
-			    	int i;
-			    	int position;
-			    	int value;
+		int i;
+		int position, length;
+		char value;
 
-			    	assert(num > 4);
+		assert(num > 4);
 
-					(*region) = (region_container*) malloc(sizeof(region_container));
-					(*region)->type = MASK;
+		(*region) = (region_container*) malloc(sizeof(region_container));
+		(*region)->type = MASK;
 
-			    	(*region)->data.mask.x = (int) data[0];
-			    	(*region)->data.mask.y = (int) data[1];
-			    	(*region)->data.mask.width = (int) data[2];
-			    	(*region)->data.mask.height = (int) data[3];
+		(*region)->data.mask.x = (int) data[0];
+		(*region)->data.mask.y = (int) data[1];
+		(*region)->data.mask.width = (int) data[2];
+		(*region)->data.mask.height = (int) data[3];
 
-			    	(*region)->data.mask.data = (char*) malloc(sizeof(char) * (*region)->data.mask.width * (*region)->data.mask.height);
+		length = (*region)->data.mask.width * (*region)->data.mask.height;
 
-			    	value = 0;
-			    	position = 0;
+		(*region)->data.mask.data = (char*) malloc(sizeof(char) * length);
 
-			    	for (i = 4; i < num; i++) {
+		value = 0;
+		position = 0;
 
-			    		int count =
+		// Mask is compressed with alternating RLE encoding
+		for (i = 4; i < num; i++) {
 
+			int count = (int) data[i];
+			while (count && position < length) {
+				(*region)->data.mask.data[position++] = value;
+				count--;
+			}
 
+			value = !value;
+		}
 
+		// Fill in remaining values as 0
+		while (position < length) {
+			(*region)->data.mask.data[position++] = 0;
+		}
 
-			    	}
-
-
-			    }*/
+		free(data);
+		return 1;
+	}
 	}
 
 	if (data) free(data);
@@ -302,6 +485,38 @@ char* region_string(region_container* region) {
 		for (i = 0; i < region->data.polygon.count; i++) {
 			buffer_append(buffer, (i == 0 ? "%.4f,%.4f" : ",%.4f,%.4f"), region->data.polygon.x[i], region->data.polygon.y[i]);
 		}
+
+	} else if (region->type == MASK) {
+
+		char value = 0;
+		int count = 0;
+		int length = region->data.mask.width * region->data.mask.height;
+
+		buffer_append(buffer, "mask:%d,%d,%d,%d",
+					region->data.mask.x, region->data.mask.y,
+					region->data.mask.width, region->data.mask.height);
+
+		// Borderline case when maks starts with foreground in top-left corner.
+		// Append 0 to trigger value switch
+		if (region->data.mask.data[0]) {
+			buffer_append(buffer, ",0");
+			value = !value;
+		}
+
+		for (i = 0; i < length; i++) {
+			if ((region->data.mask.data[i] && value) || (!region->data.mask.data[i] && !value)) {
+				count++;
+			} else {
+				buffer_append(buffer, ",%d", count);
+				count = 1;
+				value = !value;
+			}
+		}
+
+		// Output remaining stride if it contains foreground
+		if (count && value) {
+			buffer_append(buffer, ",%d", count);
+		}
 	}
 
 	if (buffer_size(buffer) > 0)
@@ -326,7 +541,6 @@ region_container* region_convert(const region_container* region, region_type typ
 
 	region_container* reg = NULL;
 	switch (type) {
-
 	case RECTANGLE: {
 
 		reg = (region_container*) malloc(sizeof(region_container));
@@ -356,19 +570,24 @@ region_container* region_convert(const region_container* region, region_type typ
 			reg->data.rectangle.width = right - left;
 			reg->data.rectangle.height = bottom - top;
 			break;
-		}
-		case SPECIAL: {
-			free(reg); reg = NULL;
+			}
+		case MASK: {
+			region_bounds b = compute_bounds_mask(&(region->data.mask));
+
+			reg->data.rectangle.x = b.left;
+			reg->data.rectangle.y = b.top;
+			reg->data.rectangle.width = b.right - b.left + 1;
+			reg->data.rectangle.height = b.bottom - b.top + 1;
+
 			break;
-		}
+			}
 		default: {
 			free(reg); reg = NULL;
 			break;
-		}
+			}
 		}
 		break;
-	}
-
+		}
 	case POLYGON: {
 
 		reg = (region_container*) malloc(sizeof(region_container));
@@ -409,22 +628,57 @@ region_container* region_convert(const region_container* region, region_type typ
 			}
 
 			break;
+			}
+		case MASK: {
+
+			// TODO
+			free(reg); reg = NULL;
+
+			break;
 		}
 		case POLYGON: {
 
-			reg->data.polygon.count = region->data.polygon.count;
+			reg->data.polygon = *(clone_polygon(&(region->data.polygon)));
 
-			reg->data.polygon.x = (float *) malloc(sizeof(float) * region->data.polygon.count);
-			reg->data.polygon.y = (float *) malloc(sizeof(float) * region->data.polygon.count);
+			break;
+			}
+		default: {
+			free(reg); reg = NULL;
+			break;
+			}
+		}
+		break;
+		}
+	case MASK: {
 
-			memcpy(reg->data.polygon.x, region->data.polygon.x, sizeof(float) * region->data.polygon.count);
-			memcpy(reg->data.polygon.y, region->data.polygon.y, sizeof(float) * region->data.polygon.count);
+		switch (region->type) {
+		case RECTANGLE: {
+
+			reg = region_create_mask((int)region->data.rectangle.x, (int)region->data.rectangle.y, (int)region->data.rectangle.width, (int)region->data.rectangle.height);
+			memset(reg->data.mask.data, 255, reg->data.mask.width * reg->data.mask.height);
 
 			break;
 		}
-		case SPECIAL: {
-			free(reg); reg = NULL;
+		case POLYGON: {
+
+			reg = (region_container*) malloc(sizeof(region_container));
+			reg->type = type;
+
+			region_bounds b = compute_bounds_polygon(&(region->data.polygon));
+
+			reg = region_create_mask(b.left, b.right, b.right - b.left, b.bottom - b.top);
+
+			region_get_mask_offset(region, reg->data.mask.data, b.left, b.right, b.right - b.left, b.bottom - b.top);
+
 			break;
+		}
+		case MASK: {
+
+			reg = region_create_mask(region->data.mask.x, region->data.mask.y, region->data.mask.width, region->data.mask.height);
+			memcpy(reg->data.mask.data, region->data.mask.data, region->data.mask.width * region->data.mask.height);
+
+			break;
+
 		}
 		default: {
 			free(reg); reg = NULL;
@@ -432,22 +686,17 @@ region_container* region_convert(const region_container* region, region_type typ
 		}
 		}
 		break;
-
-		case SPECIAL: {
-			if (region->type == SPECIAL)
-				// If source is also code then just copy the value
-				reg = region_create_special(region->data.special);
-			else
-				// All types are converted to default region
-				reg = region_create_special(TRAX_DEFAULT_CODE);
-			break;
 		}
-
-		default:
-			break;
-
+	case SPECIAL: {
+		if (region->type == SPECIAL)
+			// If source is also code then just copy the value
+			reg = region_create_special(region->data.special);
+		else
+			// All types are converted to default region
+			reg = region_create_special(TRAX_DEFAULT_CODE);
+		break;
 		}
-
+		break;
 	}
 
 	return reg;
@@ -463,6 +712,11 @@ void region_release(region_container** region) {
 		free((*region)->data.polygon.x);
 		free((*region)->data.polygon.y);
 		(*region)->data.polygon.count = 0;
+		break;
+	case MASK:
+		free((*region)->data.mask.data);
+		(*region)->data.mask.width = 0;
+		(*region)->data.mask.height = 0;
 		break;
 	case SPECIAL: {
 		break;
@@ -515,70 +769,29 @@ region_container* region_create_polygon(int count) {
 	}
 }
 
+region_container* region_create_mask(int x, int y, int width, int height) {
+
+	assert(width > 0 && height > 0);
+
+	{
+
+		region_container* reg = __create_region(MASK);
+
+		reg->data.mask.x = x;
+		reg->data.mask.y = y;
+		reg->data.mask.width = width;
+		reg->data.mask.height = height;
+		reg->data.mask.data = (char *) malloc(sizeof(char) * width * height);
+
+		return reg;
+
+	}
+
+}
+
+
 #define MAX_MASK 10000
 
-void free_polygon(region_polygon* polygon) {
-
-	free(polygon->x);
-	free(polygon->y);
-
-	polygon->x = NULL;
-	polygon->y = NULL;
-
-	polygon->count = 0;
-
-}
-
-region_polygon* allocate_polygon(int count) {
-
-	region_polygon* polygon = (region_polygon*) malloc(sizeof(region_polygon));
-
-	polygon->count = count;
-
-	polygon->x = (float*) malloc(sizeof(float) * count);
-	polygon->y = (float*) malloc(sizeof(float) * count);
-
-	memset(polygon->x, 0, sizeof(float) * count);
-	memset(polygon->y, 0, sizeof(float) * count);
-
-	return polygon;
-}
-
-region_polygon* clone_polygon(const region_polygon* polygon) {
-
-	region_polygon* clone = allocate_polygon(polygon->count);
-
-	memcpy(clone->x, polygon->x, sizeof(float) * polygon->count);
-	memcpy(clone->y, polygon->y, sizeof(float) * polygon->count);
-
-	return clone;
-}
-
-region_polygon* offset_polygon(const region_polygon* polygon, float x, float y) {
-
-	int i;
-	region_polygon* clone = clone_polygon(polygon);
-
-	for (i = 0; i < clone->count; i++) {
-		clone->x[i] += x;
-		clone->y[i] += y;
-	}
-
-	return clone;
-}
-
-region_polygon* round_polygon(const region_polygon* polygon) {
-
-	int i;
-	region_polygon* clone = clone_polygon(polygon);
-
-	for (i = 0; i < clone->count; i++) {
-		clone->x[i] = round(clone->x[i]);
-		clone->y[i] = round(clone->y[i]);
-	}
-
-	return clone;
-}
 
 int point_in_polygon(const region_polygon* polygon, float x, float y) {
 	int i, j, c = 0;
@@ -589,6 +802,15 @@ int point_in_polygon(const region_polygon* polygon, float x, float y) {
 	}
 	return c;
 }
+
+int point_in_mask(const region_mask* mask, float x, float y) {
+	
+	if (x < mask->x || y < mask->y || x >= mask->x + mask->width || y >= mask->y + mask->height)
+		return 0;
+
+	return mask->data[((int)x - mask->x) + ((int)y - mask->y) * mask->width] != 0;
+}
+
 
 void print_polygon(const region_polygon* polygon) {
 
@@ -601,84 +823,6 @@ void print_polygon(const region_polygon* polygon) {
 
 	printf("\n");
 
-}
-
-region_bounds compute_bounds(const region_polygon* polygon) {
-
-	int i;
-	region_bounds bounds;
-	bounds.top = FLT_MAX;
-	bounds.bottom = -FLT_MAX;
-	bounds.left = FLT_MAX;
-	bounds.right = -FLT_MAX;
-
-	for (i = 0; i < polygon->count; i++) {
-		bounds.top = MIN(bounds.top, polygon->y[i]);
-		bounds.bottom = MAX(bounds.bottom, polygon->y[i]);
-		bounds.left = MIN(bounds.left, polygon->x[i]);
-		bounds.right = MAX(bounds.right, polygon->x[i]);
-	}
-
-	return bounds;
-
-}
-
-region_bounds bounds_round(region_bounds bounds) {
-
-	bounds.top = floor(bounds.top);
-	bounds.bottom = ceil(bounds.bottom);
-	bounds.left = floor(bounds.left);
-	bounds.right = ceil(bounds.right);
-
-	return bounds;
-
-}
-
-region_bounds bounds_intersection(region_bounds a, region_bounds b) {
-
-	region_bounds result;
-
-	result.top = MAX(a.top, b.top);
-	result.bottom = MIN(a.bottom, b.bottom);
-	result.left = MAX(a.left, b.left);
-	result.right = MIN(a.right, b.right);
-
-	return result;
-
-}
-
-region_bounds bounds_union(region_bounds a, region_bounds b) {
-
-	region_bounds result;
-
-	result.top = MIN(a.top, b.top);
-	result.bottom = MAX(a.bottom, b.bottom);
-	result.left = MIN(a.left, b.left);
-	result.right = MAX(a.right, b.right);
-
-	return result;
-
-}
-
-float bounds_overlap(region_bounds a, region_bounds b) {
-
-	region_bounds rintersection = bounds_intersection(a, b);
-	float intersection = (rintersection.right - rintersection.left) * (rintersection.bottom - rintersection.top);
-
-	return MAX(0, intersection / (((a.right - a.left) * (a.bottom - a.top)) + ((b.right - b.left) * (b.bottom - b.top)) - intersection));
-
-}
-
-region_bounds region_create_bounds(float left, float top, float right, float bottom) {
-
-	region_bounds result;
-
-	result.top = top;
-	result.bottom = bottom;
-	result.left = left;
-	result.right = right;
-
-	return result;
 }
 
 region_bounds region_compute_bounds(const region_container* region) {
@@ -699,7 +843,11 @@ region_bounds region_compute_bounds(const region_container* region) {
 		}
 		break;
 	case POLYGON: {
-		bounds = compute_bounds(&(region->data.polygon));
+		bounds = compute_bounds_polygon(&(region->data.polygon));
+		break;
+	}
+	case MASK: {
+		bounds = compute_bounds_mask(&(region->data.mask));
 		break;
 	}
 	default: {
@@ -786,8 +934,11 @@ int rasterize_polygon(const region_polygon* polygon_input, char* mask, int width
 				        (((int)polygon->y[i] == (int)polygon->y[j]) && ((int)polygon->y[i] == pixelY))) {
 					double r = (polygon->y[j] - polygon->y[i]);
 					double k = (polygon->x[j] - polygon->x[i]);
-					if (r != 0)
+					if (r != 0) {
 						nodeX[nodes++] = (int) ((double) polygon->x[i] + (double) (pixelY - polygon->y[i]) / r * k);
+					} else {
+						nodeX[nodes++] = (double) polygon->x[i];
+					}
 				}
 				j = i;
 			}
@@ -807,14 +958,14 @@ int rasterize_polygon(const region_polygon* polygon_input, char* mask, int width
 			/*  Fill the pixels between node pairs. */
 			i = 0;
 			while (i < nodes - 1) {
+				if (nodeX[i] >= width) break;
 				// If a point is in the line then we get two identical values
-				// Ignore the first
-				if (nodeX[i] == nodeX[i + 1]) {
+				// Ignore the first, except when it is the last point in vector
+				if (nodeX[i] == nodeX[i + 1] && i < nodes - 2) {
 					i++;
 					continue;
 				}
 
-				if (nodeX[i] >= width) break;
 				if (nodeX[i + 1] >= 0) {
 					if (nodeX[i] < 0) nodeX[i] = 0;
 					if (nodeX[i + 1] >= width) nodeX[i + 1] = width - 1;
@@ -854,11 +1005,11 @@ float compute_polygon_overlap(const region_polygon* p1, const region_polygon* p2
 	region_bounds b1, b2;
 
 	if (__flags & REGION_LEGACY_RASTERIZATION) {
-		b1 = bounds_intersection(compute_bounds(p1), bounds);
-		b2 = bounds_intersection(compute_bounds(p2), bounds);
+		b1 = bounds_intersection(compute_bounds_polygon(p1), bounds);
+		b2 = bounds_intersection(compute_bounds_polygon(p2), bounds);
 	} else {
-		b1 = bounds_intersection(bounds_round(compute_bounds(p1)), bounds);
-		b2 = bounds_intersection(bounds_round(compute_bounds(p2)), bounds);
+		b1 = bounds_intersection(bounds_round(compute_bounds_polygon(p1)), bounds);
+		b2 = bounds_intersection(bounds_round(compute_bounds_polygon(p2)), bounds);
 	}
 
 	x = MIN(b1.left, b2.left);
@@ -940,35 +1091,100 @@ float compute_polygon_overlap(const region_polygon* p1, const region_polygon* p2
 
 region_overlap region_compute_overlap(const region_container* ra, const region_container* rb, region_bounds bounds) {
 
-	region_container* ta = (region_container *) ra;
-	region_container* tb = (region_container *) rb;
+	int x, y;
+	int width, height;
+	region_bounds b1, b2;
+	double a1, a2;
+	int vol_1 = 0;
+	int vol_2 = 0;
+	int mask_1 = 0;
+	int mask_2 = 0;
+	int mask_intersect = 0;
+
+	region_container* ta = NULL;
+	region_container* tb = NULL;
 	region_overlap overlap;
 	overlap.overlap = 0;
 	overlap.only1 = 0;
 	overlap.only2 = 0;
 
-	if (ra->type == RECTANGLE)
-		ta = region_convert(ra, POLYGON);
 
-	if (rb->type == RECTANGLE)
-		tb = region_convert(rb, POLYGON);
+	if (__flags & REGION_LEGACY_RASTERIZATION) {
+		b1 = bounds_intersection(region_compute_bounds(ra), bounds);
+		b2 = bounds_intersection(region_compute_bounds(rb), bounds);
+	} else {
+		b1 = bounds_intersection(bounds_round(region_compute_bounds(ra)), bounds);
+		b2 = bounds_intersection(bounds_round(region_compute_bounds(rb)), bounds);
+	}
 
-	if (ta->type == POLYGON && tb->type == POLYGON) {
+	x = MIN(b1.left, b2.left);
+	y = MIN(b1.top, b2.top);
 
-		region_polygon p1, p2;
+	width = (int) (MAX(b1.right, b2.right) - x) + 1;
+	height = (int) (MAX(b1.bottom, b2.bottom) - y) + 1;
 
-		COPY_POLYGON(ta, p1);
-		COPY_POLYGON(tb, p2);
+	// Fixing crashes due to overflowed regions, a simple check if the ratio
+	// between the two bounding boxes is simply too big and the overlap would
+	// be 0 anyway.
+	
+	a1 = (b1.right - b1.left) * (b1.bottom - b1.top);
+	a2 = (b2.right - b2.left) * (b2.bottom - b2.top);
 
-		overlap.overlap = compute_polygon_overlap(&p1, &p2, &(overlap.only1), &(overlap.only2), bounds);
+	if (a1 / a2 < 1e-10 || a2 / a1 < 1e-10 || width < 1 || height < 1) 
+		return overlap;
+	
+
+	if (bounds_overlap(b1, b2) == 0) {
+		int i;
+
+		ta = region_create_mask(b1.left, b1.top, b1.right - b1.left + 1, b1.bottom - b1.top + 1);
+		tb = region_create_mask(b2.left, b2.top, b2.right - b2.left + 1, b2.bottom - b2.top + 1);
+
+		region_get_mask_offset(ra, ta->data.mask.data, b1.left, b1.top, b1.right - b1.left + 1, b1.bottom - b1.top + 1);
+		region_get_mask_offset(rb, tb->data.mask.data, b2.left, b2.top, b2.right - b2.left + 1, b2.bottom - b2.top + 1);
+
+		for (i = 0; i < (b1.right - b1.left + 1) * (b1.bottom - b1.top + 1); i++) {
+			if (ta->data.mask.data[i]) vol_1++;
+		}
+
+		for (i = 0; i < (b2.right - b2.left + 1) * (b2.bottom - b2.top + 1); i++) {
+			if (tb->data.mask.data[i]) vol_2++;
+		}
+
+		overlap.only1 = (float) vol_1 / (float) (vol_1 + vol_2);
+		overlap.only2 = (float) vol_2 / (float) (vol_1 + vol_2);
+
+		return overlap;
+
+	} else {
+
+		int i;
+		char* mask1 = ta->data.mask.data;
+		char* mask2 = tb->data.mask.data;
+
+		ta = region_create_mask(x, y, width, height);
+		tb = region_create_mask(x, y, width, height);
+
+		region_get_mask_offset(ra, ta->data.mask.data, x, y, width, height);
+		region_get_mask_offset(rb, tb->data.mask.data, x, y, width, height);
+
+
+		for (i = 0; i < width * height; i++) {
+			if (mask1[i]) vol_1++;
+			if (mask2[i]) vol_2++;
+			if (mask1[i] && mask2[i]) mask_intersect++;
+			else if (mask1[i]) mask_1++;
+			else if (mask2[i]) mask_2++;
+		}
+
+		overlap.only1 = (float) mask_1 / (float) (mask_1 + mask_2 + mask_intersect);
+		overlap.only2 = (float) mask_2 / (float) (mask_1 + mask_2 + mask_intersect);
+		overlap.overlap = mask_intersect / (float) (mask_1 + mask_2 + mask_intersect);
 
 	}
 
-	if (ta != ra)
-		region_release(&ta);
-
-	if (tb != rb)
-		region_release(&tb);
+	if (ta) region_release(&ta);
+	if (tb) region_release(&tb);
 
 	return overlap;
 
@@ -986,40 +1202,57 @@ int region_contains_point(region_container* r, float x, float y) {
 	if (r->type == POLYGON)
 		return point_in_polygon(&(r->data.polygon), x, y);
 
+	if (r->type == MASK)
+		return point_in_mask(&(r->data.mask), x, y);
+
 	return 0;
 
 }
 
-void region_get_mask(region_container* r, char* mask, int width, int height) {
+void region_get_mask(const region_container* r, char* mask, int width, int height) {
 
-	region_container* t = r;
-
-	if (r->type == RECTANGLE)
-		t = region_convert(r, POLYGON);
-
-	rasterize_polygon(&(t->data.polygon), mask, width, height);
-
-	if (t != r)
-		region_release(&t);
+	region_get_mask_offset(r, mask, 0, 0, width, height);
 
 }
 
-void region_get_mask_offset(region_container* r, char* mask, int x, int y, int width, int height) {
+void region_get_mask_offset(const region_container* r, char* mask, int x, int y, int width, int height) {
 
-	region_container* t = r;
-	region_polygon *p;
+	if (r->type == MASK) {
+		int i, j;
+		int ox = MAX((r->data.mask).x - x, 0);
+		int oy = MAX((r->data.mask).y - y, 0);
+		int gx = MAX(x - (r->data.mask).x, 0);
+		int gy = MAX(y - (r->data.mask).y, 0);
 
-	if (r->type == RECTANGLE)
-		t = region_convert(r, POLYGON);
+		int gw = MIN(x + width - (r->data.mask).x - (r->data.mask).width, 0) + (r->data.mask).width;
+		int gh = MIN(y + height - (r->data.mask).y - (r->data.mask).height, 0) + (r->data.mask).height;
 
-	p = offset_polygon(&(t->data.polygon), -x, -y);
+		memset(mask, 0, width * height);
 
-	rasterize_polygon(p, mask, width, height);
+		for (i = 0; i < gh; i++) {
+			for (j = 0; j < gw; j++) {
+				mask[j + ox + (i + oy) * width] = (r->data.mask).data[j + gx + (i + gy) * (r->data.mask).width];
+			}
+		}
 
-	free_polygon(p);
+		return;
+	} else {
 
-	if (t != r)
-		region_release(&t);
+		region_polygon *p;
+
+		if (r->type == RECTANGLE) {
+			region_container* t = region_convert(r, POLYGON);
+			p = offset_polygon(&(t->data.polygon), -x, -y);
+			region_release(&t);
+		} else {
+			p = offset_polygon(&(r->data.polygon), -x, -y);
+		}
+
+		rasterize_polygon(p, mask, width, height);
+
+		free_polygon(p);
+
+	}
 
 }
 

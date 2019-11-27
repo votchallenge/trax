@@ -1385,6 +1385,43 @@ int trax_region_get_polygon_count(const trax_region* region) {
 
 }
 
+trax_region* trax_region_create_mask(int x, int y, int width, int height) {
+
+    return region_create_mask(x, y, width, height);
+
+}
+
+void trax_region_get_mask_header(const trax_region* region, int* x, int* y, int* width, int* height) {
+
+    assert(REGION(region)->type == MASK);
+
+    if (x) *x = REGION(region)->data.mask.x;
+    if (y) *y = REGION(region)->data.mask.y;
+    if (width) *width = REGION(region)->data.mask.width;
+    if (height) *height = REGION(region)->data.mask.height;
+
+}
+
+char* trax_region_write_mask_row(trax_region* region, int row) {
+
+    assert(REGION(region)->type == MASK);
+
+    assert(row >= 0 && row < REGION(region)->data.mask.height);
+
+    return &(REGION(region)->data.mask.data[REGION(region)->data.mask.width * row]);
+
+}
+
+const char* trax_region_get_mask_row(const trax_region* region, int row) {
+
+    assert(REGION(region)->type == MASK);
+
+    assert(row >= 0 && row < REGION(region)->data.mask.height);
+
+    return &(REGION(region)->data.mask.data[REGION(region)->data.mask.width * row]);
+    
+}
+
 char* trax_region_encode(const trax_region* region) {
 
     return region_string(REGION(region));

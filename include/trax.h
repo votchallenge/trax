@@ -70,7 +70,7 @@
 #define TRAX_REGION_SPECIAL 1
 #define TRAX_REGION_RECTANGLE 2
 #define TRAX_REGION_POLYGON 4
-#define TRAX_REGION_MASK 8 // Not implemented yet!
+#define TRAX_REGION_MASK 8
 
 #define TRAX_REGION_ANY (TRAX_REGION_RECTANGLE | TRAX_REGION_POLYGON)
 
@@ -403,6 +403,26 @@ __TRAX_EXPORT void trax_region_get_polygon_point(const trax_region* region, int 
  * Returns the number of points in the polygon.
 **/
 __TRAX_EXPORT int trax_region_get_polygon_count(const trax_region* region);
+
+/**
+ * Creates a mask region object for a given amout of points. Note that the mask data is not initialized.
+**/
+__TRAX_EXPORT trax_region* trax_region_create_mask(int x, int y, int width, int height);
+
+/**
+ * Returns the header data of a mask region.
+**/
+__TRAX_EXPORT void trax_region_get_mask_header(const trax_region* region, int* x, int* y, int* width, int* height);
+
+/**
+ * Returns a pointer for a writeable row in a data array of a mask.
+**/
+__TRAX_EXPORT char* trax_region_write_mask_row(trax_region* region, int row);
+
+/**
+ * Returns a read-only pointer for a row in a data array of a mask.
+**/
+__TRAX_EXPORT const char* trax_region_get_mask_row(const trax_region* region, int row);
 
 /**
  * Calculates a bounding box region that bounds the input region.
@@ -916,6 +936,11 @@ public:
     static Region create_polygon(int count);
 
     /**
+     * Creates a mask region object for a given amout of points. Note that the mask data is not initialized.
+    **/
+    static Region create_mask(int x, int y, int width, int height);
+
+    /**
      * Releases region, frees allocated memory.
     **/
     virtual ~Region();
@@ -964,6 +989,21 @@ public:
      * Returns the number of points in the polygon.
     **/
     int get_polygon_count() const;
+
+    /**
+     * Returns the header data of a mask region.
+    **/
+    void get_mask_header(int* x, int* y, int* width, int* height) const;
+
+    /**
+     * Returns a pointer for a writeable row in a data array of a mask.
+    **/
+    char* write_mask_row(int row);
+
+    /**
+     * Returns a read-only pointer for a row in a data array of a mask.
+    **/
+    const char* get_mask_row(int row) const;
 
     /**
      * Computes bounds of a region.

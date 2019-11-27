@@ -202,20 +202,40 @@ mxArray* parameters_to_struct(Properties& input) {
 Region array_to_region(const mxArray* input) {
 
     Region p;
-    double *r = (double*)mxGetPr(input);
     int l = mxGetN(input);
 
-    if (l % 2 == 0 && l >= 6) {
+    if (mxIsUint8(input)) {
 
-        p = Region::create_polygon(l / 2);
+        int i = 0;
+        int width = l;
+        int height = mxGetM(input);
+        char *r = (char*)mxGetPr(input);
 
-        for (int i = 0; i < l / 2; i++) {
-            p.set_polygon_point(i, r[i * 2], r[i * 2 + 1]);
+        p = Region::create_mask(0, 0, width, height);
+
+        for (i = 0; i < height; i++) {
+
+            memcpy(p.write_mask_row(i), r + i * width, width);
+
         }
 
-    } else if (l == 4) {
+        return p;
+    } else {
+        double *r = (double*)mxGetPr(input);
 
-        p = Region::create_rectangle(r[0], r[1], r[2], r[3]);
+        if (l % 2 == 0 && l >= 6) {
+
+            p = Region::create_polygon(l / 2);
+
+            for (int i = 0; i < l / 2; i++) {
+                p.set_polygon_point(i, r[i * 2], r[i * 2 + 1]);
+            }
+
+        } else if (l == 4) {
+
+            p = Region::create_rectangle(r[0], r[1], r[2], r[3]);
+
+        }
 
     }
 
@@ -255,8 +275,22 @@ mxArray* region_to_array(const Region& region) {
         break;
     }
     case TRAX_REGION_MASK: {
-        // TODO
-        MEX_ERROR("Mask conversion not implemented yet.");
+        int x, y, width, height;
+        region.get_mask_header(&x, &y, &width, &height);
+        mwSize dims[2];
+        dims[0] = height + y;
+        dims[1] = width + x;
+        
+        val = mxCreateNumericArray(2, dims, mxUINT8_CLASS, mxREAL);
+        char *data = (char*) mxGetPr(val);
+        memset(data, 0, dims[0] * dims[1]);
+
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                memcpy(data + (i + y) * width + x, region.get_mask_row(i), width);          
+            }
+        }
+
         break;
     }
     }

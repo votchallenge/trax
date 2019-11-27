@@ -23,7 +23,6 @@ Logging::~Logging() {
 
 }
 
-
 Bounds::Bounds() {
 
 	this->left = trax_no_bounds.left;
@@ -510,6 +509,14 @@ Region Region::create_polygon(int count) {
 
 }
 
+Region Region::create_mask(int x, int y, int width, int height) {
+
+	Region region;
+	region.wrap(trax_region_create_mask(x, y, width, height));
+	return region;
+
+}
+
 Region::~Region() {
 	release();
 }
@@ -554,12 +561,30 @@ void  Region::set_polygon_point(int index, float x, float y) {
 	trax_region_set_polygon_point(region, index, x, y);
 }
 
-void  Region::get_polygon_point(int index, float* x, float* y) const {
+void Region::get_polygon_point(int index, float* x, float* y) const {
 	trax_region_get_polygon_point(region, index, x, y);
 }
 
-int  Region::get_polygon_count() const {
+int Region::get_polygon_count() const {
 	return trax_region_get_polygon_count(region);
+}
+
+void Region::get_mask_header(int* x, int* y, int* width, int* height) const {
+
+	trax_region_get_mask_header(region, x, y, width, height);
+
+}
+
+char* Region::write_mask_row(int row) {
+
+	return trax_region_write_mask_row(region, row);
+
+}
+
+const char* Region::get_mask_row(int row) const {
+
+	return trax_region_get_mask_row(region, row);
+
 }
 
 Region Region::convert(int format) const {
