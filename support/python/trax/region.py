@@ -8,13 +8,14 @@ import weakref
 from abc import abstractmethod
 from ctypes import memmove, byref, c_int, c_float, cast, c_void_p
 from functools import reduce
+import numpy as np
 
 from .internal import trax_region_bounds, trax_region_create_polygon, \
     trax_region_create_rectangle, trax_region_get_polygon_count, trax_region_get_polygon_point, \
     trax_region_get_special, trax_region_get_type, trax_region_get_rectangle, \
-    trax_region_set_polygon_point, trax_region_create_special
-from .wrapper import RegionWrapper
-from trax import TraxException
+    trax_region_set_polygon_point, trax_region_create_special, trax_region_create_mask, \
+    trax_region_get_mask_header, trax_region_get_mask_row, trax_region_write_mask_row
+from trax import TraxException, RegionWrapper
 
 if (sys.version_info > (3, 0)):
     xrange = range
@@ -24,6 +25,7 @@ class Region(object):
     SPECIAL = "special"
     RECTANGLE = "rectangle"
     POLYGON = "polygon"
+    MASK = "mask"
 
     def __init__(self, internal):
         self._ref = RegionWrapper(internal)
@@ -41,6 +43,8 @@ class Region(object):
             return Rectangle(internal)     
         elif type == 4:
             return Polygon(internal) 
+        elif type == 8:
+            return Mask(internal) 
 
     @abstractmethod
     def type(self):
@@ -54,6 +58,8 @@ class Region(object):
             return 2      
         elif strcode == Region.POLYGON:
             return 4
+        elif strcode == Region.MASK:
+            return 8
 
         raise IndexError("Illegal region format name {}".format(strcode))
 
@@ -203,3 +209,83 @@ class Polygon(Region):
 
     def __iter__(self):
         return PolygonIterator(self)
+
+
+class Mask(Region):
+    """Mask region
+    
+    Raises:
+        IndexError: [description]
+    
+    Returns:
+        [type] -- [description]
+    """
+    @staticmethod
+    def create(source, x = 0, y = 0):
+        """Creates a new mask region object
+        
+        Arguments:
+            source {np.ndarray} -- source mask as NumPy array
+ 
+        Keyword Arguments:
+            x {int} -- horizontal offset (default: {0})
+            y {int} -- vertical offset (default: {0})
+        
+        Returns:
+            Mask -- reference to a new mask region
+        """
+        assert(len(source.shape) == 1 and source.dtype == np.uint8)
+
+        mask = cast(trax_region_create_mask(x, y, source.shape[1], source.shape[0]), c_void_p)
+
+        data = trax_region_write_mask_row(mask, 0)
+        memmove(data, source.ctypes.data, source.nbytes)
+
+        return Mask(mask)
+
+    def __str__(self):
+        width = c_int()
+        height = c_int()
+        x = c_int()
+        y = c_int()
+        trax_region_get_mask_header(self.reference.reference(), byref(x), byref(y), byref(width), byref(height))
+        return 'Mask of size {}x{} with offset x={}, y={}'.format(width.value, height.value, x.value, y.value)
+
+    def type(self):
+        return Region.MASK
+
+    def size(self):
+        width = c_int()
+        height = c_int()
+        trax_region_get_mask_header(self.reference.reference(), None, None, byref(width), byref(height))
+        return width.value, height.value
+
+    def offset(self):
+        x = c_int()
+        y = c_int()
+        trax_region_get_mask_header(self.reference.reference(), byref(x), byref(y), None, None)
+        return x.value, y.value
+
+    def get(self, i):
+        if i < 0 or i >= self.size():
+            raise IndexError("Index {} is invalid".format(i))
+        x = c_float()
+        y = c_float()
+        trax_region_get_polygon_point(self.reference.reference(), i, byref(x), byref(y))
+        return x.value, y.value
+
+    def array(self, normalize=False):
+        width = c_int()
+        height = c_int()
+        x = c_int()
+        y = c_int()
+        trax_region_get_mask_header(self.reference.reference(), byref(x), byref(y), byref(width), byref(height))
+        mat = np.empty((height.value, width.value), dtype=np.uint8)
+
+        data = trax_region_get_mask_row(self.reference.reference(), 0)
+        memmove(mat.ctypes.data, data, mat.nbytes)
+
+        if not normalize:
+            return mat
+
+        return np.pad(mat, pad_width=[(y.value, 0), (x.value, 0)], mode='constant')

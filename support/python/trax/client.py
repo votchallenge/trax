@@ -9,14 +9,13 @@ import collections
 
 from ctypes import byref, cast, py_object
 
-from . import TraxException, TraxStatus, Properties
+from . import TraxException, TraxStatus, Properties, HandleWrapper, ImageListWrapper
 from .internal import \
     trax_image_list_set, trax_client_initialize, \
     trax_client_wait, trax_region_p, trax_properties_p, \
     trax_image_create_path, trax_client_frame, \
     trax_client_setup_file, trax_client_setup_socket, \
     trax_image_list_create, trax_logger_setup, trax_logger
-from .wrapper import HandleWrapper, ImageListWrapper
 from .image import ImageChannel, Image
 from .region import Region
 

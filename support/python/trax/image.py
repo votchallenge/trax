@@ -17,8 +17,7 @@ from .internal import \
         trax_image_create_url, trax_image_get_memory_row, \
         trax_image_write_memory_row, trax_image_get_buffer, \
         trax_image_create_buffer
-from .wrapper import ImageWrapper
-from trax import TraxException
+from trax import TraxException, ImageWrapper
 
 class ImageChannel(object):
     COLOR = "color"

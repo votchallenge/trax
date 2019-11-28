@@ -303,6 +303,10 @@ trax_region_create_polygon = _libraries['trax'].trax_region_create_polygon
 trax_region_create_polygon.restype = ctypes.c_void_p
 trax_region_create_polygon.argtypes = [ctypes.c_int32]
 
+trax_region_create_mask = _libraries['trax'].trax_region_create_mask
+trax_region_create_mask.restype = ctypes.c_void_p
+trax_region_create_mask.argtypes = [ctypes.c_int32, ctypes.c_int32, ctypes.c_int32, ctypes.c_int32]
+
 trax_region_set_polygon_point = _libraries['trax'].trax_region_set_polygon_point
 trax_region_set_polygon_point.restype = None
 trax_region_set_polygon_point.argtypes = [ctypes.c_void_p, ctypes.c_int32, ctypes.c_float, ctypes.c_float]
@@ -314,6 +318,18 @@ trax_region_get_polygon_point.argtypes = [ctypes.c_void_p, ctypes.c_int32, POINT
 trax_region_get_polygon_count = _libraries['trax'].trax_region_get_polygon_count
 trax_region_get_polygon_count.restype = ctypes.c_int32
 trax_region_get_polygon_count.argtypes = [ctypes.c_void_p]
+
+trax_region_get_mask_header = _libraries['trax'].trax_region_get_mask_header
+trax_region_get_mask_header.restype = None
+trax_region_get_mask_header.argtypes = [ctypes.c_void_p, POINTER_T(ctypes.c_int32), POINTER_T(ctypes.c_int32), POINTER_T(ctypes.c_int32), POINTER_T(ctypes.c_int32)]
+
+trax_region_write_mask_row = _libraries['trax'].trax_region_write_mask_row
+trax_region_write_mask_row.restype = POINTER_T(ctypes.c_char)
+trax_region_write_mask_row.argtypes = [ctypes.c_void_p, ctypes.c_int32]
+
+trax_region_get_mask_row = _libraries['trax'].trax_region_get_mask_row
+trax_region_get_mask_row.restype = POINTER_T(ctypes.c_char)
+trax_region_get_mask_row.argtypes = [ctypes.c_void_p, ctypes.c_int32]
 
 trax_region_bounds = _libraries['trax'].trax_region_bounds
 trax_region_bounds.restype = trax_bounds
@@ -445,4 +461,6 @@ __all__ = \
     'trax_set_parameter', 'trax_terminate', 'trax_version',
     'trax_image_p', 'trax_region_p', 'trax_properties_p',
     'trax_image_list_p', 'trax_image_list_get', 'trax_image_list_create',
-    'trax_image_list_set', 'trax_image_list_release', 'trax_image_list_clear']
+    'trax_image_list_set', 'trax_image_list_release', 'trax_image_list_clear',
+    'trax_region_create_mask', 'trax_region_get_mask_header',
+    'trax_region_write_mask_row', 'trax_region_get_mask_row']

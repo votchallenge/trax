@@ -9,7 +9,7 @@ import collections
 
 from ctypes import byref, cast, py_object
 
-from . import TraxException, TraxStatus, Properties
+from . import TraxException, TraxStatus, Properties, HandleWrapper
 from .internal import \
         trax_metadata_create, trax_server_setup, \
         trax_logger_setup, trax_image_list_p, \
@@ -17,7 +17,6 @@ from .internal import \
         trax_server_wait, trax_server_reply, \
         trax_image_list_release, trax_region_p, \
         trax_properties_p
-from .wrapper import HandleWrapper
 from .image import ImageChannel, Image
 from .region import Region
 
