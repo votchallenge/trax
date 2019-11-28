@@ -9,6 +9,7 @@
 
 #include "region.h"
 #include "buffer.h"
+#include "hull.h"
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER)
 #ifndef isnan
@@ -73,52 +74,52 @@ void free_polygon(region_polygon* polygon) {
 
 }
 
-region_polygon* allocate_polygon(int count) {
+region_polygon allocate_polygon(int count) {
 
-	region_polygon* polygon = (region_polygon*) malloc(sizeof(region_polygon));
+	region_polygon polygon;
 
-	polygon->count = count;
+	polygon.count = count;
 
-	polygon->x = (float*) malloc(sizeof(float) * count);
-	polygon->y = (float*) malloc(sizeof(float) * count);
+	polygon.x = (float*) malloc(sizeof(float) * count);
+	polygon.y = (float*) malloc(sizeof(float) * count);
 
-	memset(polygon->x, 0, sizeof(float) * count);
-	memset(polygon->y, 0, sizeof(float) * count);
+	memset(polygon.x, 0, sizeof(float) * count);
+	memset(polygon.y, 0, sizeof(float) * count);
 
 	return polygon;
 }
 
-region_polygon* clone_polygon(const region_polygon* polygon) {
+region_polygon clone_polygon(const region_polygon polygon) {
 
-	region_polygon* clone = allocate_polygon(polygon->count);
+	region_polygon clone = allocate_polygon(polygon.count);
 
-	memcpy(clone->x, polygon->x, sizeof(float) * polygon->count);
-	memcpy(clone->y, polygon->y, sizeof(float) * polygon->count);
+	memcpy(clone.x, polygon.x, sizeof(float) * polygon.count);
+	memcpy(clone.y, polygon.y, sizeof(float) * polygon.count);
 
 	return clone;
 }
 
-region_polygon* offset_polygon(const region_polygon* polygon, float x, float y) {
+region_polygon offset_polygon(const region_polygon polygon, float x, float y) {
 
 	int i;
-	region_polygon* clone = clone_polygon(polygon);
+	region_polygon clone = clone_polygon(polygon);
 
-	for (i = 0; i < clone->count; i++) {
-		clone->x[i] += x;
-		clone->y[i] += y;
+	for (i = 0; i < clone.count; i++) {
+		clone.x[i] += x;
+		clone.y[i] += y;
 	}
 
 	return clone;
 }
 
-region_polygon* round_polygon(const region_polygon* polygon) {
+region_polygon round_polygon(const region_polygon polygon) {
 
 	int i;
-	region_polygon* clone = clone_polygon(polygon);
+	region_polygon clone = clone_polygon(polygon);
 
-	for (i = 0; i < clone->count; i++) {
-		clone->x[i] = round(clone->x[i]);
-		clone->y[i] = round(clone->y[i]);
+	for (i = 0; i < clone.count; i++) {
+		clone.x[i] = round(clone.x[i]);
+		clone.y[i] = round(clone.y[i]);
 	}
 
 	return clone;
@@ -631,14 +632,55 @@ region_container* region_convert(const region_container* region, region_type typ
 			}
 		case MASK: {
 
-			// TODO
-			free(reg); reg = NULL;
+			char* data = region->data.mask.data;
+			int width = region->data.mask.width;
+			int height = region->data.mask.height;
+			int i = 0, j, n = 0;
+			hull_point* points;
 
+			while (i < width * height) {if (data[i++]) n++; }
+
+			if (!n) {
+				free(reg); reg = NULL;
+				break;
+			}
+
+			points = (hull_point*) malloc(n * sizeof(hull_point));
+
+			n = 0;
+
+			for (i = 0; i < height; i++) {
+				for (j = 0; j < width; j++) {
+					if (data[j * width + i]) {
+						points[n].x = j;
+						points[n].y = i;
+						n++;
+					}
+				}
+			}
+
+			hull_node* nodes = convex_hull(n, points);
+
+			n = 0;
+			hull_node* current = nodes;
+
+			while (current->next) {n++; current = current->next; }
+
+			reg->data.polygon = allocate_polygon(n);
+
+			current = nodes;
+			for (i = 0; i < n; i++) {
+				reg->data.polygon.x[i] = current->data.x + region->data.mask.x;
+				reg->data.polygon.y[i] = current->data.y + region->data.mask.y;
+				current = current->next;
+			}
+
+			free_node(nodes);
 			break;
 		}
 		case POLYGON: {
 
-			reg->data.polygon = *(clone_polygon(&(region->data.polygon)));
+			reg->data.polygon = clone_polygon(region->data.polygon);
 
 			break;
 			}
@@ -860,13 +902,13 @@ region_bounds region_compute_bounds(const region_container* region) {
 
 }
 
-int rasterize_polygon(const region_polygon* polygon_input, char* mask, int width, int height) {
+int rasterize_polygon(const region_polygon polygon_input, char* mask, int width, int height) {
 
 	int nodes, pixelY, i, j, swap;
 	int sum = 0;
-	region_polygon* polygon = (region_polygon*) polygon_input;
+	region_polygon polygon = polygon_input;
 
-	int* nodeX = (int*) malloc(sizeof(int) * polygon->count);
+	int* nodeX = (int*) malloc(sizeof(int) * polygon.count);
 
 	if (mask) memset(mask, 0, width * height * sizeof(char));
 
@@ -877,13 +919,13 @@ int rasterize_polygon(const region_polygon* polygon_input, char* mask, int width
 
 			/*  Build a list of nodes. */
 			nodes = 0;
-			j = polygon->count - 1;
+			j = polygon.count - 1;
 
-			for (i = 0; i < polygon->count; i++) {
-				if (((polygon->y[i] < (double) pixelY) && (polygon->y[j] >= (double) pixelY)) ||
-				        ((polygon->y[j] < (double) pixelY) && (polygon->y[i] >= (double) pixelY))) {
-					nodeX[nodes++] = (int) (polygon->x[i] + (pixelY - polygon->y[i]) /
-					                        (polygon->y[j] - polygon->y[i]) * (polygon->x[j] - polygon->x[i]));
+			for (i = 0; i < polygon.count; i++) {
+				if (((polygon.y[i] < (double) pixelY) && (polygon.y[j] >= (double) pixelY)) ||
+				        ((polygon.y[j] < (double) pixelY) && (polygon.y[i] >= (double) pixelY))) {
+					nodeX[nodes++] = (int) (polygon.x[i] + (pixelY - polygon.y[i]) /
+					                        (polygon.y[j] - polygon.y[i]) * (polygon.x[j] - polygon.x[i]));
 				}
 				j = i;
 			}
@@ -924,20 +966,20 @@ int rasterize_polygon(const region_polygon* polygon_input, char* mask, int width
 
 			/*  Build a list of nodes. */
 			nodes = 0;
-			j = polygon->count - 1;
+			j = polygon.count - 1;
 
-			for (i = 0; i < polygon->count; i++) {
-				if ((((int)polygon->y[i] <= pixelY) && ((int)polygon->y[j] > pixelY)) ||
-				        (((int)polygon->y[j] <= pixelY) && ((int)polygon->y[i] > pixelY)) ||
-				        (((int)polygon->y[i] < pixelY) && ((int)polygon->y[j] >= pixelY)) ||
-				        (((int)polygon->y[j] < pixelY) && ((int)polygon->y[i] >= pixelY)) ||
-				        (((int)polygon->y[i] == (int)polygon->y[j]) && ((int)polygon->y[i] == pixelY))) {
-					double r = (polygon->y[j] - polygon->y[i]);
-					double k = (polygon->x[j] - polygon->x[i]);
+			for (i = 0; i < polygon.count; i++) {
+				if ((((int)polygon.y[i] <= pixelY) && ((int)polygon.y[j] > pixelY)) ||
+				        (((int)polygon.y[j] <= pixelY) && ((int)polygon.y[i] > pixelY)) ||
+				        (((int)polygon.y[i] < pixelY) && ((int)polygon.y[j] >= pixelY)) ||
+				        (((int)polygon.y[j] < pixelY) && ((int)polygon.y[i] >= pixelY)) ||
+				        (((int)polygon.y[i] == (int)polygon.y[j]) && ((int)polygon.y[i] == pixelY))) {
+					double r = (polygon.y[j] - polygon.y[i]);
+					double k = (polygon.x[j] - polygon.x[i]);
 					if (r != 0) {
-						nodeX[nodes++] = (int) ((double) polygon->x[i] + (double) (pixelY - polygon->y[i]) / r * k);
+						nodeX[nodes++] = (int) ((double) polygon.x[i] + (double) (pixelY - polygon.y[i]) / r * k);
 					} else {
-						nodeX[nodes++] = (double) polygon->x[i];
+						nodeX[nodes++] = (double) polygon.x[i];
 					}
 				}
 				j = i;
@@ -979,7 +1021,7 @@ int rasterize_polygon(const region_polygon* polygon_input, char* mask, int width
 			}
 		}
 
-		free_polygon(polygon);
+		free_polygon(&polygon);
 
 	}
 
@@ -1001,7 +1043,7 @@ float compute_polygon_overlap(const region_polygon* p1, const region_polygon* p2
 	double a1, a2;
 	float x, y;
 	int width, height;
-	region_polygon *op1, *op2;
+	region_polygon op1, op2;
 	region_bounds b1, b2;
 
 	if (__flags & REGION_LEGACY_RASTERIZATION) {
@@ -1040,8 +1082,8 @@ float compute_polygon_overlap(const region_polygon* p1, const region_polygon* p2
 	if (bounds_overlap(b1, b2) == 0) {
 
 		if (only1 || only2) {
-			vol_1 = rasterize_polygon(p1, NULL, b1.right - b1.left + 1, b1.bottom - b1.top + 1);
-			vol_2 = rasterize_polygon(p2, NULL, b2.right - b2.left + 1, b2.bottom - b2.top + 1);
+			vol_1 = rasterize_polygon(*p1, NULL, b1.right - b1.left + 1, b1.bottom - b1.top + 1);
+			vol_2 = rasterize_polygon(*p2, NULL, b2.right - b2.left + 1, b2.bottom - b2.top + 1);
 
 			if (only1)
 				(*only1) = (float) vol_1 / (float) (vol_1 + vol_2);
@@ -1057,8 +1099,8 @@ float compute_polygon_overlap(const region_polygon* p1, const region_polygon* p2
 	mask1 = (char*) malloc(sizeof(char) * width * height);
 	mask2 = (char*) malloc(sizeof(char) * width * height);
 
-	op1 = offset_polygon(p1, -x, -y);
-	op2 = offset_polygon(p2, -x, -y);
+	op1 = offset_polygon(*p1, -x, -y);
+	op2 = offset_polygon(*p2, -x, -y);
 
 	rasterize_polygon(op1, mask1, width, height);
 	rasterize_polygon(op2, mask2, width, height);
@@ -1071,8 +1113,8 @@ float compute_polygon_overlap(const region_polygon* p1, const region_polygon* p2
 		else if (mask2[i]) mask_2++;
 	}
 
-	free_polygon(op1);
-	free_polygon(op2);
+	free_polygon(&op1);
+	free_polygon(&op2);
 
 	free(mask1);
 	free(mask2);
@@ -1238,19 +1280,19 @@ void region_get_mask_offset(const region_container* r, char* mask, int x, int y,
 		return;
 	} else {
 
-		region_polygon *p;
+		region_polygon p;
 
 		if (r->type == RECTANGLE) {
 			region_container* t = region_convert(r, POLYGON);
-			p = offset_polygon(&(t->data.polygon), -x, -y);
+			p = offset_polygon(t->data.polygon, -x, -y);
 			region_release(&t);
 		} else {
-			p = offset_polygon(&(r->data.polygon), -x, -y);
+			p = offset_polygon(r->data.polygon, -x, -y);
 		}
 
 		rasterize_polygon(p, mask, width, height);
 
-		free_polygon(p);
+		free_polygon(&p);
 
 	}
 
