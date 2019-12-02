@@ -34,7 +34,7 @@
  *
  */
 
-#define _BSD_SOURCE
+//#define _BSD_SOURCE
 
 #include <stdio.h>
 #include <ctype.h>
@@ -596,12 +596,12 @@ int main( int argc, char** argv) {
             print_debug("Groundtruth loaded from file %s.\n", groundtruth_file.c_str());
 
             if (images.size() < groundtruth.size()) {
-                print_debug("Warning: Image sequence shorter that groundtruth. Truncating.");
+                print_debug("Warning: Image sequence shorter that groundtruth. Truncating.\n");
                 groundtruth = vector<Region>(groundtruth.begin(), groundtruth.begin() + images.size());
             }
 
             if (images.size() > groundtruth.size()) {
-                print_debug("Warning: Image sequence longer that groundtruth. Truncating.");
+                print_debug("Warning: Image sequence longer that groundtruth. Truncating.\n");
                 images = vector<vector<string> >(images.begin(), images.begin() + groundtruth.size());
             }
 

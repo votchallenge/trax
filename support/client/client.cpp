@@ -549,7 +549,7 @@ public:
 
 			run = state->watchdog_active;
 
-			bool terminate = false;
+			bool terminate = !state->process_running();;
 
 			for (vector<WatchdogCallback*>::iterator c = state->callbacks.begin(); c != state->callbacks.end(); c++) {
 				terminate |= (*c)();
@@ -867,7 +867,6 @@ int load_trajectory(const std::string& file, std::vector<Region>& trajectory) {
 
 		Region region;
 		input >> region;
-
 		if (!input.good()) break;
 
 		trajectory.push_back(region);

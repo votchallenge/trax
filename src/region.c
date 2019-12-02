@@ -1175,13 +1175,13 @@ region_overlap region_compute_overlap(const region_container* ra, const region_c
 	if (a1 / a2 < 1e-10 || a2 / a1 < 1e-10 || width < 1 || height < 1) 
 		return overlap;
 	
+	ta = region_create_mask(b1.left, b1.top, b1.right - b1.left + 1, b1.bottom - b1.top + 1);
+	tb = region_create_mask(b2.left, b2.top, b2.right - b2.left + 1, b2.bottom - b2.top + 1);
 
 	if (bounds_overlap(b1, b2) == 0) {
+
 		int i;
-
-		ta = region_create_mask(b1.left, b1.top, b1.right - b1.left + 1, b1.bottom - b1.top + 1);
-		tb = region_create_mask(b2.left, b2.top, b2.right - b2.left + 1, b2.bottom - b2.top + 1);
-
+		
 		region_get_mask_offset(ra, ta->data.mask.data, b1.left, b1.top, b1.right - b1.left + 1, b1.bottom - b1.top + 1);
 		region_get_mask_offset(rb, tb->data.mask.data, b2.left, b2.top, b2.right - b2.left + 1, b2.bottom - b2.top + 1);
 

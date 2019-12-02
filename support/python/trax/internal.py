@@ -6,9 +6,6 @@
 #
 import ctypes, sys
 
-# Generated using https://github.com/trolldbois/ctypeslib
-# clang2py -l trax --debug ../include/trax.h
-
 # if local wordsize is same as target, keep ctypes pointer function.
 if ctypes.sizeof(ctypes.c_void_p) == 8:
     POINTER_T = ctypes.POINTER
@@ -62,7 +59,7 @@ libname = find_library("trax")
 
 _libraries = {}
 if sys.platform.startswith('linux'):
-    _libraries['trax'] = ctypes.CDLL('/usr/local/lib/libtrax.so')
+    _libraries['trax'] = ctypes.CDLL('libtrax.so')
 elif sys.platform in ['darwin']:
     _libraries['trax'] = ctypes.CDLL('libtrax.dynlib')
 elif sys.platform in ['win32']:

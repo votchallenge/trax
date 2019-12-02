@@ -119,13 +119,13 @@ class FileImage(Image):
 
     def __str__(self):
         """ Get description """
-        return "File resource at '{}'".format(trax_image_get_path(self.reference.reference()))
+        return "File resource at '{}'".format(trax_image_get_path(self.reference))
 
     def type(self):
         return Image.PATH
 
     def path(self):
-        return trax_image_get_path(self.reference.reference()).decode('utf8')
+        return trax_image_get_path(self.reference).decode('utf8')
 
 class URLImage(Image):
     """ 
@@ -138,13 +138,13 @@ class URLImage(Image):
         
     def __str__(self):
         """ Get description """
-        return "URL resource at '{}'".format(trax_image_get_url(self.reference.reference()))
+        return "URL resource at '{}'".format(trax_image_get_url(self.reference))
 
     def type(self):
         return Image.URL
 
     def url(self):
-        return trax_image_get_url(self.reference.reference()).decode('utf8')
+        return trax_image_get_url(self.reference).decode('utf8')
 
 try:
     import numpy as np
@@ -190,7 +190,7 @@ try:
             width = c_int()
             height = c_int()
             format = c_int()
-            trax_image_get_memory_header(self.reference.reference(), byref(width), byref(height), byref(format))
+            trax_image_get_memory_header(self.reference, byref(width), byref(height), byref(format))
 
             return "Raw image of size {}x{}, format {}".format(width.value, height.value, _image_memory_map_string[format.value])
 
@@ -201,10 +201,10 @@ try:
             width = c_int()
             height = c_int()
             format = c_int()
-            trax_image_get_memory_header(self.reference.reference(), byref(width), byref(height), byref(format))
+            trax_image_get_memory_header(self.reference, byref(width), byref(height), byref(format))
             mat = np.empty((height.value, width.value, _image_memory_map_ch[format.value]), dtype=_image_memory_map_dtype[format.value])
 
-            data = trax_image_get_memory_row(self.reference.reference(), 0)
+            data = trax_image_get_memory_row(self.reference, 0)
             memmove(mat.ctypes.data, data, mat.nbytes)
 
             return mat
@@ -216,7 +216,7 @@ except ImportError:
             width = c_int()
             height = c_int()
             format = c_int()
-            trax_image_get_memory_header(self.reference.reference(), byref(width), byref(height), byref(format))
+            trax_image_get_memory_header(self.reference, byref(width), byref(height), byref(format))
 
             return "Raw image of size {}x{}, format {}".format(width.value, height.value, _image_memory_map_string[format.value])
 
@@ -241,7 +241,7 @@ class BufferImage(Image):
         """ Get description """
         length = c_int()
         format = c_int()
-        trax_image_get_buffer(self.reference.reference(), byref(length), byref(format))
+        trax_image_get_buffer(self.reference, byref(length), byref(format))
         return "Encoded image (format: {}, size: {})".format(_image_buffer_map_string[format.value], length.value)
 
     def type(self):
@@ -250,5 +250,5 @@ class BufferImage(Image):
     def buffer(self):
         length = c_int()
         format = c_int()
-        data = trax_image_get_buffer(self.reference.reference(), byref(length), byref(format))
+        data = trax_image_get_buffer(self.reference, byref(length), byref(format))
         return string_at(data, length.value)
