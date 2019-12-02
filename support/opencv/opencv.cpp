@@ -123,6 +123,32 @@ Region points_to_region(const std::vector<cv::Point2f> points) {
 
 }
 
+cv::Mat region_to_mat(const Region& region) {
+
+    int height, width, x, y;
+    region.get_mask_header(&x, &y, &width, &height);
+
+    cv::Mat result(height + y, width + x, CV_8UC1);
+
+    for (int i = 0; i < height; i++) {
+            const char* data = region.get_mask_row(i);
+            memcpy(&(result.data[(i + y) * width + x]), data, width);
+
+    }
+    return result;
+
+}
+
+Region mat_to_region(const cv::Mat& mat) {
+
+    CV_Assert(mat.type() == CV_8UC1);
+
+    Region r = Region::create_mask(0, 0, mat.cols, mat.rows);
+    memcpy(r.write_mask_row(0), mat.data, mat.cols * mat.rows);
+
+    return r;
+
+}
 
 void draw_region(cv::Mat& canvas, const Region& region, cv::Scalar color, int width) {
 
@@ -150,6 +176,21 @@ void draw_region(cv::Mat& canvas, const Region& region, cv::Scalar color, int wi
                 cv::fillPoly(canvas, &ppoints, &npoints, 1, color);
             else
                 cv::polylines(canvas, &ppoints, &npoints, 1, true, color, width);
+
+            break;
+        }
+        case TRAX_REGION_MASK: {
+
+            cv::Mat mask = region_to_mat(region);
+
+            int width = MIN(canvas.cols, mask.cols);
+            int height = MIN(canvas.rows, mask.rows);
+
+            cv::Mat stencil = cv::Mat::zeros(cv::Size(height, width), CV_8UC3);
+
+            stencil(cv::Range(0, height), cv::Range(0, width)).setTo(color, mask);
+
+            canvas = canvas * (1 - stencil) + stencil;
 
             break;
         }
