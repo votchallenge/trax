@@ -9,6 +9,7 @@ set_tests_properties(test_native_static_default PROPERTIES TIMEOUT 10)
 IF (PYTHON_EXECUTABLE)
 ADD_TEST(NAME test_python_static_default COMMAND traxtest -d -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/python_static.py WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set_tests_properties(test_python_static_default PROPERTIES TIMEOUT 10)
+set_tests_properties(test_python_static_default PROPERTIES ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR};PYTHONPATH=${PYTHONPATH}:${CMAKE_BINARY_DIR}/python/")
 ENDIF()
 
 IF (OCTAVE)

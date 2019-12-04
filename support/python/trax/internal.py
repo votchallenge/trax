@@ -4,7 +4,7 @@
 # POINTER_SIZE is: 8
 # LONGDOUBLE_SIZE is: 16
 #
-import ctypes, sys
+import ctypes, sys, os
 
 # if local wordsize is same as target, keep ctypes pointer function.
 if ctypes.sizeof(ctypes.c_void_p) == 8:
@@ -45,6 +45,13 @@ else:
         ctypes._pointer_t_type_cache[clsname] = _class
         return _class
 
+def fptr_from_param(cls, obj):
+    if obj is None:
+        return None # return a NULL pointer
+    from ctypes import _CFuncPtr
+    return _CFuncPtr.from_param(obj)
+
+
 c_int128 = ctypes.c_ubyte*16
 c_uint128 = c_int128
 void = None
@@ -55,17 +62,24 @@ else:
 
 from ctypes.util import find_library
 
-libname = find_library("trax")
 
 _libraries = {}
 if sys.platform.startswith('linux'):
-    _libraries['trax'] = ctypes.CDLL('libtrax.so')
+    trax_library = 'libtrax.so'
 elif sys.platform in ['darwin']:
-    _libraries['trax'] = ctypes.CDLL('libtrax.dynlib')
+    trax_library = 'libtrax.dynlib'
 elif sys.platform in ['win32']:
-    _libraries['trax'] = ctypes.CDLL('trax.dll')
+    trax_library = 'trax.dll'
 else:
     raise RuntimeError('Unsupported platform')
+
+# Support internal trax library in case of Wheel packages
+trax_library_internal = os.path.join(os.path.dirname(__file__), trax_library)
+
+if os.path.isfile(trax_library_internal):
+    trax_library = trax_library_internal
+
+_libraries['trax'] = ctypes.CDLL(trax_library)
 
 class struct_trax_image(ctypes.Structure):
     _pack_ = True # source:False
@@ -94,8 +108,12 @@ class struct_trax_bounds(ctypes.Structure):
      ]
 
 trax_bounds = struct_trax_bounds
-trax_logger = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_char), ctypes.c_int32, ctypes.c_void_p)
+trax_logger = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_int32, ctypes.c_void_p)
 trax_enumerator = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p)
+
+trax_logger.from_param = classmethod(fptr_from_param)
+trax_enumerator.from_param = classmethod(fptr_from_param)
+
 class struct_trax_logging(ctypes.Structure):
     pass
 
@@ -115,9 +133,9 @@ class struct_trax_metadata(ctypes.Structure):
     ('format_image', ctypes.c_int32),
     ('channels', ctypes.c_int32),
     ('PADDING_0', ctypes.c_ubyte * 4),
-    ('tracker_name', POINTER_T(ctypes.c_char)),
-    ('tracker_description', POINTER_T(ctypes.c_char)),
-    ('tracker_family', POINTER_T(ctypes.c_char)),
+    ('tracker_name', ctypes.c_char_p),
+    ('tracker_description', ctypes.c_char_p),
+    ('tracker_family', ctypes.c_char_p),
      ]
 
 trax_metadata = struct_trax_metadata
