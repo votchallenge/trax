@@ -26,7 +26,7 @@ try:
       with open(os.path.join("..", os.path.join("..", "VERSION")), "r") as fp:
             version = fp.readline().strip()
 except IOError:
-      version = "unknown"
+      version = os.getenv("TRAX_VERSION", "unknown")
 
 varargs = dict()
 
@@ -39,8 +39,6 @@ elif sys.platform in ['win32']:
 
 if os.path.isfile(os.path.join("trax", trax_library)):
       varargs["package_data"] = {"trax" : [trax_library]}
-      #varargs["distclass"] = BinaryDistribution
-      #varargs["ext_modules"] = []
       varargs["cmdclass"] = {'bdist_wheel': bdist_wheel}
 
 setup(name='trax',
