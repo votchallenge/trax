@@ -51,6 +51,19 @@ class Region(object):
         pass
 
     @staticmethod
+    def decode_list(intcode):
+        decoded = []
+        if intcode & 1:
+            decoded.append(Region.SPECIAL)
+        elif intcode & 2:
+            decoded.append(Region.RECTANGLE)
+        elif intcode & 4:
+            decoded.append(Region.POLYGON)
+        elif intcode & 8:
+            decoded.append(Region.MASK)
+        return decoded
+
+    @staticmethod
     def encode(strcode):
         if strcode == Region.SPECIAL:
             return 1

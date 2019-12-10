@@ -35,6 +35,17 @@ class ImageChannel(object):
         raise IndexError("Illegal image channel identifier {}".format(intcode))
 
     @staticmethod
+    def decode_list(intcode):
+        decoded = []
+        if intcode & 1:
+            decoded.append(ImageChannel.COLOR)
+        elif intcode & 2:
+            decoded.append(ImageChannel.DEPTH)
+        elif intcode & 4:
+            decoded.append(ImageChannel.IR)
+        return decoded
+
+    @staticmethod
     def encode(strcode):
         if strcode == ImageChannel.COLOR:
             return 1
@@ -68,6 +79,19 @@ class Image(object):
     @property
     def reference(self):
         return self._ref.reference
+
+    @staticmethod
+    def decode_list(intcode):
+        decoded = []
+        if intcode & 1:
+            decoded.append(Image.PATH)
+        elif intcode & 2:
+            decoded.append(Image.URL)
+        elif intcode & 4:
+            decoded.append(Image.MEMORY)
+        elif intcode & 8:
+            decoded.append(Image.BUFFER)
+        return decoded
 
     @staticmethod
     def wrap(internal):

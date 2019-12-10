@@ -37,6 +37,8 @@ def wrap_images(images):
     return tlist
 
 def console_logger(buffer, length, object):
+    if not buffer:
+        return
     print(buffer[:length].decode("utf-8"), end = '')
 
 class Client(object):
@@ -70,6 +72,21 @@ class Client(object):
             raise TraxException("Unable to connect to tracker")
 
         self._handle = HandleWrapper(handle)
+
+        metadata = self._handle.reference.contents.metadata
+
+        self._format_region = Region.decode_list(metadata.contents.format_region)
+        self._format_image = Image.decode_list(metadata.contents.format_image)
+        self._channels = ImageChannel.decode_list(metadata.contents.channels)
+        
+        self._tracker_name = metadata.contents.tracker_name.decode("utf-8")
+        self._tracker_family = metadata.contents.tracker_family.decode("utf-8")
+        self._tracker_description = metadata.contents.tracker_description.decode("utf-8")
+
+    @property
+    def channels(self):
+        return self._channels
+
 
     def initialize(self, images, region, properties):
 
