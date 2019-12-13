@@ -98,13 +98,13 @@ class Special(Region):
         return Special(cast(trax_region_create_special(code), c_void_p))
 
     def __str__(self):
-        return 'Special region (code {})'.format(trax_region_get_special(self.reference.reference()))
+        return 'Special region (code {})'.format(trax_region_get_special(self.reference))
 
     def type(self):
         return Region.SPECIAL
 
     def code(self):
-        return trax_region_get_special(self.reference.reference())
+        return trax_region_get_special(self.reference)
 
 class Rectangle(Region):
     """
@@ -132,7 +132,7 @@ class Rectangle(Region):
         y = c_float()
         width = c_float()
         height = c_float()
-        trax_region_get_rectangle(self.reference.reference(), byref(x), byref(y), byref(width), byref(height))
+        trax_region_get_rectangle(self.reference, byref(x), byref(y), byref(width), byref(height))
         return 'Rectangle {},{} {}x{}'.format(x.value, y.value, width.value, height.value)
 
     def type(self):
@@ -143,7 +143,7 @@ class Rectangle(Region):
         y = c_float()
         width = c_float()
         height = c_float()
-        trax_region_get_rectangle(self.reference.reference(), byref(x), byref(y), byref(width), byref(height))
+        trax_region_get_rectangle(self.reference, byref(x), byref(y), byref(width), byref(height))
         return x.value, y.value, width.value, height.value
 
 if (sys.version_info > (3, 0)):
@@ -207,7 +207,7 @@ class Polygon(Region):
         return Region.POLYGON
 
     def size(self):
-        return trax_region_get_polygon_count(self.reference.reference())
+        return trax_region_get_polygon_count(self.reference)
 
     def __getitem__(self, i):
         return self.get(i)
@@ -217,7 +217,7 @@ class Polygon(Region):
             raise IndexError("Index {} is invalid".format(i))
         x = c_float()
         y = c_float()
-        trax_region_get_polygon_point(self.reference.reference(), i, byref(x), byref(y))
+        trax_region_get_polygon_point(self.reference, i, byref(x), byref(y))
         return x.value, y.value
 
     def __iter__(self):
@@ -261,7 +261,7 @@ class Mask(Region):
         height = c_int()
         x = c_int()
         y = c_int()
-        trax_region_get_mask_header(self.reference.reference(), byref(x), byref(y), byref(width), byref(height))
+        trax_region_get_mask_header(self.reference, byref(x), byref(y), byref(width), byref(height))
         return 'Mask of size {}x{} with offset x={}, y={}'.format(width.value, height.value, x.value, y.value)
 
     def type(self):
@@ -270,13 +270,13 @@ class Mask(Region):
     def size(self):
         width = c_int()
         height = c_int()
-        trax_region_get_mask_header(self.reference.reference(), None, None, byref(width), byref(height))
+        trax_region_get_mask_header(self.reference, None, None, byref(width), byref(height))
         return width.value, height.value
 
     def offset(self):
         x = c_int()
         y = c_int()
-        trax_region_get_mask_header(self.reference.reference(), byref(x), byref(y), None, None)
+        trax_region_get_mask_header(self.reference, byref(x), byref(y), None, None)
         return x.value, y.value
 
     def get(self, i):
@@ -284,7 +284,7 @@ class Mask(Region):
             raise IndexError("Index {} is invalid".format(i))
         x = c_float()
         y = c_float()
-        trax_region_get_polygon_point(self.reference.reference(), i, byref(x), byref(y))
+        trax_region_get_polygon_point(self.reference, i, byref(x), byref(y))
         return x.value, y.value
 
     def array(self, normalize=False):
@@ -292,10 +292,10 @@ class Mask(Region):
         height = c_int()
         x = c_int()
         y = c_int()
-        trax_region_get_mask_header(self.reference.reference(), byref(x), byref(y), byref(width), byref(height))
+        trax_region_get_mask_header(self.reference, byref(x), byref(y), byref(width), byref(height))
         mat = np.empty((height.value, width.value), dtype=np.uint8)
 
-        data = trax_region_get_mask_row(self.reference.reference(), 0)
+        data = trax_region_get_mask_row(self.reference, 0)
         memmove(mat.ctypes.data, data, mat.nbytes)
 
         if not normalize:

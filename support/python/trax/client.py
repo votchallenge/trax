@@ -106,6 +106,8 @@ class Client(object):
 
         if status == TraxStatus.ERROR:
             raise TraxException("Exception when waiting for response")
+        if status == TraxStatus.QUIT:
+            raise TraxException("Server terminated the session")
 
         region = Region.wrap(tregion)
         properties = Properties(tproperties)
@@ -129,6 +131,9 @@ class Client(object):
 
         if status == TraxStatus.ERROR:
             raise TraxException("Exception when waiting for response")
+        if status == TraxStatus.QUIT:
+            raise TraxException("Server terminated the session")
+
 
         region = Region.wrap(tregion)
         properties = Properties(tproperties)
