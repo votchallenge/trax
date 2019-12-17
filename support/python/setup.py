@@ -36,7 +36,7 @@ if platform.startswith('linux'):
     trax_library = 'libtrax.so'
 elif platform in ['darwin']:
     trax_library = 'libtrax.dynlib'
-elif platform in ['win32', "win64"]:
+elif platform.startswith('win'):
     trax_library = 'trax.dll'
 
 if os.path.isfile(os.path.join("trax", trax_library)):
