@@ -30,11 +30,13 @@ except IOError:
 
 varargs = dict()
 
-if sys.platform.startswith('linux'):
+platform = os.getenv("TRAX_PYTHON_PLATFORM", sys.platform)
+
+if platform.startswith('linux'):
     trax_library = 'libtrax.so'
-elif sys.platform in ['darwin']:
+elif platform in ['darwin']:
     trax_library = 'libtrax.dynlib'
-elif sys.platform in ['win32']:
+elif platform in ['win32']:
     trax_library = 'trax.dll'
 
 if os.path.isfile(os.path.join("trax", trax_library)):
