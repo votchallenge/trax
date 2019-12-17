@@ -2,8 +2,8 @@
 Bindings for the TraX sever.
 """
 
-import os
-import sys
+import os, sys
+import time
 import logging as log
 import collections
 
@@ -102,7 +102,11 @@ class Client(object):
         tregion = trax_region_p()
         tproperties = trax_properties_p()
 
+        start = time.time()
+
         status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), tproperties))
+
+        elapsed = time.time() - start
 
         if status == TraxStatus.ERROR:
             raise TraxException("Exception when waiting for response")
@@ -112,7 +116,7 @@ class Client(object):
         region = Region.wrap(tregion)
         properties = Properties(tproperties)
 
-        return region, properties
+        return region, properties, elapsed
 
     def frame(self, images, properties = dict()):
 
@@ -127,7 +131,11 @@ class Client(object):
         tregion = trax_region_p()
         tproperties = trax_properties_p()
 
+        start = time.time()
+
         status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), tproperties))
+
+        elapsed = time.time() - start
 
         if status == TraxStatus.ERROR:
             raise TraxException("Exception when waiting for response")
@@ -138,7 +146,7 @@ class Client(object):
         region = Region.wrap(tregion)
         properties = Properties(tproperties)
 
-        return region, properties
+        return region, properties, elapsed
 
     def quit(self):
         """ Sends quit message and end terminates communication. """
