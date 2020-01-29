@@ -9,7 +9,6 @@
 
 #include "region.h"
 #include "buffer.h"
-#include "hull.h"
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(_MSC_VER)
 #ifndef isnan
@@ -632,50 +631,19 @@ region_container* region_convert(const region_container* region, region_type typ
 			}
 		case MASK: {
 
-			char* data = region->data.mask.data;
-			int width = region->data.mask.width;
-			int height = region->data.mask.height;
-			int i = 0, j, n = 0;
-			hull_point* points;
+			region_bounds b = compute_bounds_mask(&(region->data.mask));
+			reg->data.polygon = allocate_polygon(4);
 
-			while (i < width * height) {if (data[i++]) n++; }
+			reg->data.polygon.x[0] = b.left;
+			reg->data.polygon.x[1] = b.right;
+			reg->data.polygon.x[2] = b.right;
+			reg->data.polygon.x[3] = b.left;
 
-			if (!n) {
-				free(reg); reg = NULL;
-				break;
-			}
+			reg->data.polygon.y[0] = b.top;
+			reg->data.polygon.y[1] = b.top;
+			reg->data.polygon.y[2] = b.bottom;
+			reg->data.polygon.y[3] = b.bottom;
 
-			points = (hull_point*) malloc(n * sizeof(hull_point));
-
-			n = 0;
-
-			for (i = 0; i < height; i++) {
-				for (j = 0; j < width; j++) {
-					if (data[j * width + i]) {
-						points[n].x = j;
-						points[n].y = i;
-						n++;
-					}
-				}
-			}
-
-			hull_node* nodes = convex_hull(n, points);
-
-			n = 0;
-			hull_node* current = nodes;
-
-			while (current->next) {n++; current = current->next; }
-
-			reg->data.polygon = allocate_polygon(n);
-
-			current = nodes;
-			for (i = 0; i < n; i++) {
-				reg->data.polygon.x[i] = current->data.x + region->data.mask.x;
-				reg->data.polygon.y[i] = current->data.y + region->data.mask.y;
-				current = current->next;
-			}
-
-			free_node(nodes);
 			break;
 		}
 		case POLYGON: {

@@ -100,9 +100,11 @@ class Special(Region):
     def __str__(self):
         return 'Special region (code {})'.format(trax_region_get_special(self.reference))
 
+    @property
     def type(self):
         return Region.SPECIAL
-
+        
+    @property
     def code(self):
         return trax_region_get_special(self.reference)
 
@@ -135,6 +137,7 @@ class Rectangle(Region):
         trax_region_get_rectangle(self.reference, byref(x), byref(y), byref(width), byref(height))
         return 'Rectangle {},{} {}x{}'.format(x.value, y.value, width.value, height.value)
 
+    @property
     def type(self):
         return Region.RECTANGLE
 
@@ -203,6 +206,7 @@ class Polygon(Region):
     def __str__(self):
         return 'Polygon with {} points'.format(self.size())
 
+    @property
     def type(self):
         return Region.POLYGON
 
@@ -247,7 +251,7 @@ class Mask(Region):
         Returns:
             Mask -- reference to a new mask region
         """
-        assert(len(source.shape) == 1 and source.dtype == np.uint8)
+        assert(len(source.shape) == 2 and source.dtype == np.uint8)
 
         mask = cast(trax_region_create_mask(x, y, source.shape[1], source.shape[0]), c_void_p)
 
@@ -264,6 +268,7 @@ class Mask(Region):
         trax_region_get_mask_header(self.reference, byref(x), byref(y), byref(width), byref(height))
         return 'Mask of size {}x{} with offset x={}, y={}'.format(width.value, height.value, x.value, y.value)
 
+    @property
     def type(self):
         return Region.MASK
 
