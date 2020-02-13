@@ -49,12 +49,12 @@ class Client(object):
         else:
             self._logger = None
 
-        assert(len(streams) == 2)
-
         logger = trax_logger_setup(self._logger, 0, 0)
 
         if (streams and not (port or timeout)):
-            
+
+            assert(len(streams) == 2)
+
             handle = trax_client_setup_file(
                 streams[1],
                 streams[0],
