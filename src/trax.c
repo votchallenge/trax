@@ -13,6 +13,7 @@
 #include "buffer.h"
 #include "message.h"
 #include "base64.h"
+#include "debug.h"
 
 #define VALIDATE_HANDLE(H) assert(((H)->flags & TRAX_FLAG_VALID))
 #define VALIDATE_SERVER_HANDLE(H) assert(((H)->flags & TRAX_FLAG_VALID) && ((H)->flags & TRAX_FLAG_SERVER))
@@ -40,8 +41,6 @@
     ( T == TRAX_REGION_MASK ) ? MASK :\
     ( T == TRAX_REGION_SPECIAL ) ? SPECIAL :\
     EMPTY)
-
-#define PING(X) {printf("%s %d : %s\n", __FILE__, __LINE__, (X));}
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <io.h>
@@ -501,11 +500,14 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     arguments = list_create(8);
 
     if (read_message((message_stream*)client->stream, &LOGGER(client), arguments, tmp_properties) != TRAX_HELLO) {
+        DEBUGMSG("Unable to parse hello message.");
         goto failure;
     }
 
-    if (list_size(arguments) > 0)
+    if (list_size(arguments) > 0) {
+        DEBUGMSG("Illegal number of arguments %d, required more.", list_size(arguments));
         goto failure;
+    }
 
     client->version = trax_properties_get_int(tmp_properties, "trax.version", 1);
 

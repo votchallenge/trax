@@ -2,14 +2,13 @@
 Bindings for the TraX sever.
 """
 
-import os, sys
+import os
 import time
-import logging as log
 import collections
 
-from ctypes import byref, cast, py_object
+from ctypes import byref, cast
 
-from . import TraxException, TraxStatus, Properties, HandleWrapper, ImageListWrapper
+from . import TraxException, TraxStatus, Properties, HandleWrapper, ImageListWrapper, ConsoleLogger, FileLogger
 from .internal import \
     trax_image_list_set, trax_client_initialize, \
     trax_client_wait, trax_region_p, trax_properties_p, \
@@ -36,18 +35,21 @@ def wrap_images(images):
 
     return tlist
 
-def console_logger(buffer, length, object):
-    if not buffer:
-        return
-    print(buffer[:length].decode("utf-8"), end = '')
 
 class Client(object):
 
     """ TraX client."""
 
-    def __init__(self, streams = None, port = None, timeout = None):
+    def __init__(self, streams=None, port=None, timeout=None, log=False):
 
-        self._logger = trax_logger(console_logger)
+        if isinstance(log, bool) and log:
+            self._logger = trax_logger(ConsoleLogger())
+        elif isinstance(log, str):
+            self._logger = trax_logger(FileLogger(log))
+        else:
+            self._logger = None
+
+        assert(len(streams) == 2)
 
         logger = trax_logger_setup(self._logger, 0, 0)
 
@@ -86,7 +88,6 @@ class Client(object):
     @property
     def channels(self):
         return self._channels
-
 
     def initialize(self, images, region, properties):
 

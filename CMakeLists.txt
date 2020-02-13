@@ -6,6 +6,8 @@ SET (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 INCLUDE(GNUInstallDirs)
 INCLUDE(CMakePackageConfigHelpers)
 
+SET (BUILD_DEBUG FALSE CACHE BOOL "Build in debug mode")
+
 IF (NOT BUILD_DATE)
 	STRING(TIMESTAMP BUILD_DATE "%Y-%m-%d")
 ENDIF()
@@ -32,11 +34,11 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 LINK_LIBRARIES(${LIBRARIES})
 ADD_DEFINITIONS(-DTRAX_BUILD_VERSION="${BUILD_VERSION}" -DTRAX_BUILD_DATE="${BUILD_DATE}")
-SET(TRAX_SOURCE src/trax.c src/region.c src/strmap.c src/message.c src/base64.c src/traxpp.cpp)
-#ADD_LIBRARY(traxobj OBJECT ${TRAX_SOURCE})
-#SET_PROPERTY(TARGET traxobj PROPERTY POSITION_INDEPENDENT_CODE 1)
-#ADD_LIBRARY(trax SHARED $<TARGET_OBJECTS:traxobj>)
-#ADD_LIBRARY(traxstatic STATIC $<TARGET_OBJECTS:traxobj>)
+SET(TRAX_SOURCE src/trax.c src/region.c src/strmap.c src/message.c src/base64.c src/traxpp.cpp src/debug.c)
+
+IF (BUILD_DEBUG)
+ADD_DEFINITIONS(-DTRAX_DEBUG=1)
+ENDIF ()
 
 ADD_LIBRARY(trax SHARED ${TRAX_SOURCE})
 ADD_LIBRARY(traxstatic STATIC ${TRAX_SOURCE})
@@ -46,7 +48,6 @@ if(MSVC)
     ADD_DEFINITIONS(/wd4244 /wd4267 /wd4018 /wd4355 /wd4800 /wd4251 /wd4996 /wd4146 /wd4305) # Ignore some of the warnings
 elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
-    SET (BUILD_DEBUG FALSE CACHE BOOL "Build in debug mode (with tests)")
     IF (BUILD_DEBUG)
         SET_TARGET_PROPERTIES(trax PROPERTIES COMPILE_FLAGS "-finstrument-functions")
         SET_TARGET_PROPERTIES(traxstatic PROPERTIES COMPILE_FLAGS "-finstrument-functions")

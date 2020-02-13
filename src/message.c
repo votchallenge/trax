@@ -1,5 +1,6 @@
 /* -*- Mode: C++; indent-tabs-mode: nil; c-basic-offset: 4; tab-width: 4 -*- */
 #include "message.h"
+#include "debug.h"
 
 #define PARSE_STATE_TYPE 0
 #define PARSE_STATE_SPACE_EXPECT 1
@@ -300,7 +301,6 @@ static __INLINE int read_character(message_stream* stream) {
 
 int read_message(message_stream* stream, trax_logging* log, string_list* arguments, trax_properties* properties) {
 	
-
 	VALIDATE_MESSAGE_STREAM(stream);
 
     list_reset(arguments);
@@ -581,8 +581,6 @@ int read_message(message_stream* stream, trax_logging* log, string_list* argumen
                     stream->input.message_type = -1;
                     buffer_reset(stream->input.key_buffer);
                     buffer_reset(stream->input.value_buffer);
-
-
                 }
                 
                 break;

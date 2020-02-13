@@ -2,21 +2,19 @@
 Bindings for the TraX sever.
 """
 
-import os
-import sys
 import logging as log
 import collections
 
 from ctypes import byref, cast, py_object
 
-from . import TraxException, TraxStatus, Properties, HandleWrapper
+from . import TraxException, TraxStatus, Properties, HandleWrapper, ConsoleLogger, FileLogger
 from .internal import \
         trax_metadata_create, trax_server_setup, \
         trax_logger_setup, trax_image_list_p, \
         trax_image_list_get, trax_metadata_release, \
         trax_server_wait, trax_server_reply, \
         trax_image_list_release, trax_region_p, \
-        trax_properties_p
+        trax_properties_p, trax_logger
 from .image import ImageChannel, Image
 from .region import Region
 
@@ -47,13 +45,20 @@ class Server(object):
 
     """ TraX server."""
 
-    def __init__(self, region_formats, image_formats, image_channels = ["color"], trackerName="", trackerDescription="", trackerFamily="", verbose=False):
+    def __init__(self, region_formats, image_formats, image_channels=["color"], trackerName="", trackerDescription="", trackerFamily="", log=False):
+
+        if isinstance(log, bool) and log:
+            self._logger = trax_logger(ConsoleLogger())
+        elif isinstance(log, str):
+            self._logger = trax_logger(FileLogger(log))
+        else:
+            self._logger = None
 
         mdata = trax_metadata_create(Region.encode_list(region_formats),
             Image.encode_list(image_formats), ImageChannel.encode_list(image_channels),
             trackerName.encode('utf-8'), trackerDescription.encode('utf-8'), trackerFamily.encode('utf-8'))
 
-        logger = trax_logger_setup(None, None, 0)
+        logger = trax_logger_setup(self._logger, None, 0)
 
         self._handle = HandleWrapper(trax_server_setup(mdata, logger))
 

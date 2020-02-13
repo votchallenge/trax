@@ -1,5 +1,5 @@
 
-import sys
+import sys, os
 import traceback
 import weakref
 from ctypes import py_object, c_void_p, cast, byref
@@ -41,6 +41,28 @@ class TraxStatus(object):
             return TraxStatus.QUIT
         elif intcode == 5:
             return TraxStatus.STATE
+
+class ConsoleLogger(object):
+
+    def __call__(self, buffer, length, _):
+        if not buffer:
+            return
+        print(buffer[:length].decode("utf-8"), end='')
+
+class FileLogger(object):
+
+    def __init__(self, filename):
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        self._fp = open(filename, "w")
+
+    def __call__(self, buffer, length, _):
+        if not buffer:
+            return
+        self._fp.write(buffer[:length].decode("utf-8"))
+
+    def __del__(self):
+        self._fp.close()
+
 
 class OwnerRef(weakref.ref):
     pass
