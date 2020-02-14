@@ -34,7 +34,23 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 LINK_LIBRARIES(${LIBRARIES})
 ADD_DEFINITIONS(-DTRAX_BUILD_VERSION="${BUILD_VERSION}" -DTRAX_BUILD_DATE="${BUILD_DATE}")
-SET(TRAX_SOURCE src/trax.c src/region.c src/strmap.c src/message.c src/base64.c src/traxpp.cpp src/debug.c)
+SET(TRAX_SOURCE 
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/trax.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/region.c 
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/strmap.c 
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/message.c 
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/base64.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/traxpp.cpp 
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c)
+
+SET(TRAX_HEADERS
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/trax.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/region.h 
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/strmap.h 
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/message.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/base64.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/buffer.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/debug.h)
 
 IF (BUILD_DEBUG)
 ADD_DEFINITIONS(-DTRAX_DEBUG=1)

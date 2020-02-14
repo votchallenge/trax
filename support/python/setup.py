@@ -1,57 +1,85 @@
 #!/usr/bin/env python
 
-import os, sys
-import setuptools
-from distutils.core import setup, Distribution
-
-try:
-      from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
-
-      class bdist_wheel(_bdist_wheel):
-
-            def finalize_options(self):
-                  _bdist_wheel.finalize_options(self)
-                  # Mark us as not a pure python package
-                  self.root_is_pure = False
-
-            def get_tag(self):
-                  python, abi, plat = _bdist_wheel.get_tag(self)
-                  # We don't contain any python source
-                  python, abi = 'py2.py3', 'none'
-                  return python, abi, plat
-except ImportError:
-      bdist_wheel = None
-
-try:
-      with open(os.path.join("..", os.path.join("..", "VERSION")), "r") as fp:
-            version = fp.readline().strip()
-except IOError:
-      version = os.getenv("TRAX_VERSION", "unknown")
-
-varargs = dict()
+import os, sys, glob
+from distutils.core import setup, Extension
+from distutils.command.build_ext import build_ext
 
 platform = os.getenv("TRAX_PYTHON_PLATFORM", sys.platform)
 
 if platform.startswith('linux'):
-    trax_library = 'libtrax.so'
+    library_prefix = 'lib'
+    library_suffix = '.so'
 elif platform in ['darwin']:
-    trax_library = 'libtrax.dynlib'
+    library_prefix = 'lib'
+    library_suffix = '.dynlib'
 elif platform.startswith('win'):
-    trax_library = 'trax.dll'
+    library_prefix = ''
+    library_suffix = '.dll'
 
-if os.path.isfile(os.path.join("trax", trax_library)):
-      varargs["package_data"] = {"trax" : [trax_library]}
-      varargs["cmdclass"] = {'bdist_wheel': bdist_wheel}
+class build_ext_ctypes(build_ext):
 
-setup(name='trax',
-      version=version,
-      description='TraX reference implementation wrapper for Python',
-      author='Luka Cehovin',
-      author_email='luka.cehovin@gmail.com',
-      url='https://github.com/votchallenge/trax/',
-      packages=['trax'],
-      setup_requires=['wheel'],
-      install_requires=["numpy>=1.16",
-            "opencv-python>=4.0"],
-      **varargs
-      )
+    def build_extension(self, ext):
+        self._ctypes = isinstance(ext, CTypes)
+        return super().build_extension(ext)
+
+    def get_export_symbols(self, ext):
+        if self._ctypes:
+            return ext.export_symbols
+        return super().get_export_symbols(ext)
+
+    def get_ext_filename(self, ext_name):
+        if self._ctypes:
+            return library_prefix + ext_name + library_suffix
+        return super().get_ext_filename(ext_name)
+
+class CTypes(Extension): pass
+
+try:
+    from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
+
+    class bdist_wheel(_bdist_wheel):
+
+        def finalize_options(self):
+            _bdist_wheel.finalize_options(self)
+            # Mark us as not a pure python package
+            self.root_is_pure = False
+
+        def get_tag(self):
+            python, abi, plat = _bdist_wheel.get_tag(self)
+            # We don't contain any python source
+            python, abi = 'py2.py3', 'none'
+            return python, abi, plat
+
+except ImportError:
+    bdist_wheel = None
+
+try:
+    with open("VERSION", "r") as fp:
+        VERSION = fp.readline().strip()
+
+except IOError:
+    VERSION = os.getenv("TRAX_VERSION", "unknown")
+
+varargs = dict()
+
+if os.path.isfile(os.path.join("trax", library_prefix + "trax" + library_suffix)):
+    varargs["package_data"] = {"trax" : [library_prefix + "trax" + library_suffix]}
+    varargs["cmdclass"] = {'bdist_wheel': bdist_wheel}
+    varargs["setup_requires"] = ['wheel']
+elif os.path.isfile(os.path.join("trax", "trax.c")):
+    sources = glob.glob("trax/*.c") + glob.glob("trax/*.cpp")
+    varargs["ext_modules"] = [CTypes("trax.trax", sources=sources, define_macros=[("trax_EXPORTS", "1")])]
+    varargs["cmdclass"] = {'build_ext': build_ext_ctypes}
+
+setup(name='vot_trax',
+    version=VERSION,
+    description='TraX protocol reference implementation wrapper for Python',
+    author='Luka Cehovin Zajc',
+    author_email='luka.cehovin@gmail.com',
+    url='https://github.com/votchallenge/trax/',
+    packages=['trax'],
+    install_requires=[
+        "numpy>=1.16",
+        "opencv-python>=4.0"],
+    **varargs
+)
