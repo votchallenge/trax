@@ -15,7 +15,7 @@ Reference server and client implementation
 
 libtrax is a reference implementation of the Tracking eXchange protocol written in plain C. It enables researchers to quickly add support for the protocol in their C or C++ tracker (servers) as well as write new clients (evaluation, various tools).
 
-Integration examples are provided in the `trackers` directory. A simple static tracker is available that explains the basic concept of the integration without too much tracker-specific details.
+Integration examples are provided in the `support/tests` directory. A simple static tracker is available that explains the basic concept of the integration without too much tracker-specific details.
 
 Other languages
 ---------------
@@ -26,11 +26,11 @@ C library also comes with a C++ wrapper that provides easier interaction in C++ 
 
 ### Matlab/Octave
 
-It is technically not possible to have a Matlab-only implementation of TraX protocol on all platforms because of the way Matlab handles terminal input and output. Therefore, Matlab TraX implementation is available as a MEX function that links the C library. It is available in the `matlab` directory. In case of using Matlab on Windows, the only way to use TraX is to use TCP/IP sockets, which means that both the client and server have to explicitly enable this (see help of `traxclient` for more details).
+It is technically not possible to have a Matlab-only implementation of TraX protocol on all platforms because of the way Matlab handles terminal input and output. Therefore, Matlab TraX implementation is available as a MEX function that links the C library. It is available in the `support/matlab` directory. In case of using Matlab on Windows, the only way to use TraX is to use TCP/IP sockets, which means that both the client and server have to explicitly enable this (see help of `traxclient` for more details).
 
 ### Python
 
-Besides being able to use C library directly from Python, there is also a pure Python implementation of the server available in the `python` directory. An example of a tracker is available in the `trackers` directory.
+There is a Python wrapper to C library (using CTypes) available in the `support/python` directory. You can install a Python package using pip: `pip install vot-trax`.
 
 Support utilities
 -----------------

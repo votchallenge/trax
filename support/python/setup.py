@@ -4,6 +4,7 @@ import os, sys, glob
 from distutils.core import setup, Extension
 from distutils.command.build_ext import build_ext
 
+root = os.path.abspath(path.dirname(__file__))
 platform = os.getenv("TRAX_PYTHON_PLATFORM", sys.platform)
 
 if platform.startswith('linux'):
@@ -32,7 +33,8 @@ class build_ext_ctypes(build_ext):
             return library_prefix + ext_name + library_suffix
         return super().get_ext_filename(ext_name)
 
-class CTypes(Extension): pass
+class CTypes(Extension): 
+    pass
 
 try:
     from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
@@ -54,11 +56,19 @@ except ImportError:
     bdist_wheel = None
 
 try:
-    with open("VERSION", "r") as fp:
+    with open(os.path.join(root, "VERSION"), encoding='utf-8') as fp:
         VERSION = fp.readline().strip()
 
 except IOError:
     VERSION = os.getenv("TRAX_VERSION", "unknown")
+
+try:
+    with open(os.path.join(root, 'README.md'), encoding='utf-8') as f:
+        long_description = f.read()
+
+except IOError:
+    long_description = ""
+
 
 varargs = dict()
 
@@ -71,15 +81,23 @@ elif os.path.isfile(os.path.join("trax", "trax.c")):
     varargs["ext_modules"] = [CTypes("trax.trax", sources=sources, define_macros=[("trax_EXPORTS", "1")])]
     varargs["cmdclass"] = {'build_ext': build_ext_ctypes}
 
-setup(name='vot_trax',
+setup(name='vot-trax',
     version=VERSION,
     description='TraX protocol reference implementation wrapper for Python',
     author='Luka Cehovin Zajc',
     author_email='luka.cehovin@gmail.com',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     url='https://github.com/votchallenge/trax/',
     packages=['trax'],
     install_requires=[
         "numpy>=1.16",
         "opencv-python>=4.0"],
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: BSD License",
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Science/Research",
+    ],
     **varargs
 )
