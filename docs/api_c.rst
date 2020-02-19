@@ -560,6 +560,42 @@ Region
    :param region: A pointer to the region object
    :return: Number of points
 
+.. c:function:: trax_region* trax_region_create_mask(int x, int y, int width, int height)
+
+   Creates a mask region object of given size. Note that the mask data is not initialized.
+
+   :param x: Left offset 
+   :param y: Top offset
+   :param width: Mask width
+   :param height: Mask height
+   :return: A pointer to the region object
+
+.. c:function:: void trax_region_get_mask_header(const trax_region* region, int* x, int* y, int* width, int* height)
+
+   Returns the header data of a mask region.
+
+   :param region: A pointer to the region object
+   :param x: Pointer to left offset value variable
+   :param y: Pointer to top offset value variable
+   :param width: Pointer to width value variable
+   :param height: Pointer to height value variable
+
+.. c:function:: char* trax_region_write_mask_row(trax_region* region, int row)
+
+   Returns a pointer for a writeable row in a data array of a mask.
+
+   :param region: Region structure pointer
+   :param row: Number of row
+   :returns: Pointer to character array of the line
+
+.. c:function:: const char* trax_region_get_mask_row(const trax_region* region, int row)
+
+   Returns a read-only pointer for a row in a data array of a mask.
+
+   :param region: Region structure pointer
+   :param row: Number of row
+   :returns: Pointer to character array of the line
+
 .. c:function:: trax_bounds trax_region_bounds(const trax_region* region)
 
    Calculates a bounding box region that bounds the input region.
@@ -590,7 +626,6 @@ Region
    :param x: X coordinate of the point
    :param y: Y coordinate of the point
    :return: Returns zero if the point is not in the region or one if it is
-
 
 .. c:function:: float trax_region_overlap(const trax_region* a, const trax_region* b, const trax_bounds bounds)
 

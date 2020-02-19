@@ -1,8 +1,10 @@
-Python implementation
-=====================
+Python wrapper
+==============
 
 Requirements and support
 ------------------------
+
+The Python wrapper requires only core Python libraries and numpy for handling mask data. The Python code itself is a CTypes wrapper arround the trax C library.
 
 Documentation
 -------------
@@ -17,6 +19,12 @@ Server-side communication
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: trax.server
+   :members:
+
+Client-side communication
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: trax.client
    :members:
 
 Image module
@@ -69,9 +77,7 @@ To make the tracker work with the TraX protocol you have to modify the above cod
 
   tracker = Tracker()
 
-  options = trax.server.ServerOptions(trax.region.RECTANGLE, trax.image.PATH)
-
-  with trax.server.Server(options) as server:
+  with trax.server.Server(trax.region.RECTANGLE, trax.image.PATH) as server:
     while True:
       request = server.wait()
       if request.type in ["quit", "error"]:

@@ -200,6 +200,10 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
       Creates a polygon region object for a given amout of points. Note that the coordinates of the points are arbitrary and have to be set after allocation.
 
+   .. cpp:function:: static Region create_mask(int x, int y, int width, int height)
+
+      Creates a mask region object of given size. Note that the mask data is not initialized.
+
    .. cpp:function:: ~Region()
 
       Releases region, frees allocated memory.
@@ -239,6 +243,18 @@ The wrapper is composed of several classes, mostly following the underlying C fu
    .. cpp:function:: int get_polygon_count() const
 
       Returns the number of points in the polygon.
+
+   .. cpp:function:: void get_mask_header(int* x, int* y, int* width, int* height) const
+
+      Returns the header data of a mask region.
+    
+   .. cpp:function:: char* write_mask_row(int row)
+
+      Returns a pointer for a writeable row in a data array of a mask.
+
+   .. cpp:function:: const char* get_mask_row(int row) const
+
+      Returns a read-only pointer for a row in a data array of a mask.
 
    .. cpp:function:: Bounds bounds() const
 
