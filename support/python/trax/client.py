@@ -14,7 +14,8 @@ from .internal import \
     trax_client_wait, trax_region_p, trax_properties_p, \
     trax_image_create_path, trax_client_frame, \
     trax_client_setup_file, trax_client_setup_socket, \
-    trax_image_list_create, trax_logger_setup, trax_logger
+    trax_image_list_create, trax_logger_setup, trax_logger, \
+    trax_properties_create
 from .image import ImageChannel, Image
 from .region import Region
 
@@ -81,9 +82,12 @@ class Client(object):
         self._format_image = Image.decode_list(metadata.contents.format_image)
         self._channels = ImageChannel.decode_list(metadata.contents.channels)
         
-        self._tracker_name = metadata.contents.tracker_name.decode("utf-8")
-        self._tracker_family = metadata.contents.tracker_family.decode("utf-8")
-        self._tracker_description = metadata.contents.tracker_description.decode("utf-8")
+        self._tracker_name = metadata.contents.tracker_name.decode("utf-8") \
+            if not metadata.contents.tracker_name is None else ""
+        self._tracker_family = metadata.contents.tracker_family.decode("utf-8") \
+            if not metadata.contents.tracker_family is None else ""
+        self._tracker_description = metadata.contents.tracker_description.decode("utf-8") \
+            if not metadata.contents.tracker_description is None else ""
 
     @property
     def channels(self):
@@ -130,11 +134,11 @@ class Client(object):
             raise TraxException("Exception when sending frame to tracker")
 
         tregion = trax_region_p()
-        tproperties = trax_properties_p()
+        properties = Properties()
 
         start = time.time()
 
-        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), tproperties))
+        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), properties.reference))
 
         elapsed = time.time() - start
 
@@ -143,9 +147,7 @@ class Client(object):
         if status == TraxStatus.QUIT:
             raise TraxException("Server terminated the session")
 
-
         region = Region.wrap(tregion)
-        properties = Properties(tproperties)
 
         return region, properties, elapsed
 

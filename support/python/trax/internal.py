@@ -416,7 +416,7 @@ trax_properties_count.argtypes = [POINTER_T(struct_trax_properties)]
 
 trax_properties_enumerate = _libraries['trax'].trax_properties_enumerate
 trax_properties_enumerate.restype = None
-trax_properties_enumerate.argtypes = [POINTER_T(struct_trax_properties), trax_enumerator, ctypes.c_void_p]
+trax_properties_enumerate.argtypes = [POINTER_T(struct_trax_properties), trax_enumerator, ctypes.py_object]
 
 trax_image_list_create = _libraries['trax'].trax_image_list_create
 trax_image_list_create.restype = trax_image_list_p

@@ -2,7 +2,7 @@
 import sys, os
 import traceback
 import weakref
-from ctypes import py_object, c_void_p, cast, byref
+from ctypes import py_object, c_void_p, cast, byref, POINTER
 
 from .internal import \
     trax_properties_enumerate, trax_properties_create, trax_enumerator, \
@@ -172,8 +172,8 @@ class Properties(object):
 
     def dict(self):
         result = dict()
-        fun = lambda key, value, obj: obj.set(key, value)
-        trax_properties_enumerate(self._ref.reference, trax_enumerator(fun), byref(py_object(result)))
+        fun = lambda key, value, obj: cast(obj, py_object).value.setdefault(key.decode("utf8"), value.decode("utf8"))
+        trax_properties_enumerate(self._ref.reference, trax_enumerator(fun), py_object(result))
         return result
 
 from .server import Server

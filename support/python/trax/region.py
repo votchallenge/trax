@@ -3,8 +3,6 @@ Region description classes.
 """
 
 import sys
-import traceback
-import weakref
 from abc import abstractmethod
 from ctypes import memmove, byref, c_int, c_float, cast, c_void_p
 from functools import reduce
@@ -15,7 +13,7 @@ from .internal import trax_region_bounds, trax_region_create_polygon, \
     trax_region_get_special, trax_region_get_type, trax_region_get_rectangle, \
     trax_region_set_polygon_point, trax_region_create_special, trax_region_create_mask, \
     trax_region_get_mask_header, trax_region_get_mask_row, trax_region_write_mask_row
-from trax import TraxException, RegionWrapper
+from trax import RegionWrapper
 
 if (sys.version_info > (3, 0)):
     xrange = range
