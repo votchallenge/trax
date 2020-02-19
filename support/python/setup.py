@@ -4,7 +4,7 @@ import os, sys, glob
 from distutils.core import setup, Extension
 from distutils.command.build_ext import build_ext
 
-root = os.path.abspath(path.dirname(__file__))
+root = os.path.abspath(os.path.dirname(__file__))
 platform = os.getenv("TRAX_PYTHON_PLATFORM", sys.platform)
 
 if platform.startswith('linux'):
@@ -90,9 +90,7 @@ setup(name='vot-trax',
     long_description_content_type='text/markdown',
     url='https://github.com/votchallenge/trax/',
     packages=['trax'],
-    install_requires=[
-        "numpy>=1.16",
-        "opencv-python>=4.0"],
+    install_requires=["numpy>=1.16"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD License",
