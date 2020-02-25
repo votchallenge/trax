@@ -63,20 +63,31 @@ class FileLogger(object):
     def __del__(self):
         self._fp.close()
 
+class ProxyLogger(object):
+
+    def __init__(self, hook):
+        self._hook = hook
+
+    def __call__(self, buffer, length, _):
+        if not buffer:
+            return
+        self._hook(buffer[:length].decode("utf-8"))
 
 class OwnerRef(weakref.ref):
-    pass
+    def __init__(self, ref):
+        super().__init__(ref, _run_finalizer)
 
 def _run_finalizer(ref):
     """Internal weakref callback to run finalizers"""
     del _finalize_refs[id(ref)]
     finalizer = ref.finalizer
     item = ref.item
-    try:
-        finalizer(item)
-    except Exception:
-        print("Exception {}:".format(finalizer))
-        traceback.print_exc()
+    if finalizer:
+        try:
+            finalizer(item)
+        except Exception:
+            print("Exception {}:".format(finalizer))
+            traceback.print_exc()
 
 _finalize_refs = {}
 
@@ -87,7 +98,7 @@ def _track_for_finalization(owner, item, finalizer):
     ``finalizer`` will be called with ``item`` as its only argument when
     ``owner`` is destroyed by the garbage collector.
     """
-    ref = OwnerRef(owner, _run_finalizer)
+    ref = OwnerRef(owner)
     ref.item = item
     ref.finalizer = finalizer
     _finalize_refs[id(ref)] = ref
@@ -115,37 +126,37 @@ class Wrapper(object):
 
 class ImageWrapper(Wrapper):
 
-    def __init__(self, reference):
-        super(ImageWrapper, self).__init__(POINTER_T(struct_trax_image), reference, lambda x: trax_image_release(byref(x)))
+    def __init__(self, reference, owner=True):
+        super(ImageWrapper, self).__init__(POINTER_T(struct_trax_image), reference, lambda x: trax_image_release(byref(x)) if owner else None)
 
 class ImageListWrapper(Wrapper):
 
-    def __init__(self, reference):
-        super(ImageListWrapper, self).__init__(POINTER_T(struct_trax_image_list), reference, lambda x: trax_image_list_release(byref(x)))
+    def __init__(self, reference, owner=True):
+        super(ImageListWrapper, self).__init__(POINTER_T(struct_trax_image_list), reference, lambda x: trax_image_list_release(byref(x)) if owner else None)
 
 class RegionWrapper(Wrapper):
 
-    def __init__(self, reference):
-        super(RegionWrapper, self).__init__(c_void_p, reference, lambda x: trax_region_release(byref(cast(x, c_void_p))))
+    def __init__(self, reference, owner=True):
+        super(RegionWrapper, self).__init__(c_void_p, reference, lambda x: trax_region_release(byref(cast(x, c_void_p))) if owner else None)
 
 class PropertiesWrapper(Wrapper):
 
-    def __init__(self, reference):
-        super(PropertiesWrapper, self).__init__(POINTER_T(struct_trax_properties), reference, lambda x: trax_properties_release(byref(x)))
+    def __init__(self, reference, owner=True):
+        super(PropertiesWrapper, self).__init__(POINTER_T(struct_trax_properties), reference, lambda x: trax_properties_release(byref(x)) if owner else None)
 
 class HandleWrapper(Wrapper):
 
-    def __init__(self, reference):
-        super(HandleWrapper, self).__init__(POINTER_T(struct_trax_handle), reference, lambda x: trax_cleanup(byref(x)))
+    def __init__(self, reference, owner=True):
+        super(HandleWrapper, self).__init__(POINTER_T(struct_trax_handle), reference, lambda x: trax_cleanup(byref(x)) if owner else None)
 
 
 class Properties(object):
 
-    def __init__(self, data=None):
+    def __init__(self, data=None, owner=True):
         if not data:
             self._ref = PropertiesWrapper(trax_properties_create())
         elif isinstance(data, trax_properties_p):
-            self._ref = PropertiesWrapper(data)
+            self._ref = PropertiesWrapper(data, owner)
         elif isinstance(data, dict):
             self._ref = PropertiesWrapper(trax_properties_create())
             for key, value in data.items():

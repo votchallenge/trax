@@ -186,6 +186,24 @@ Metadata& Metadata::operator=(Metadata lhs) throw() {
 
 }
 
+std::string Metadata::get_custom(const std::string key) const {
+
+	char* cval = trax_properties_get(metadata->custom, key.c_str());
+
+	if (!cval) return std::string();
+
+	std::string val(cval);
+	free(cval);
+	return val;
+
+}
+
+void Metadata::get_custom(const std::string key, const std::string value) {
+
+	trax_properties_set(metadata->custom, key.c_str(), value.c_str());
+
+}
+
 Handle::Handle() {
 	handle = NULL;
 }
@@ -226,10 +244,10 @@ const Metadata Handle::metadata() {
 
 }
 
-bool Handle::terminate() {
+bool Handle::terminate(const std::string reason) {
 	if (!claims()) return -1;
 
-	return trax_terminate(handle) == TRAX_OK;
+	return trax_terminate(handle, reason.c_str()) == TRAX_OK;
 }
 
 Client::Client(int input, int output, Logging log) {

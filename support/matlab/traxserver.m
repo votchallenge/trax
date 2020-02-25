@@ -14,7 +14,7 @@
 % [response] = traxserver('state', region, parameters)
 %
 % Terminating the session:
-% [response] = traxserver('quit', parameters)
+% [response] = traxserver('quit', reason)
 %
 % For more information consult the online TraX reference
 % library documentation.

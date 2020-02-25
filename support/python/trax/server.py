@@ -2,7 +2,6 @@
 Bindings for the TraX sever.
 """
 
-import logging as log
 import collections
 
 from ctypes import byref, cast, py_object
@@ -14,7 +13,7 @@ from .internal import \
         trax_image_list_get, trax_metadata_release, \
         trax_server_wait, trax_server_reply, \
         trax_image_list_release, trax_region_p, \
-        trax_properties_p, trax_logger
+        trax_properties_p, trax_logger, trax_terminate
 from .image import ImageChannel, Image
 from .region import Region
 
@@ -45,7 +44,7 @@ class Server(object):
 
     """ TraX server."""
 
-    def __init__(self, region_formats, image_formats, image_channels=["color"], trackerName="", trackerDescription="", trackerFamily="", log=False):
+    def __init__(self, region_formats, image_formats, image_channels=["color"], trackerName="", trackerDescription="", trackerFamily="", customMetadata=None, log=False):
 
         if isinstance(log, bool) and log:
             self._logger = trax_logger(ConsoleLogger())
@@ -57,6 +56,11 @@ class Server(object):
         mdata = trax_metadata_create(Region.encode_list(region_formats),
             Image.encode_list(image_formats), ImageChannel.encode_list(image_channels),
             trackerName.encode('utf-8'), trackerDescription.encode('utf-8'), trackerFamily.encode('utf-8'))
+
+        if isinstance(customMetadata, dict):
+            custom = Properties(mdata.contents.custom, False)
+            for key, value in customMetadata.items():
+                custom.set(key, value)
 
         logger = trax_logger_setup(self._logger, None, 0)
 
@@ -78,12 +82,10 @@ class Server(object):
         status = TraxStatus.decode(trax_server_wait(self._handle.reference, byref(timage), byref(tregion), tproperties))
 
         if status == TraxStatus.QUIT:
-            log.info('Received quit message from client.')
             properties = Properties(tproperties)
             return Request(status, None, None, properties)
 
         if status == TraxStatus.INITIALIZE:
-            log.info('Received initialize message.')
             image = wrap_image_list(timage)
             trax_image_list_release(byref(timage))
             region = Region.wrap(tregion)
@@ -91,7 +93,6 @@ class Server(object):
             return Request(status, image, region, properties)
 
         if status == TraxStatus.FRAME:
-            log.info('Received frame message.')
             image = wrap_image_list(timage)
             trax_image_list_release(byref(timage))
             properties = Properties(tproperties)
@@ -119,6 +120,8 @@ class Server(object):
         """ Destructor used by 'with' statement. """
         self.quit()
 
-    def quit(self):
+    def quit(self, reason=None):
         """ Sends quit message and end terminates communication. """
+        if not reason is None:
+            trax_terminate(self._handle.reference, reason.encode('utf-8'))
         self._handle = None

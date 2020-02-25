@@ -136,6 +136,7 @@ class struct_trax_metadata(ctypes.Structure):
     ('tracker_name', ctypes.c_char_p),
     ('tracker_description', ctypes.c_char_p),
     ('tracker_family', ctypes.c_char_p),
+    ('custom', POINTER_T(struct_trax_properties)),
      ]
 
 trax_metadata = struct_trax_metadata
@@ -220,7 +221,7 @@ trax_server_reply.argtypes = [POINTER_T(struct_trax_handle), ctypes.c_void_p, PO
 
 trax_terminate = _libraries['trax'].trax_terminate
 trax_terminate.restype = ctypes.c_int32
-trax_terminate.argtypes = [POINTER_T(struct_trax_handle)]
+trax_terminate.argtypes = [POINTER_T(struct_trax_handle), ctypes.c_char_p]
 
 trax_cleanup = _libraries['trax'].trax_cleanup
 trax_cleanup.restype = ctypes.c_int32

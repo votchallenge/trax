@@ -162,6 +162,7 @@ typedef struct trax_metadata {
     char* tracker_name;
     char* tracker_description;
     char* tracker_family;
+    trax_properties* custom;
 } trax_metadata;
 
 typedef trax_metadata trax_configuration;
@@ -262,7 +263,7 @@ __TRAX_EXPORT int trax_server_reply(trax_handle* server, trax_region* region, tr
 /**
  * Used in client and server. Closes communication, sends quit message if needed.
 **/
-__TRAX_EXPORT int trax_terminate(trax_handle* handle);
+__TRAX_EXPORT int trax_terminate(trax_handle* handle, const char* reason);
 
 /**
  * Used in client and server. Closes communication, sends quit message if needed.
@@ -475,6 +476,11 @@ __TRAX_EXPORT void trax_properties_clear(trax_properties* properties);
 __TRAX_EXPORT trax_properties* trax_properties_create();
 
 /**
+ * Create a property object using values from extisting property object.
+ **/
+__TRAX_EXPORT trax_properties* trax_properties_copy(const trax_properties* original);
+
+/**
  * Set a string property (the value string is cloned).
  **/
 __TRAX_EXPORT void trax_properties_set(trax_properties* properties, const char* key, const char* value);
@@ -516,7 +522,7 @@ __TRAX_EXPORT int trax_properties_count(const trax_properties* properties);
  * Iterate over the property set using a callback function. An optional pointer can be given and is forwarded
  * to the callback.
  **/
-__TRAX_EXPORT void trax_properties_enumerate(trax_properties* properties, trax_enumerator enumerator, const void* object);
+__TRAX_EXPORT void trax_properties_enumerate(const trax_properties* properties, trax_enumerator enumerator, const void* object);
 
 /**
 * Allocate memory for storing the input images
@@ -650,6 +656,10 @@ public:
 
     std::string tracker_family() const;
 
+    std::string get_custom(const std::string key) const;
+
+    void get_custom(const std::string key, const std::string value);
+
     Metadata& operator=(Metadata p) throw();
 
 protected:
@@ -690,7 +700,7 @@ public:
     /**
      * Terminates session, sends quit message.
     **/
-    bool terminate();
+    bool terminate(const std::string reason = std::string());
 
 protected:
 

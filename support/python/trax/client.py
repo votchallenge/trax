@@ -8,14 +8,16 @@ import collections
 
 from ctypes import byref, cast
 
-from . import TraxException, TraxStatus, Properties, HandleWrapper, ImageListWrapper, ConsoleLogger, FileLogger
+from . import TraxException, TraxStatus, Properties, HandleWrapper, ImageListWrapper, \
+    ConsoleLogger, FileLogger, ProxyLogger
+    
 from .internal import \
     trax_image_list_set, trax_client_initialize, \
     trax_client_wait, trax_region_p, trax_properties_p, \
     trax_image_create_path, trax_client_frame, \
     trax_client_setup_file, trax_client_setup_socket, \
     trax_image_list_create, trax_logger_setup, trax_logger, \
-    trax_properties_create
+    trax_properties_create, trax_terminate
 from .image import ImageChannel, Image
 from .region import Region
 
@@ -41,35 +43,37 @@ class Client(object):
 
     """ TraX client."""
 
-    def __init__(self, streams=None, port=None, timeout=None, log=False):
+    def __init__(self, stream=None, timeout=30, log=False):
 
         if isinstance(log, bool) and log:
             self._logger = trax_logger(ConsoleLogger())
         elif isinstance(log, str):
             self._logger = trax_logger(FileLogger(log))
+        elif callable(log):
+            self._logger = trax_logger(ProxyLogger(log))
         else:
             self._logger = None
 
         logger = trax_logger_setup(self._logger, 0, 0)
 
-        if (streams and not (port or timeout)):
+        if isinstance(stream, tuple):
 
-            assert(len(streams) == 2)
+            assert(len(stream) == 2)
 
             handle = trax_client_setup_file(
-                streams[1],
-                streams[0],
+                stream[1],
+                stream[0],
                 logger)
 
-        elif (port and timeout and not streams):
+        elif isinstance(stream, int):
 
             handle = trax_client_setup_socket(
-                port,
+                stream,
                 timeout,
                 logger)
 
         else:
-            raise TraxException("Invalid parameters, use streams or port and timeout")
+            raise TraxException("Invalid parameters")
 
         if not handle:
             raise TraxException("Unable to connect to tracker")
@@ -89,9 +93,38 @@ class Client(object):
         self._tracker_description = metadata.contents.tracker_description.decode("utf-8") \
             if not metadata.contents.tracker_description is None else ""
 
+        custom = Properties(metadata.contents.custom, False)
+
+        self._custom = custom.dict()
+
     @property
     def channels(self):
         return self._channels
+
+    @property
+    def image_formats(self):
+        return self._format_image
+
+    @property
+    def region_formats(self):
+        return self._format_region
+
+    @property
+    def tracker_name(self):
+        return self._tracker_name
+
+    @property
+    def tracker_family(self):
+        return self._tracker_family
+
+    @property
+    def tracker_description(self):
+        return self._tracker_description
+
+    def get(self, key):
+        if key in self._custom:
+            return self._custom[key]
+        return None
 
     def initialize(self, images, region, properties):
 
@@ -116,7 +149,11 @@ class Client(object):
         if status == TraxStatus.ERROR:
             raise TraxException("Exception when waiting for response")
         if status == TraxStatus.QUIT:
-            raise TraxException("Server terminated the session")
+            reason = tproperties.get("trax.reason", None)
+            if reason is None:
+                raise TraxException("Server terminated the session")
+            else:
+                raise TraxException("Server terminated the session: {}".format(reason))
 
         region = Region.wrap(tregion)
         properties = Properties(tproperties)
@@ -145,12 +182,18 @@ class Client(object):
         if status == TraxStatus.ERROR:
             raise TraxException("Exception when waiting for response")
         if status == TraxStatus.QUIT:
-            raise TraxException("Server terminated the session")
-
+            reason = tproperties.get("trax.reason", None)
+            if reason is None:
+                raise TraxException("Server terminated the session")
+            else:
+                raise TraxException("Server terminated the session: {}".format(reason))
+            
         region = Region.wrap(tregion)
 
         return region, properties, elapsed
 
-    def quit(self):
+    def quit(self, reason=None):
         """ Sends quit message and end terminates communication. """
+        if not reason is None:
+            trax_terminate(self._handle.reference, reason.encode('utf-8'))
         self._handle = None

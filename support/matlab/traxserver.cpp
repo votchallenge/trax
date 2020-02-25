@@ -4,6 +4,7 @@
 #include <string>
 #include <algorithm>
 #include <cmath>
+#include <map>
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <io.h>
@@ -49,17 +50,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         int channels = TRAX_CHANNEL_COLOR;
 
+        std::map<std::string, std::string>& custom;
+
         if ( nrhs > 3 ) {
 
             for (int i = 3; i < std::floor((float)nrhs/2) * 2; i+=2) {
-                switch (get_argument_code(get_string(prhs[i]))) {
+                string key = get_string(prhs[i]);
+                switch (get_argument_code(key)) {
                 case ARGUMENT_TRACKERNAME: tracker_name = get_string(prhs[i+1]); break;
                 case ARGUMENT_TRACKERDESCRIPTION: tracker_description = get_string(prhs[i+1]); break;
                 case ARGUMENT_TRACKERFAMILY: tracker_family = get_string(prhs[i+1]); break;
                 case ARGUMENT_CHANNELS: channels = get_flags(prhs[i+1], get_channel_code); break;
                 default:
-                    MEX_ERROR("Illegal argument.");
-                    return;
+                    if (key.rfind("trax.", 0) == 0) {
+                        MEX_ERROR("Illegal argument.");
+                        return;
+                    } else {
+                        custom[key] = get_string(prhs[i+1]);
+                    }
                 }
             }
 
@@ -70,6 +78,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         Metadata metadata(region_formats, image_formats, channels,
             tracker_name, tracker_description, tracker_family);
+
+        typedef std::map<std::string, std::string>::const_iterator it_type;
+        for(it_type iterator = custom.begin(); iterator != custom.end(); iterator++) {
+            metadata.set_custom(iterator->first, iterator->second);
+        }
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 
@@ -158,6 +171,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             plhs[0] = mxCreateLogicalScalar(handle != NULL);
 
     } else if (operation == "quit") {
+
+        if (nrhs > 0) {
+
+            if (nrhs != 1)
+                MEX_ERROR("Only one optional string argument allowed.");
+
+            string reason = get_string(prhs[0]));
+            handle->terminate(reason);
+
+        }
 
 		if (handle) delete handle;
 		handle = NULL;
