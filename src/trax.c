@@ -508,6 +508,7 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
 
     client->logging = log;
     client->stream = stream;
+    client->error = NULL;
 
     tmp_properties = trax_properties_create();
     arguments = list_create(8);
@@ -575,7 +576,7 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
 
     server->flags = (TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
     server->logging = log;
-
+    server->error = NULL;
     server->stream = stream;
 
     if (metadata->custom) {
@@ -1014,6 +1015,14 @@ int trax_server_reply(trax_handle* server, trax_region* region, trax_properties*
 
 }
 
+const char* trax_get_error(trax_handle* handle) {
+
+    VALIDATE_HANDLE(handle);
+
+    return handle->error;
+
+}
+
 int trax_terminate(trax_handle* handle, const char* reason) {
 
     string_list *arguments;
@@ -1052,6 +1061,9 @@ int trax_cleanup(trax_handle** handle) {
     trax_metadata_release(&(*handle)->metadata);
 
     destroy_message_stream((message_stream**) & (*handle)->stream);
+
+    if ((*handle)->error) 
+        free((*handle)->error);
 
     free(*handle);
     *handle = 0;

@@ -17,7 +17,7 @@ from .internal import \
     trax_image_create_path, trax_client_frame, \
     trax_client_setup_file, trax_client_setup_socket, \
     trax_image_list_create, trax_logger_setup, trax_logger, \
-    trax_properties_create, trax_terminate
+    trax_properties_create, trax_terminate, trax_get_error
 from .image import ImageChannel, Image
 from .region import Region
 
@@ -135,7 +135,9 @@ class Client(object):
         status = TraxStatus.decode(trax_client_initialize(self._handle.reference, timage.reference, tregion, tproperties.reference))
 
         if status == TraxStatus.ERROR:
-            raise TraxException("Exception when initializing tracker")
+            message = trax_get_error(self._handle.reference)
+            message = message.decode('utf-8') if not message is None else "Unknown"
+            raise TraxException("Exception when initializing tracker: {}".format(message))
 
         tregion = trax_region_p()
         properties = Properties()
@@ -155,6 +157,11 @@ class Client(object):
             else:
                 raise TraxException("Server terminated the session: {}".format(reason))
 
+        if status == TraxStatus.ERROR:
+            message = trax_get_error(self._handle.reference)
+            message = message.decode('utf-8') if not message is None else "Unknown"
+            raise TraxException("Exception when waiting for response: {}".format(message))
+
         region = Region.wrap(tregion)
 
         return region, properties, elapsed
@@ -167,7 +174,9 @@ class Client(object):
         status = TraxStatus.decode(trax_client_frame(self._handle.reference, timage.reference, tproperties.reference))
 
         if status == TraxStatus.ERROR:
-            raise TraxException("Exception when sending frame to tracker")
+            message = trax_get_error(self._handle.reference)
+            message = message.decode('utf-8') if not message is None else "Unknown"
+            raise TraxException("Exception when sending frame to tracker: {}".format(message))
 
         tregion = trax_region_p()
         properties = Properties()
@@ -179,7 +188,9 @@ class Client(object):
         elapsed = time.time() - start
 
         if status == TraxStatus.ERROR:
-            raise TraxException("Exception when waiting for response")
+            message = trax_get_error(self._handle.reference)
+            message = message.decode('utf-8') if not message is None else "Unknown"
+            raise TraxException("Exception when waiting for response: {}".format(message))
         if status == TraxStatus.QUIT:
             reason = properties.get("trax.reason", None)
             if reason is None:

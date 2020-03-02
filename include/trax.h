@@ -176,6 +176,7 @@ typedef struct trax_handle {
     void* stream;
     trax_logging logging;
     trax_metadata* metadata;
+    char* error;
 } trax_handle;
 
 /**
@@ -264,6 +265,11 @@ __TRAX_EXPORT int trax_server_reply(trax_handle* server, trax_region* region, tr
  * Used in client and server. Closes communication, sends quit message if needed.
 **/
 __TRAX_EXPORT int trax_terminate(trax_handle* handle, const char* reason);
+
+/**
+ * Retrieve last error message encountered by the server or client. Returns NULL if no error occured.
+**/
+__TRAX_EXPORT const char* trax_get_error(trax_handle* handle);
 
 /**
  * Used in client and server. Closes communication, sends quit message if needed.
