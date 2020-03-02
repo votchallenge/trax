@@ -7,6 +7,7 @@ from abc import abstractmethod
 from ctypes import memmove, byref, c_int, c_float, cast, c_void_p
 from functools import reduce
 import numpy as np
+import six
 
 from .internal import trax_region_bounds, trax_region_create_polygon, \
     trax_region_create_rectangle, trax_region_get_polygon_count, trax_region_get_polygon_point, \
@@ -14,9 +15,6 @@ from .internal import trax_region_bounds, trax_region_create_polygon, \
     trax_region_set_polygon_point, trax_region_create_special, trax_region_create_mask, \
     trax_region_get_mask_header, trax_region_get_mask_row, trax_region_write_mask_row
 from trax import RegionWrapper
-
-if (sys.version_info > (3, 0)):
-    xrange = range
 
 class Region(object):
 
@@ -38,11 +36,11 @@ class Region(object):
         if type == 1:
             return Special(internal)
         elif type == 2:
-            return Rectangle(internal)     
+            return Rectangle(internal)
         elif type == 4:
-            return Polygon(internal) 
+            return Polygon(internal)
         elif type == 8:
-            return Mask(internal) 
+            return Mask(internal)
 
     @abstractmethod
     def type(self):
@@ -66,7 +64,7 @@ class Region(object):
         if strcode == Region.SPECIAL:
             return 1
         elif strcode == Region.RECTANGLE:
-            return 2      
+            return 2
         elif strcode == Region.POLYGON:
             return 4
         elif strcode == Region.MASK:
@@ -101,7 +99,7 @@ class Special(Region):
     @property
     def type(self):
         return Region.SPECIAL
-        
+
     @property
     def code(self):
         return trax_region_get_special(self.reference)
@@ -192,11 +190,11 @@ class Polygon(Region):
         """
         assert(isinstance(points, list))
         assert(len(points) > 2)
-        assert(reduce(lambda x,y: x and y, [isinstance(p, tuple) for p in points]))
+        assert(reduce(lambda x, y: x and y, [isinstance(p, tuple) for p in points]))
 
         poly = cast(trax_region_create_polygon(len(points)), c_void_p)
 
-        for i in xrange(0, len(points)):
+        for i in six.moves.range(0, len(points)):
             trax_region_set_polygon_point(poly, i, points[i][0], points[i][1])
 
         return Polygon(poly)
@@ -228,24 +226,24 @@ class Polygon(Region):
 
 class Mask(Region):
     """Mask region
-    
+
     Raises:
         IndexError: [description]
-    
+
     Returns:
         [type] -- [description]
     """
     @staticmethod
     def create(source, x = 0, y = 0):
         """Creates a new mask region object
-        
+
         Arguments:
             source {np.ndarray} -- source mask as NumPy array
- 
+
         Keyword Arguments:
             x {int} -- horizontal offset (default: {0})
             y {int} -- vertical offset (default: {0})
-        
+
         Returns:
             Mask -- reference to a new mask region
         """

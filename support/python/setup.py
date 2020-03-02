@@ -90,7 +90,7 @@ setup(name='vot-trax',
     long_description_content_type='text/markdown',
     url='https://github.com/votchallenge/trax/',
     packages=['trax'],
-    install_requires=["numpy>=1.16"],
+    install_requires=["numpy>=1.16", "six"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD License",
