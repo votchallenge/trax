@@ -60,7 +60,7 @@ _libraries = {}
 if sys.platform.startswith('linux'):
     _libraries['trax'] = ctypes.CDLL('libtrax.so')
 elif sys.platform in ['darwin']:
-    _libraries['trax'] = ctypes.CDLL('libtrax.dynlib')
+    _libraries['trax'] = ctypes.CDLL('libtrax.dylib')
 elif sys.platform in ['win32']:
     _libraries['trax'] = ctypes.CDLL('trax.dll')
 else:
