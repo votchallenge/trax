@@ -51,11 +51,11 @@ class Region(object):
         decoded = []
         if intcode & 1:
             decoded.append(Region.SPECIAL)
-        elif intcode & 2:
+        if intcode & 2:
             decoded.append(Region.RECTANGLE)
-        elif intcode & 4:
+        if intcode & 4:
             decoded.append(Region.POLYGON)
-        elif intcode & 8:
+        if intcode & 8:
             decoded.append(Region.MASK)
         return decoded
 

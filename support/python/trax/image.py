@@ -1,5 +1,5 @@
 """
-Image description classes. 
+Image description classes.
 """
 
 #from __future__ import absolute
@@ -29,7 +29,7 @@ class ImageChannel(object):
         if intcode == 1:
             return ImageChannel.COLOR
         elif intcode == 2:
-            return ImageChannel.DEPTH           
+            return ImageChannel.DEPTH
         elif intcode == 4:
             return ImageChannel.IR
         raise IndexError("Illegal image channel identifier {}".format(intcode))
@@ -39,9 +39,9 @@ class ImageChannel(object):
         decoded = []
         if intcode & 1:
             decoded.append(ImageChannel.COLOR)
-        elif intcode & 2:
+        if intcode & 2:
             decoded.append(ImageChannel.DEPTH)
-        elif intcode & 4:
+        if intcode & 4:
             decoded.append(ImageChannel.IR)
         return decoded
 
@@ -50,7 +50,7 @@ class ImageChannel(object):
         if strcode == ImageChannel.COLOR:
             return 1
         elif strcode == ImageChannel.DEPTH:
-            return 2      
+            return 2
         elif strcode == ImageChannel.IR:
             return 4
         raise IndexError("Illegal image channel name {}".format(strcode))
@@ -72,7 +72,7 @@ class Image(object):
     MEMORY = "memory"
     BUFFER = "buffer"
 
-    """ Image saved in memory as a numpy array """        
+    """ Image saved in memory as a numpy array """
     def __init__(self, internal):
         self._ref = ImageWrapper(internal)
 
@@ -85,11 +85,11 @@ class Image(object):
         decoded = []
         if intcode & 1:
             decoded.append(Image.PATH)
-        elif intcode & 2:
+        if intcode & 2:
             decoded.append(Image.URL)
-        elif intcode & 4:
+        if intcode & 4:
             decoded.append(Image.MEMORY)
-        elif intcode & 8:
+        if intcode & 8:
             decoded.append(Image.BUFFER)
         return decoded
 
@@ -103,7 +103,7 @@ class Image(object):
         if type == 4:
             return MemoryImage(internal)
         if type == 8:
-            return BufferImage(internal)            
+            return BufferImage(internal)
 
     @abstractmethod
     def type(self):
@@ -114,11 +114,11 @@ class Image(object):
         if strcode == Image.PATH:
             return 1
         elif strcode == Image.URL:
-            return 2      
+            return 2
         elif strcode == Image.MEMORY:
             return 4
         elif strcode == Image.BUFFER:
-            return 8      
+            return 8
         raise IndexError("Illegal image format name {}".format(strcode))
 
 
@@ -133,8 +133,8 @@ class Image(object):
         return encoded
 
 class FileImage(Image):
-    """ 
-    Image saved in a local file 
+    """
+    Image saved in a local file
     """
 
     @staticmethod
@@ -152,14 +152,14 @@ class FileImage(Image):
         return trax_image_get_path(self.reference).decode('utf8')
 
 class URLImage(Image):
-    """ 
-    Image saved in a local or remote resource 
+    """
+    Image saved in a local or remote resource
     """
 
     @staticmethod
     def create(url = None):
         return URLImage(trax_image_create_url(url.encode('utf8')))
-        
+
     def __str__(self):
         """ Get description """
         return "URL resource at '{}'".format(trax_image_get_url(self.reference))
@@ -208,7 +208,7 @@ try:
             data = trax_image_write_memory_row(timage, 0)
             memmove(data, image.ctypes.data, image.nbytes)
             return MemoryImage(timage)
-            
+
         def __str__(self):
             """ Get description """
             width = c_int()
@@ -233,7 +233,7 @@ try:
 
             return mat
 except ImportError:
-    
+
     class MemoryImage(Image):
         def __str__(self):
             """ Get description """
