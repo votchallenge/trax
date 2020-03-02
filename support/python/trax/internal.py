@@ -67,7 +67,7 @@ _libraries = {}
 if sys.platform.startswith('linux'):
     trax_library = 'libtrax.so'
 elif sys.platform in ['darwin']:
-    trax_library = 'libtrax.dynlib'
+    trax_library = 'libtrax.dylib'
 elif sys.platform in ['win32']:
     trax_library = 'trax.dll'
 else:

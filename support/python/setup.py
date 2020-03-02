@@ -12,7 +12,7 @@ if platform.startswith('linux'):
     library_suffix = '.so'
 elif platform in ['darwin']:
     library_prefix = 'lib'
-    library_suffix = '.dynlib'
+    library_suffix = '.dylib'
 elif platform.startswith('win'):
     library_prefix = ''
     library_suffix = '.dll'

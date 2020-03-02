@@ -4,3 +4,6 @@ docs/_*
 *~
 *.pyc
 *.o
+.vscode/
+*.egg-info
+dist/
