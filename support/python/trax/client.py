@@ -138,25 +138,24 @@ class Client(object):
             raise TraxException("Exception when initializing tracker")
 
         tregion = trax_region_p()
-        tproperties = trax_properties_p()
+        properties = Properties()
 
         start = time.time()
 
-        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), tproperties))
+        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), properties.reference))
 
         elapsed = time.time() - start
 
         if status == TraxStatus.ERROR:
             raise TraxException("Exception when waiting for response")
         if status == TraxStatus.QUIT:
-            reason = tproperties.get("trax.reason", None)
+            reason = properties.get("trax.reason", None)
             if reason is None:
                 raise TraxException("Server terminated the session")
             else:
                 raise TraxException("Server terminated the session: {}".format(reason))
 
         region = Region.wrap(tregion)
-        properties = Properties(tproperties)
 
         return region, properties, elapsed
 
@@ -182,7 +181,7 @@ class Client(object):
         if status == TraxStatus.ERROR:
             raise TraxException("Exception when waiting for response")
         if status == TraxStatus.QUIT:
-            reason = tproperties.get("trax.reason", None)
+            reason = properties.get("trax.reason", None)
             if reason is None:
                 raise TraxException("Server terminated the session")
             else:

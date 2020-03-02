@@ -173,10 +173,10 @@ class Properties(object):
         trax_properties_set(self._ref.reference, key.encode('utf8'), str(value).encode('utf8'))
 
     def get(self, key, default = None):
-        value = trax_properties_get(self._ref.reference, key)
+        value = trax_properties_get(self._ref.reference, key.encode('utf8'))
         if value == None:
             return default
-        return value
+        return value.decode('utf8') if not value is None else None
 
     def set(self, key, value):
         trax_properties_set(self._ref.reference, key.encode('utf8'), str(value).encode('utf8'))
