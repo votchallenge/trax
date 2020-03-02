@@ -195,4 +195,7 @@ class Client(object):
         """ Sends quit message and end terminates communication. """
         if not reason is None:
             trax_terminate(self._handle.reference, reason.encode('utf-8'))
+        else:
+            trax_terminate(self._handle.reference, None)
         self._handle = None
+
