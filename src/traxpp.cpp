@@ -198,7 +198,7 @@ std::string Metadata::get_custom(const std::string key) const {
 
 }
 
-void Metadata::get_custom(const std::string key, const std::string value) {
+void Metadata::set_custom(const std::string key, const std::string value) {
 
 	trax_properties_set(metadata->custom, key.c_str(), value.c_str());
 

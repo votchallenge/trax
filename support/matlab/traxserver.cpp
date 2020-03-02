@@ -50,7 +50,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         int channels = TRAX_CHANNEL_COLOR;
 
-        std::map<std::string, std::string>& custom;
+        std::map<std::string, std::string> custom;
 
         if ( nrhs > 3 ) {
 
@@ -177,7 +177,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             if (nrhs != 1)
                 MEX_ERROR("Only one optional string argument allowed.");
 
-            string reason = get_string(prhs[0]));
+            string reason = get_string(prhs[0]);
             handle->terminate(reason);
 
         }

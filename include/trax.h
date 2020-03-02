@@ -664,7 +664,7 @@ public:
 
     std::string get_custom(const std::string key) const;
 
-    void get_custom(const std::string key, const std::string value);
+    void set_custom(const std::string key, const std::string value);
 
     Metadata& operator=(Metadata p) throw();
 
