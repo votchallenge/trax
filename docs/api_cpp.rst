@@ -66,6 +66,24 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
    .. cpp:function:: ~Bounds()
 
+.. cpp:class:: Handle
+
+   .. cpp:function:: ~Handle()
+
+   .. cpp:function:: const Metadata metadata()
+
+   .. cpp:function:: const bool terminate()
+
+      Terminate session by sending quit message. Implicitly called when object is destroyed.
+
+   .. cpp:function:: std::string get_error()
+
+      Return last error string or empty string if no error has occured in last call to handle.
+
+   .. cpp:function:: bool is_alive()
+
+      Check if the handle is opened or not.
+
 
 .. cpp:class:: Client
 
@@ -91,12 +109,6 @@ The wrapper is composed of several classes, mostly following the underlying C fu
 
       Sends a frame message.
 
-   .. cpp:function:: const Metadata metadata()
-
-   .. cpp:function:: const bool terminate()
-
-      Terminate session by sending quit message. Implicitly called when object is destroyed.
-
 .. cpp:class:: Server
 
    .. cpp:function:: Server(Configuration configuration, Logging log)
@@ -112,13 +124,6 @@ The wrapper is composed of several classes, mostly following the underlying C fu
    .. cpp:function:: int reply(const Region& region, const Properties& properties)
 
       Sends a status reply to the client.
-
-   .. cpp:function:: const Metadata metadata()
-
-   .. cpp:function:: const bool terminate()
-
-      Terminate session by sending quit message. Implicitly called when object is destroyed.
-
 
 .. cpp:class:: Image
 

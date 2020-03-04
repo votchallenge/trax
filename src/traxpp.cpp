@@ -250,6 +250,22 @@ bool Handle::terminate(const std::string reason) {
 	return trax_terminate(handle, reason.c_str()) == TRAX_OK;
 }
 
+std::string Handle::get_error() {
+	if (!claims()) return std::string();
+
+	const char* error = trax_get_error(handle);
+
+	if (!error) return std::string();
+
+	return std::string(error);
+}
+
+bool Handle::is_alive() {
+	if (!claims()) return false;
+
+	return trax_is_alive(handle) != 0;
+}
+
 Client::Client(int input, int output, Logging log) {
 	wrap(trax_client_setup_file(input, output, log));
 }

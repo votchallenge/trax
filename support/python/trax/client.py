@@ -17,7 +17,8 @@ from .internal import \
     trax_image_create_path, trax_client_frame, \
     trax_client_setup_file, trax_client_setup_socket, \
     trax_image_list_create, trax_logger_setup, trax_logger, \
-    trax_properties_create, trax_terminate, trax_get_error
+    trax_properties_create, trax_terminate, trax_get_error, \
+    trax_is_alive
 from .image import ImageChannel, Image
 from .region import Region
 
@@ -77,6 +78,11 @@ class Client(object):
 
         if not handle:
             raise TraxException("Unable to connect to tracker")
+
+        if trax_is_alive(handle) == 0:
+            message = trax_get_error(handle.reference)
+            message = message.decode('utf-8') if not message is None else "Unknown"
+            raise TraxException("Exception when connecting to tracker: {}".format(message))
 
         self._handle = HandleWrapper(handle)
 

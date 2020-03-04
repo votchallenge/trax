@@ -63,15 +63,17 @@ int main( int argc, char** argv) {
 
 		char buff[32];
 		snprintf(buff, sizeof(buff), "%08d.jpg", i + 1);
-		trax::Image image = trax::Image::create_path(string(buff));
+		trax::ImageList images = trax::ImageList();
+		trax::Image image = trax::Image::create_path(buff);
+		images.set(image, TRAX_CHANNEL_COLOR);
 
 		// Initialize every 50 frames
 		if (i % 50 == 0) {
-			if (!tracker.initialize(image, groundtruth[i]))
+			if (!tracker.initialize(images, groundtruth[i]))
 				// Something went wrong, break the loop
 				break;
 		} else {
-			if (!tracker.frame(image))
+			if (!tracker.frame(images))
 				// Something went wrong, break the loop
 				break;
 		}

@@ -764,6 +764,7 @@ bool TrackerProcess::initialize(const ImageList& image, const Region& region, co
 
 	if (result == TRAX_ERROR) {
 		state->stop_process();
+		std::runtime_error("Unable to initialize tracker: " + state->client->get_error());
 	}
 
 	return result == TRAX_OK;
@@ -787,6 +788,7 @@ bool TrackerProcess::wait(Region& region, Properties& properties) {
 
 	if (result == TRAX_ERROR) {
 		state->stop_process();
+		std::runtime_error("Unable to retrieve response: " + state->client->get_error());
 	}
 
 	return result == TRAX_STATE;
@@ -809,6 +811,7 @@ bool TrackerProcess::frame(const ImageList& image, const Properties& properties)
 
 	if (result == TRAX_ERROR) {
 		state->stop_process();
+		std::runtime_error("Unable to send new frame: " + state->client->get_error());
 	}
 
 	return result == TRAX_OK;
@@ -817,7 +820,7 @@ bool TrackerProcess::frame(const ImageList& image, const Properties& properties)
 
 bool TrackerProcess::ready() {
 
-	if (!state || !state->process_running()) return false;
+	if (!state || !state->process_running() || !state->client->is_alive()) return false;
 
 	return true;
 

@@ -221,7 +221,11 @@ trax_server_reply.argtypes = [POINTER_T(struct_trax_handle), ctypes.c_void_p, PO
 
 trax_get_error = _traxlib.trax_get_error
 trax_get_error.restype = ctypes.c_char_p
-trax_get_error.argtypes = [POINTER_T(POINTER_T(struct_trax_handle))]
+trax_get_error.argtypes = [POINTER_T(struct_trax_handle)]
+
+trax_is_alive = _traxlib.trax_is_alive
+trax_is_alive.restype = ctypes.c_int32
+trax_is_alive.argtypes = [POINTER_T(struct_trax_handle)]
 
 trax_terminate = _traxlib.trax_terminate
 trax_terminate.restype = ctypes.c_int32
@@ -458,7 +462,8 @@ __all__ = \
     'trax_image_get_memory_row', 'trax_image_get_path',
     'trax_image_get_type', 'trax_image_get_url', 'trax_image_list',
     'trax_image_release', 'trax_image_write_memory_row',
-    'trax_logger', 'trax_logger_setup', 'trax_get_error',
+    'trax_logger', 'trax_logger_setup', 
+    'trax_get_error', 'trax_is_alive',
     'trax_logging', 'trax_metadata', 'trax_metadata_create',
     'trax_metadata_release', 'trax_no_bounds', 'trax_no_log',
     'trax_properties', 'trax_properties_clear',

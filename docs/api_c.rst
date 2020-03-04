@@ -215,6 +215,20 @@ Communication
    :param handle: Pointer to state object pointer
    :return: Integer value indicating status, can be either :c:macro:`TRAX_OK` or :c:macro:`TRAX_ERROR`
 
+.. c:function:: const char* trax_get_error(trax_handle* handle)
+
+   Retrieve last error message encountered by the server or client. 
+
+   :param handle: Pointer to state object
+   :return: Returns NULL if no error occured.
+
+.. c:function:: int trax_is_alive(trax_handle* handle)
+
+   Check if the handle has been terminated.
+
+   :param handle: Pointer to state object
+   :return: Returns zero if handle is not alive and non-zero if it is.
+
 .. c:function:: int trax_set_parameter(trax_handle* handle, int id, int value)
 
    Sets the parameter of the client or server instance.

@@ -494,6 +494,37 @@ void copy_properties(const trax_properties* source, trax_properties* dest, int i
 
 }
 
+void clear_error(trax_handle* handle) {
+
+    if (handle->error) {
+        free(handle->error);
+        handle->error = NULL;
+    }
+
+}
+
+void set_error(trax_handle* handle, const char *format, ...) {
+	va_list args;
+
+    string_buffer* buffer = buffer_create(100);
+
+	va_start(args, format);
+	
+    buffer_append(buffer, format, args);
+
+	va_end(args);
+
+    if (handle->error) {
+        free(handle->error);
+    }
+
+    handle->error = buffer_extract(buffer);
+
+    buffer_destroy(&buffer);
+
+}
+
+
 trax_handle* client_setup(message_stream* stream, const trax_logging log) {
 
     trax_properties* tmp_properties;
@@ -749,8 +780,12 @@ int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_re
 
     VALIDATE_CLIENT_HANDLE(client);
 
-    if (!HANDLE_ALIVE(client))
+    clear_error(client);
+
+    if (!HANDLE_ALIVE(client)) {
+        set_error(client, "Client not alive");
         return TRAX_ERROR;
+    }
 
     assert(images && region);
 
@@ -763,7 +798,10 @@ int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_re
     for (i = 0; i < TRAX_CHANNELS; i++) {
         if (TRAX_SUPPORTS(client->metadata->channels, TRAX_CHANNEL_ID(i))) {
 
-            if (!images->images[i]) goto failure;
+            if (!images->images[i]) {
+                set_error(client, "Required image channel not provided (ID: %d)", TRAX_CHANNEL_ID(i));
+                goto failure;
+            }
             char* buffer = image_encode(images->images[i]);
             list_append_direct(arguments, buffer);
 
@@ -814,14 +852,21 @@ int trax_client_frame(trax_handle* client, trax_image_list* images, trax_propert
     string_list* arguments;
     VALIDATE_CLIENT_HANDLE(client);
 
-    if (!HANDLE_ALIVE(client))
+    clear_error(client);
+
+    if (!HANDLE_ALIVE(client)) {
+        set_error(client, "Client not alive");
         return TRAX_ERROR;
+    }
 
     arguments = list_create(1);
 
     for (i = 0; i < TRAX_CHANNELS; i++) {
         if (TRAX_SUPPORTS(client->metadata->channels, TRAX_CHANNEL_ID(i))) {
-            if (!images->images[i]) goto failure;
+            if (!images->images[i]) {
+                set_error(client, "Required image channel not provided (ID: %d)", TRAX_CHANNEL_ID(i));
+                goto failure;
+            }
             char* buffer = image_encode(images->images[i]);
             list_append_direct(arguments, buffer);
         } 
@@ -891,8 +936,12 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
 
     VALIDATE_SERVER_HANDLE(server);
 
-    if (!HANDLE_ALIVE(server))
+    clear_error(server);
+
+    if (!HANDLE_ALIVE(server)) {
+        set_error(server, "Server not alive");
         return TRAX_ERROR;
+    }
 
     int argument_count = trax_image_list_count(server->metadata->channels);
 
@@ -903,9 +952,11 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
 
     if (result == TRAX_FRAME) {
 
-        if (list_size(arguments) != argument_count)
+        if (list_size(arguments) != argument_count) {
+            set_error(server, "Protocol error, illegal argument number %d != %d", list_size(arguments), argument_count);
             goto failure;
-
+        }   
+            
         *images = trax_image_list_create();
 
         for (i = 0; i < TRAX_CHANNELS; i++) {
@@ -927,8 +978,10 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
 
     } else if (result == TRAX_QUIT) {
 
-        if (list_size(arguments) != 0)
+        if (list_size(arguments) != 0){
+            set_error(server, "Protocol error, illegal argument number %d != %d", list_size(arguments), 0);
             goto failure;
+        }   
 
         if (properties)
             copy_properties(tmp_properties, properties, COPY_ALL);
@@ -939,8 +992,10 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
 
     } else if (result == TRAX_INITIALIZE) {
 
-        if (list_size(arguments) != (argument_count + 1)) // There's also the region info
+        if (list_size(arguments) != (argument_count + 1)) { // There's also the region info
+            set_error(server, "Protocol error, illegal argument number %d != %d", list_size(arguments), argument_count + 1);
             goto failure;
+        }    
 
         *images = trax_image_list_create();
 
@@ -996,8 +1051,12 @@ int trax_server_reply(trax_handle* server, trax_region* region, trax_properties*
 
     VALIDATE_SERVER_HANDLE(server);
 
-    if (!HANDLE_ALIVE(server))
+    clear_error(server);
+
+    if (!HANDLE_ALIVE(server)) {
+        set_error(server, "Server not alive");
         return TRAX_ERROR;
+    }
 
     data = region_string(REGION(region));
 
@@ -1023,6 +1082,14 @@ const char* trax_get_error(trax_handle* handle) {
 
 }
 
+int trax_is_alive(trax_handle* handle) {
+
+    VALIDATE_HANDLE(handle);
+
+    return HANDLE_ALIVE(handle);
+
+}
+
 int trax_terminate(trax_handle* handle, const char* reason) {
 
     string_list *arguments;
@@ -1030,8 +1097,10 @@ int trax_terminate(trax_handle* handle, const char* reason) {
 
     VALIDATE_HANDLE(handle);
 
-    if ((handle->flags & TRAX_FLAG_TERMINATED))
-        return TRAX_ERROR;
+    clear_error(handle);
+
+    if (!HANDLE_ALIVE(handle)) 
+        return TRAX_OK;
 
     arguments = list_create(1);
     tmp_properties = trax_properties_create();
@@ -1062,8 +1131,7 @@ int trax_cleanup(trax_handle** handle) {
 
     destroy_message_stream((message_stream**) & (*handle)->stream);
 
-    if ((*handle)->error) 
-        free((*handle)->error);
+    clear_error(*handle);
 
     free(*handle);
     *handle = 0;

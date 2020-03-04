@@ -95,8 +95,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         handle = new Server(metadata, trax_no_log);
 
+        if (!handle)
+            MEX_ERROR("Unable to initialize protocol.");
+
+        if (!handle->is_alive()) {
+            std::string tmp("Unable to initialize protocol: " + handle->get_error());
+            MEX_ERROR(tmp.c_str());
+        }
+
         if (nlhs == 1)
-            plhs[0] = mxCreateLogicalScalar(handle != NULL);
+            plhs[0] = mxCreateLogicalScalar((bool) handle);
 
     } else if (operation == "wait") {
 
@@ -136,6 +144,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             if (nlhs > 1) plhs[1] = MEX_CREATE_EMTPY;
             if (nlhs > 2) plhs[2] = (propstruct) ? parameters_to_struct(prop) : parameters_to_cell(prop);
 
+        } else if (tr == TRAX_ERROR) {
+
+            std::string tmp("Protocol error while waiting: " + handle->get_error());
+            MEX_ERROR(tmp.c_str());
+
         } else {
 
             if (nlhs > 0) plhs[0] = MEX_CREATE_EMTPY;
@@ -165,8 +178,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         Properties prop = ( nrhs == 3 ) ? (mxIsStruct(prhs[2]) ? struct_to_parameters(prhs[2]) : cell_to_parameters(prhs[2])) : Properties();
 
-        handle->reply(reg, prop);
-
+        if (handle->reply(reg, prop) == TRAX_ERROR) {
+            std::string tmp("Unable to send reply: " + handle->get_error());
+            MEX_ERROR(tmp.c_str());
+        }
+        
         if (nlhs == 1)
             plhs[0] = mxCreateLogicalScalar(handle != NULL);
 
@@ -178,7 +194,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 MEX_ERROR("Only one optional string argument allowed.");
 
             string reason = get_string(prhs[0]);
-            handle->terminate(reason);
+            if (handle->terminate(reason) == TRAX_ERROR) {
+                std::string tmp("Unable to terminate protocol: " + handle->get_error());
+                MEX_ERROR(tmp.c_str());
+            }
 
         }
 

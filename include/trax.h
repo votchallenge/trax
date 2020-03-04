@@ -272,6 +272,12 @@ __TRAX_EXPORT int trax_terminate(trax_handle* handle, const char* reason);
 __TRAX_EXPORT const char* trax_get_error(trax_handle* handle);
 
 /**
+ * Check if the handle is alive or not. The handle is not alive if it was not initalized correctly or 
+ * it was terminated.
+**/
+__TRAX_EXPORT int trax_is_alive(trax_handle* handle);
+
+/**
  * Used in client and server. Closes communication, sends quit message if needed.
  * Releases the handle structure.
 **/
@@ -707,6 +713,16 @@ public:
      * Terminates session, sends quit message.
     **/
     bool terminate(const std::string reason = std::string());
+
+    /**
+     * Return last error string or empty string if no error has occured in last call to handle.
+    **/
+    std::string get_error();
+
+    /**
+     * Check if the handle is opened or not.
+    **/
+    bool is_alive();
 
 protected:
 

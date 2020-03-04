@@ -13,7 +13,8 @@ from .internal import \
         trax_image_list_get, trax_metadata_release, \
         trax_server_wait, trax_server_reply, \
         trax_image_list_release, trax_region_p, \
-        trax_properties_p, trax_logger, trax_terminate
+        trax_properties_p, trax_logger, trax_terminate, \
+        trax_is_alive, trax_get_error
 from .image import ImageChannel, Image
 from .region import Region
 
@@ -64,9 +65,19 @@ class Server(object):
 
         logger = trax_logger_setup(self._logger, None, 0)
 
-        self._handle = HandleWrapper(trax_server_setup(mdata, logger))
+        handle = trax_server_setup(mdata, logger)
 
         trax_metadata_release(byref(mdata))
+
+        if not handle:
+            raise TraxException("Exception when setting up.")
+
+        if trax_is_alive(handle) == 0:
+            message = trax_get_error(handle.reference)
+            message = message.decode('utf-8') if not message is None else "Unknown"
+            raise TraxException("Exception when setting up: {}".format(message))
+
+        self._handle = HandleWrapper(handle)
 
     def wait(self):
         """ Wait for client message request. Recognize it and parse them when received .
@@ -99,7 +110,9 @@ class Server(object):
             return Request(status, image, None, properties)
 
         else:
-            return Request(TraxStatus.ERROR, None, None, None)
+            message = trax_get_error(self._handle.reference)
+            message = message.decode('utf-8') if not message is None else "Unknown"
+            raise TraxException("Exception when waiting for command: {}".format(message))
 
     def status(self, region, properties=None):
         """ Reply to client with a status region and optional properties.
@@ -110,7 +123,14 @@ class Server(object):
         """
         assert(isinstance(region, Region))
         tproperties = Properties(properties)
-        return TraxStatus.decode(trax_server_reply(self._handle.reference, cast(region.reference, trax_region_p), tproperties.reference))
+        status = TraxStatus.decode(trax_server_reply(self._handle.reference, cast(region.reference, trax_region_p), tproperties.reference))
+
+        if status == TraxStatus.ERROR:
+            message = trax_get_error(self._handle.reference)
+            message = message.decode('utf-8') if not message is None else "Unknown"
+            raise TraxException("Exception when sending status: {}".format(message))
+
+        return True
 
     def __enter__(self):
         """ To support instantiation with 'with' statement. """
@@ -123,7 +143,15 @@ class Server(object):
     def quit(self, reason=None):
         """ Sends quit message and end terminates communication. """
         if not reason is None:
-            trax_terminate(self._handle.reference, reason.encode('utf-8'))
+            status = TraxStatus.decode(trax_terminate(self._handle.reference, reason.encode('utf-8')))
         else:
-            trax_terminate(self._handle.reference, None)
+            status = TraxStatus.decode(trax_terminate(self._handle.reference, None))
+
+        if status == TraxStatus.ERROR:
+            message = trax_get_error(self._handle.reference)
+            message = message.decode('utf-8') if not message is None else "Unknown"
+            raise TraxException("Exception when terminating: {}".format(message))
+
         self._handle = None
+
+
