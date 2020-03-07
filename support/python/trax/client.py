@@ -22,10 +22,6 @@ from .internal import \
 from .image import ImageChannel, Image
 from .region import Region
 
-class Request(collections.namedtuple('Request', ['type', 'image', 'region', 'properties'])):
-
-    """ A container class for client requests. Contains fileds type, image, region and parameters. """
-
 def wrap_images(images):
 
     channels = [ImageChannel.COLOR, ImageChannel.DEPTH, ImageChannel.IR]
@@ -47,15 +43,17 @@ class Client(object):
     def __init__(self, stream=None, timeout=30, log=False):
 
         if isinstance(log, bool) and log:
-            self._logger = trax_logger(ConsoleLogger())
+            self._logger = ConsoleLogger()
         elif isinstance(log, str):
-            self._logger = trax_logger(FileLogger(log))
+            self._logger = FileLogger(log)
         elif callable(log):
-            self._logger = trax_logger(ProxyLogger(log))
+            self._logger = ProxyLogger(log)
         else:
             self._logger = None
 
-        logger = trax_logger_setup(self._logger, 0, 0)
+        self._clogger = trax_logger(self._logger) if not self._logger is None else None
+
+        logger = trax_logger_setup(self._clogger, 0, 0)
 
         if isinstance(stream, tuple):
 
@@ -75,6 +73,9 @@ class Client(object):
 
         else:
             raise TraxException("Invalid parameters")
+
+        if self._logger and self._logger.interrupted:
+            raise KeyboardInterrupt("Interrupted by user in log callback")
 
         if not handle:
             raise TraxException("Unable to connect to tracker")
@@ -140,6 +141,9 @@ class Client(object):
 
         status = TraxStatus.decode(trax_client_initialize(self._handle.reference, timage.reference, tregion, tproperties.reference))
 
+        if self._logger and self._logger.interrupted:
+            raise KeyboardInterrupt("Interrupted by user in log callback")
+
         if status == TraxStatus.ERROR:
             message = trax_get_error(self._handle.reference)
             message = message.decode('utf-8') if not message is None else "Unknown"
@@ -153,6 +157,9 @@ class Client(object):
         status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), properties.reference))
 
         elapsed = time.time() - start
+
+        if self._logger and self._logger.interrupted:
+            raise KeyboardInterrupt("Interrupted by user in log callback")
 
         if status == TraxStatus.ERROR:
             raise TraxException("Exception when waiting for response")
@@ -179,6 +186,9 @@ class Client(object):
 
         status = TraxStatus.decode(trax_client_frame(self._handle.reference, timage.reference, tproperties.reference))
 
+        if self._logger and self._logger.interrupted:
+            raise KeyboardInterrupt("Interrupted by user in log callback")
+
         if status == TraxStatus.ERROR:
             message = trax_get_error(self._handle.reference)
             message = message.decode('utf-8') if not message is None else "Unknown"
@@ -192,6 +202,9 @@ class Client(object):
         status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), properties.reference))
 
         elapsed = time.time() - start
+
+        if self._logger and self._logger.interrupted:
+            raise KeyboardInterrupt("Interrupted by user in log callback")
 
         if status == TraxStatus.ERROR:
             message = trax_get_error(self._handle.reference)
@@ -214,5 +227,9 @@ class Client(object):
             trax_terminate(self._handle.reference, reason.encode('utf-8'))
         else:
             trax_terminate(self._handle.reference, None)
+
+        if self._logger and self._logger.interrupted:
+            raise KeyboardInterrupt("Interrupted by user in log callback")
+
         self._handle = None
 

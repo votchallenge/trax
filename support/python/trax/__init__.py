@@ -42,36 +42,53 @@ class TraxStatus(object):
         elif intcode == 5:
             return TraxStatus.STATE
 
-class ConsoleLogger(object):
+class Logger(object):
+
+    def __init__(self):
+        self._interrupted = False
 
     def __call__(self, buffer, length, _):
-        if not buffer:
-            return
-        print(buffer[:length].decode("utf-8"), end='')
+        try:
+            if not buffer:
+                return
+            message = buffer[:length].decode("utf-8")
+            self.handle(message)
+        except KeyboardInterrupt:
+            self._interrupted = True
 
-class FileLogger(object):
+    def handle(self, message):
+        pass
+
+    @property
+    def interrupted(self):
+        return self._interrupted
+
+class ConsoleLogger(Logger):
+
+    def handle(self, message):
+        print(message, end='')
+
+class FileLogger(Logger):
 
     def __init__(self, filename):
+        super().__init__()
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         self._fp = open(filename, "w")
 
-    def __call__(self, buffer, length, _):
-        if not buffer:
-            return
-        self._fp.write(buffer[:length].decode("utf-8"))
+    def handle(self, message):
+        self._fp.write(message)
 
     def __del__(self):
         self._fp.close()
 
-class ProxyLogger(object):
+class ProxyLogger(Logger):
 
     def __init__(self, hook):
+        super().__init__()
         self._hook = hook
 
-    def __call__(self, buffer, length, _):
-        if not buffer:
-            return
-        self._hook(buffer[:length].decode("utf-8"))
+    def handle(self, message):
+        self._hook(message)
 
 class OwnerRef(weakref.ref):
     def __init__(self, ref):
