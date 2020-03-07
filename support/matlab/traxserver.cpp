@@ -61,14 +61,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 case ARGUMENT_TRACKERDESCRIPTION: tracker_description = get_string(prhs[i+1]); break;
                 case ARGUMENT_TRACKERFAMILY: tracker_family = get_string(prhs[i+1]); break;
                 case ARGUMENT_CHANNELS: channels = get_flags(prhs[i+1], get_channel_code); break;
-                default:
+                case ARGUMENT_CUSTOM:
                     if (key.rfind("trax.", 0) == 0) {
                         MEX_ERROR("Illegal argument.");
                         return;
                     } else {
                         custom[key] = get_string(prhs[i+1]);
                     }
-                }
+                    break;
+				default:
+					MEX_ERROR("Illegal argument.");
+					return;
+				}
             }
 
         }

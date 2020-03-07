@@ -23,6 +23,7 @@ using namespace trax;
 #define MEX_CREATE_EMTPY mxCreateDoubleMatrix(0, 0, mxREAL)
 #define MEX_ERROR(M) mexErrMsgTxt(M)
 
+#define ARGUMENT_CUSTOM -1
 #define ARGUMENT_PROPSTRUCT 0
 #define ARGUMENT_TRACKERNAME 1
 #define ARGUMENT_TRACKERFAMILY 2
@@ -35,6 +36,8 @@ using namespace trax;
 #define ARGUMENT_DIRECTORY 9
 #define ARGUMENT_LOG 10
 #define ARGUMENT_CHANNELS 11
+
+bool is_property_name(const std::string &str);
 
 string get_string(const mxArray *arg);
 

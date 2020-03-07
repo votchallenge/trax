@@ -5,6 +5,15 @@
 
 using namespace std;
 
+static inline bool is_not_alnum_dot_dash(char c) {
+    return !(isalpha(c) || isdigit(c) || (c == '.') || (c == '_'));
+}
+
+bool is_property_name(const std::string &str) {
+
+    return find_if(str.begin(), str.end(), is_not_alnum_dot_dash) == str.end();
+}
+
 string get_string(const mxArray *arg) {
 
     if (mxGetM(arg) != 1) {
@@ -603,6 +612,14 @@ int get_argument_code(string str) {
 
     if (str == "channels") {
         return ARGUMENT_CHANNELS;
+    }
+
+    if (str == "channels") {
+        return ARGUMENT_CHANNELS;
+    }
+
+    if (is_property_name(str)) {
+        return ARGUMENT_CUSTOM;
     }
 
     MEX_ERROR("Illegal argument name");
