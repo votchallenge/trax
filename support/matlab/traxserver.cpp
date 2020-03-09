@@ -192,17 +192,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     } else if (operation == "quit") {
 
-        if (nrhs > 0) {
+        if (!handle)
+            return;
 
-            if (nrhs != 1)
-                MEX_ERROR("Only one optional string argument allowed.");
+        std::string reason;
 
-            string reason = get_string(prhs[0]);
-            if (handle->terminate(reason) == TRAX_ERROR) {
-                std::string tmp("Unable to terminate protocol: " + handle->get_error());
-                MEX_ERROR(tmp.c_str());
-            }
+        if (nrhs > 2)
+            MEX_ERROR("Only one optional string argument allowed.");
+        else
+            reason = get_string(prhs[1]);
 
+        if (handle->terminate(reason) == TRAX_ERROR) {
+            std::string tmp("Unable to terminate protocol: " + handle->get_error());
+            MEX_ERROR(tmp.c_str());
         }
 
 		if (handle) delete handle;
