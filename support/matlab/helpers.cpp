@@ -222,14 +222,15 @@ Region array_to_region(const mxArray* input) {
 
         p = Region::create_mask(0, 0, width, height);
 
-        for (i = 0; i < height; i++) {
-
-            memcpy(p.write_mask_row(i), r + i * width, width);
-
+        for (int i = 0; i < height; i++) {
+            char *row = p.write_mask_row(i);
+            for (int j = 0; j < width; j++) {
+                row[j] = r[j * (height) + i];          
+            }
         }
 
         return p;
-    } else {
+    } else if (mxGetClassID(input) == mxDOUBLE_CLASS) {
         double *r = (double*)mxGetPr(input);
 
         if (l % 2 == 0 && l >= 6) {
@@ -240,15 +241,17 @@ Region array_to_region(const mxArray* input) {
                 p.set_polygon_point(i, r[i * 2], r[i * 2 + 1]);
             }
 
+            return p;
+
         } else if (l == 4) {
 
             p = Region::create_rectangle(r[0], r[1], r[2], r[3]);
-
+            return p;
         }
 
     }
 
-    return p;
+    MEX_ERROR("Illegal region format.");
 
 }
 
@@ -294,9 +297,10 @@ mxArray* region_to_array(const Region& region) {
         char *data = (char*) mxGetPr(val);
         memset(data, 0, dims[0] * dims[1]);
 
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < height; j++) {
-                memcpy(data + (i + y) * width + x, region.get_mask_row(i), width);          
+        for (int i = 0; i < height; i++) {
+            const char *row = region.get_mask_row(i);
+            for (int j = 0; j < width; j++) {
+                *(data + (j + x) * (height + y) + y + i) = row[j];          
             }
         }
 

@@ -174,8 +174,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         if ( nlhs > 1 ) { MEX_ERROR("One output parameter allowed."); return; }
 
-        if (!MEX_TEST_DOUBLE(1)) { MEX_ERROR("Illegal region format."); return; }
-
         Region reg = array_to_region(prhs[1]);
 
         if (!reg) { MEX_ERROR("Illegal region format."); return; }
