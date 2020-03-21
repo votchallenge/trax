@@ -582,6 +582,11 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     client->metadata = trax_metadata_create(region_formats, image_formats, channels,
                                             tracker_name, tracker_description, tracker_family);
 
+
+    if (tracker_name) free(tracker_name);
+    if (tracker_description) free(tracker_description);
+    if (tracker_family) free(tracker_family);
+
     copy_properties(tmp_properties, client->metadata->custom, COPY_EXTERNAL);
 
     trax_properties_release(&tmp_properties);
