@@ -39,7 +39,7 @@
 #define TRAX_NO_LOG -1
 #endif
 
-#define TRAX_VERSION 2
+#define TRAX_VERSION 3
 
 #define TRAX_ERROR -1
 #define TRAX_OK 0
