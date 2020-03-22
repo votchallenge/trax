@@ -289,7 +289,7 @@ int _parse_sequence(const char* buffer, float** data) {
 
 	int i;
 
-	float* numbers = (float*) malloc(sizeof(float) * (strlen(buffer) / 2));
+	float* numbers = (float*) malloc(sizeof(float) * (strlen(buffer)));
 
 	const char* pch = buffer;
 	for (i = 0; ; i++) {
@@ -427,7 +427,6 @@ int region_parse(const char* buffer, region_container** region) {
 		(*region)->data.mask.height = (int) data[3];
 
 		length = (*region)->data.mask.width * (*region)->data.mask.height;
-
 		(*region)->data.mask.data = (char*) malloc(sizeof(char) * length);
 
 		value = 0;
@@ -1142,14 +1141,14 @@ region_overlap region_compute_overlap(const region_container* ra, const region_c
 
 	if (a1 / a2 < 1e-10 || a2 / a1 < 1e-10 || width < 1 || height < 1) 
 		return overlap;
-	
-	ta = region_create_mask(b1.left, b1.top, b1.right - b1.left + 1, b1.bottom - b1.top + 1);
-	tb = region_create_mask(b2.left, b2.top, b2.right - b2.left + 1, b2.bottom - b2.top + 1);
 
 	if (bounds_overlap(b1, b2) == 0) {
 
 		int i;
-		
+
+		ta = region_create_mask(b1.left, b1.top, b1.right - b1.left + 1, b1.bottom - b1.top + 1);
+		tb = region_create_mask(b2.left, b2.top, b2.right - b2.left + 1, b2.bottom - b2.top + 1);
+
 		region_get_mask_offset(ra, ta->data.mask.data, b1.left, b1.top, b1.right - b1.left + 1, b1.bottom - b1.top + 1);
 		region_get_mask_offset(rb, tb->data.mask.data, b2.left, b2.top, b2.right - b2.left + 1, b2.bottom - b2.top + 1);
 
@@ -1164,16 +1163,17 @@ region_overlap region_compute_overlap(const region_container* ra, const region_c
 		overlap.only1 = (float) vol_1 / (float) (vol_1 + vol_2);
 		overlap.only2 = (float) vol_2 / (float) (vol_1 + vol_2);
 
-		return overlap;
-
 	} else {
 
 		int i;
-		char* mask1 = ta->data.mask.data;
-		char* mask2 = tb->data.mask.data;
+		char* mask1;
+		char* mask2;
 
 		ta = region_create_mask(x, y, width, height);
 		tb = region_create_mask(x, y, width, height);
+
+		mask1 = ta->data.mask.data;
+		mask2 = tb->data.mask.data;
 
 		region_get_mask_offset(ra, ta->data.mask.data, x, y, width, height);
 		region_get_mask_offset(rb, tb->data.mask.data, x, y, width, height);
@@ -1229,18 +1229,22 @@ void region_get_mask_offset(const region_container* r, char* mask, int x, int y,
 
 	if (r->type == MASK) {
 		int i, j;
-		int ox = MAX((r->data.mask).x - x, 0);
-		int oy = MAX((r->data.mask).y - y, 0);
-		int gx = MAX(x - (r->data.mask).x, 0);
-		int gy = MAX(y - (r->data.mask).y, 0);
 
-		int gw = MIN(x + width - (r->data.mask).x - (r->data.mask).width, 0) + (r->data.mask).width;
-		int gh = MIN(y + height - (r->data.mask).y - (r->data.mask).height, 0) + (r->data.mask).height;
+		int tx = MAX((r->data.mask).x, x);
+		int ty = MAX((r->data.mask).y, y);
 
-		memset(mask, 0, width * height);
+		int ox = tx - x;
+		int oy = ty - y;
+		int gx = tx - (r->data.mask).x;
+		int gy = ty - (r->data.mask).y;
 
-		for (i = 0; i < gh; i++) {
-			for (j = 0; j < gw; j++) {
+		int tw = MIN(x + width, (r->data.mask).x + (r->data.mask).width) - tx;
+		int th = MIN(y + height, (r->data.mask).y + (r->data.mask).height) - ty;
+
+		memset(mask, 0, width * height * sizeof(char));
+
+		for (i = 0; i < th; i++) {
+			for (j = 0; j < tw; j++) {
 				mask[j + ox + (i + oy) * width] = (r->data.mask).data[j + gx + (i + gy) * (r->data.mask).width];
 			}
 		}

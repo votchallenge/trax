@@ -149,12 +149,7 @@ class Wrapper(object):
 class ImageWrapper(Wrapper):
 
     def __init__(self, reference, owner=True):
-        super().__init__(POINTER_T(struct_trax_image), reference, self._release)
-        self._owner = owner
-
-    def _release(self, x):
-        if self._owner:
-            trax_image_release(byref(x))
+        super().__init__(POINTER_T(struct_trax_image), reference, lambda x: trax_image_release(byref(x)) if owner else None)
 
 class ImageListWrapper(Wrapper):
 
