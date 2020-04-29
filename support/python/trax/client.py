@@ -230,6 +230,3 @@ class Client(object):
 
         if self._logger and self._logger.interrupted:
             raise KeyboardInterrupt("Interrupted by user in log callback")
-
-        self._handle = None
-
