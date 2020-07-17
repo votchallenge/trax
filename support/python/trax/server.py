@@ -2,6 +2,7 @@
 Bindings for the TraX sever.
 """
 
+import traceback
 import collections
 
 from ctypes import byref, cast, py_object
@@ -136,9 +137,13 @@ class Server(object):
         """ To support instantiation with 'with' statement. """
         return self
 
-    def __exit__(self, *args, **kwargs):
-        """ Destructor used by 'with' statement. """
-        self.quit()
+    def __exit__(self, exc_type, exc_val, tb):
+        """ Session destructor used by 'with' statement. """
+        if exc_val:
+            traceback.print_exception(exc_type, exc_val, tb)
+            self.quit(reason=str(exc_val))
+        else:
+            self.quit()
 
     def quit(self, reason=None):
         """ Sends quit message and end terminates communication. """
