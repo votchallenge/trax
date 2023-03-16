@@ -150,7 +150,7 @@ Region get_region_interactive(const string& window, Mat& image) {
 
 bool read_frame(VideoCapture& reader, int frame, Mat& image) {
 
-    int current = reader.get(CV_CAP_PROP_POS_FRAMES);
+    int current = reader.get(cv::CAP_PROP_POS_FRAMES);
 
     if (frame < current) return false;
 
@@ -296,7 +296,7 @@ int main(int argc, char** argv) {
 
         Mat cvimage;
         VideoCapture reader(video_file);
-        int video_length = reader.get(CV_CAP_PROP_FRAME_COUNT);
+        int video_length = reader.get(cv::CAP_PROP_FRAME_COUNT);
 
         print_debug("Video will be loaded from file %s.\n", video_file.c_str());
 

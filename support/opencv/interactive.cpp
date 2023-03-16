@@ -50,7 +50,7 @@ bool wait = false;
 
 void on_mouse(int event, int x, int y, int, void* data) {
 
-  if( event == CV_EVENT_LBUTTONDOWN && wait ) {
+  if( event == cv::EVENT_LBUTTONDOWN && wait ) {
 
     cv::Rect *rect = (cv::Rect *) data;
 

@@ -16,7 +16,7 @@ cv::Mat image_to_mat(const Image& image) {
 	
     switch (image.type()) {
     case TRAX_IMAGE_PATH:
-        return cv::imread(image.get_path(), CV_LOAD_IMAGE_COLOR);
+        return cv::imread(image.get_path(), cv::IMREAD_COLOR);
     case TRAX_IMAGE_MEMORY: {
         int width, height, format;
         image.get_memory_header(&width, &height, &format);
@@ -27,7 +27,7 @@ cv::Mat image_to_mat(const Image& image) {
 
         cv::Mat result;
 
-        cv::cvtColor(tmp, result, CV_BGR2RGB);
+        cv::cvtColor(tmp, result, cv::COLOR_BGR2RGB);
         
         return result;
     }
@@ -38,7 +38,7 @@ cv::Mat image_to_mat(const Image& image) {
         // This is problematic but we will just read from the buffer anyway ...
         const cv::Mat mem(1, length, CV_8UC1, const_cast<char *>(buffer)); 
 
-        return cv::imdecode(mem, CV_LOAD_IMAGE_COLOR);
+        return cv::imdecode(mem, cv::IMREAD_COLOR);
 
     }
     }
@@ -100,7 +100,7 @@ Image mat_to_image(const cv::Mat& mat) {
     Image image = Image::create_memory(mat.cols, mat.rows, format);
     char* dst = image.write_memory_row(0);
     cv::Mat tmp(mat.size(), mat.type(), dst);
-    cv::cvtColor(mat, tmp, CV_BGR2RGB);
+    cv::cvtColor(mat, tmp, cv::COLOR_BGR2RGB);
 
     return image;
 }
