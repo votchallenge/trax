@@ -818,7 +818,80 @@ bool TrackerProcess::frame(const ImageList& image, const Properties& properties)
 
 }
 
-bool TrackerProcess::ready() {
+bool TrackerProcess::initialize(const ImageList& image, const ObjectList& objects, const Properties& properties) {
+
+	query();
+
+	if (!ready()) throw std::runtime_error("Tracker process not alive");
+
+	state->tracking = false;
+
+	state->start_watchdog();
+
+	// Initialize the tracker ...
+	int result = state->client->initialize(image, objects, properties);
+
+	state->stop_watchdog();
+
+	state->tracking = result == TRAX_OK;
+
+	if (result == TRAX_ERROR) {
+		state->stop_process();
+		std::runtime_error("Unable to initialize tracker: " + state->client->get_error());
+	}
+
+	return result == TRAX_OK;
+
+}
+
+bool TrackerProcess::wait(ObjectList& objects, Properties& properties) {
+
+	if (!ready()) throw std::runtime_error("Tracker process not alive");
+
+	if (!state->tracking) throw std::runtime_error("Tracker not initialized yet.");
+
+	state->start_watchdog();
+
+	int result = state->client->wait(objects, properties);
+
+	state->stop_watchdog();
+
+	state->tracking = result == TRAX_STATE;
+
+	if (result == TRAX_ERROR) {
+		state->stop_process();
+		std::runtime_error("Unable to retrieve response: " + state->client->get_error());
+	}
+
+	return result == TRAX_STATE;
+
+}
+
+bool TrackerProcess::frame(const ImageList& image, const ObjectList& objects, const Properties& properties) {
+
+	if (!ready()) throw std::runtime_error("Tracker process not alive");
+
+	if (!state->tracking) throw std::runtime_error("Tracker not initialized yet.");
+
+	state->start_watchdog();
+
+	int result = state->client->frame(image, objects, properties);
+
+	state->stop_watchdog();
+
+	state->tracking = result == TRAX_OK;
+
+	if (result == TRAX_ERROR) {
+		state->stop_process();
+		std::runtime_error("Unable to send new frame: " + state->client->get_error());
+	}
+
+	return result == TRAX_OK;
+
+}
+
+
+bool TrackerProcess::ready() const {
 
 	if (!state || !state->process_running() || !state->client->is_alive()) return false;
 
@@ -826,7 +899,7 @@ bool TrackerProcess::ready() {
 
 }
 
-bool TrackerProcess::tracking() {
+bool TrackerProcess::tracking() const {
 
 	if (!ready()) return false;
 	return state->tracking;
@@ -841,6 +914,16 @@ bool TrackerProcess::reset() {
 	return state->start_process();
 
 }
+
+bool TrackerProcess::multiobject() const {
+
+	if (!ready()) return false;
+	int value = 0;
+	state->client->get_parameter(TRAX_PARAMETER_MULTIOBJECT, &value);
+	return value != 0;
+
+}
+
 
 Metadata TrackerProcess::metadata() {
 

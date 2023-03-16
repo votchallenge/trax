@@ -19,6 +19,12 @@
 #define VALIDATE_SERVER_HANDLE(H) assert(((H)->flags & TRAX_FLAG_VALID) && ((H)->flags & TRAX_FLAG_SERVER))
 #define VALIDATE_CLIENT_HANDLE(H) assert(((H)->flags & TRAX_FLAG_VALID) && !((H)->flags & TRAX_FLAG_SERVER))
 
+#define IS_MULTI_OBJECT(H) (((H)->metadata->flags & TRAX_METADATA_MULTI_OBJECT))
+
+#define IS_VERSION_2(H) (((H)->version >= 2))
+#define IS_VERSION_3(H) (((H)->version >= 3))
+#define IS_VERSION_4(H) (((H)->version >= 4))
+
 #define HANDLE_ALIVE(H) (((H)->flags & TRAX_FLAG_VALID) && !((H)->flags & TRAX_FLAG_TERMINATED))
 
 #define LOGGER(H) (((H)->logging))
@@ -28,6 +34,7 @@
 
 #define COPY_ALL 1
 #define COPY_EXTERNAL 0
+#define COPY_OVERWRITE 2
 
 #define REGION(VP) ((region_container*) (VP))
 
@@ -210,22 +217,29 @@ char* strntok(char* str, char query, int limit) {
 
 }
 
-void copy_property_all(const char *key, const char *value, const void *obj) {
-
+void copy_property_overwrite(const char *key, const char *value, const void *obj) {
     trax_properties* dest = (trax_properties*) obj;
     trax_properties_set(dest, key, value);
-
 }
 
-void copy_property_external(const char *key, const char *value, const void *obj) {
-
+void copy_property_safe(const char *key, const char *value, const void *obj) {
     trax_properties* dest = (trax_properties*) obj;
+    if (trax_properties_has(dest, key)) return;
+    trax_properties_set(dest, key, value);
+}
 
+void copy_property_external_overwrite(const char *key, const char *value, const void *obj) {
+    trax_properties* dest = (trax_properties*) obj;
     if (strncmp(key, "trax.", 5) == 0) return;
-
     trax_properties_set(dest, key, value);
-
 }
+
+void copy_property_external_safe(const char *key, const char *value, const void *obj) {
+    trax_properties* dest = (trax_properties*) obj;
+    if (trax_properties_has(dest, key) || strncmp(key, "trax.", 5) == 0) return;
+    trax_properties_set(dest, key, value);
+}
+
 
 char* image_encode(trax_image* image) {
 
@@ -445,6 +459,21 @@ void region_formats_encode(int formats, char *key) {
 
 }
 
+trax_region* region_autoconvert(trax_region* region, int supported) {
+
+    trax_region* converted = NULL;
+
+    if TRAX_SUPPORTS(supported, TRAX_REGION_MASK)
+        converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_MASK));
+    else if TRAX_SUPPORTS(supported, TRAX_REGION_POLYGON)
+        converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_POLYGON));
+    else if TRAX_SUPPORTS(supported, TRAX_REGION_RECTANGLE)
+        converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_RECTANGLE));
+
+    return converted;
+
+}
+
 int channels_decode(char *str) {
 
     int channels = 0;
@@ -488,9 +517,13 @@ void channels_encode(int channels, char *key) {
 
 }
 
-void copy_properties(const trax_properties* source, trax_properties* dest, int internal) {
+void copy_properties(const trax_properties* source, trax_properties* dest, int flags) {
 
-    trax_properties_enumerate(source, (internal) ? copy_property_all : copy_property_external, dest);
+    trax_enumerator f = (flags & COPY_ALL) ?
+     ((flags && COPY_OVERWRITE) ? copy_property_overwrite : copy_property_safe) :
+     ((flags && COPY_OVERWRITE) ? copy_property_external_overwrite : copy_property_external_safe);
+    
+    trax_properties_enumerate(source, f, dest);
 
 }
 
@@ -529,9 +562,8 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
 
     trax_properties* tmp_properties;
     string_list* arguments;
-    int version = 1;
     char *tmp, *tracker_name, *tracker_description, *tracker_family;
-    int region_formats, image_formats, channels;
+    int region_formats, image_formats, channels, flags;
 
     trax_handle* client = (trax_handle*) malloc(sizeof(trax_handle));
 
@@ -540,6 +572,7 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     client->logging = log;
     client->stream = stream;
     client->error = NULL;
+    client->objects = 0;
 
     tmp_properties = trax_properties_create();
     arguments = list_create(8);
@@ -564,7 +597,7 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     image_formats = image_formats_decode(tmp);
     free(tmp);
 
-    // Multiple channels are only supported in TraX version 2
+    // Multiple channels are only supported in TraX protocol version 2
     if (client->version < 2) {
         channels = TRAX_CHANNEL_COLOR;
     } else {
@@ -579,15 +612,21 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     tracker_description = trax_properties_get(tmp_properties, "trax.description");
     tracker_family = trax_properties_get(tmp_properties, "trax.family");
 
-    client->metadata = trax_metadata_create(region_formats, image_formats, channels,
-                                            tracker_name, tracker_description, tracker_family);
+    flags = 0;
+    if (client->version > 3) {
+        if (trax_properties_get_int(tmp_properties, "trax.multiobject", 0)) {
+            flags |= TRAX_METADATA_MULTI_OBJECT;
+        }
+    }
 
+    client->metadata = trax_metadata_create(region_formats, image_formats, channels,
+                                            tracker_name, tracker_description, tracker_family, flags);
 
     if (tracker_name) free(tracker_name);
     if (tracker_description) free(tracker_description);
     if (tracker_family) free(tracker_family);
 
-    copy_properties(tmp_properties, client->metadata->custom, COPY_EXTERNAL);
+    copy_properties(tmp_properties, client->metadata->custom, COPY_EXTERNAL | COPY_OVERWRITE);
 
     trax_properties_release(&tmp_properties);
     list_destroy(&arguments);
@@ -603,17 +642,19 @@ failure:
 
 }
 
-trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const trax_logging log) {
+trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const trax_logging log, int version) {
 
     trax_properties* properties;
     trax_handle* server = (trax_handle*) malloc(sizeof(trax_handle));
     string_list* arguments;
+    int flags;
     char tmp[BUFFER_LENGTH];
 
     server->flags = (TRAX_FLAG_SERVER) | TRAX_FLAG_VALID;
     server->logging = log;
     server->error = NULL;
     server->stream = stream;
+    server->objects = 0;
 
     if (metadata->custom) {
         properties = trax_properties_copy(metadata->custom);
@@ -621,8 +662,11 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
         properties = trax_properties_create();
     }
     
-    server->version = TRAX_VERSION;
-    trax_properties_set_int(properties, "trax.version", TRAX_VERSION);
+    assert(version <= TRAX_VERSION);
+    if (version < 1) version = TRAX_VERSION;
+
+    server->version = version;
+    trax_properties_set_int(properties, "trax.version", server->version);
 
     region_formats_encode(metadata->format_region, tmp);
     trax_properties_set(properties, "trax.region", tmp);
@@ -642,9 +686,16 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
     if (metadata->tracker_family)
         trax_properties_set(properties, "trax.family", metadata->tracker_family);
 
+    if (IS_VERSION_4(server)) {
+        flags = 0;
+        if (metadata->flags & TRAX_METADATA_MULTI_OBJECT) {
+            flags |= TRAX_METADATA_MULTI_OBJECT;
+            trax_properties_set_int(properties, "trax.multiobject", 1);
+        }
+    }
 
     server->metadata = trax_metadata_create(metadata->format_region, metadata->format_image, metadata->channels,
-                                            metadata->tracker_name, metadata->tracker_description, metadata->tracker_family);
+                                            metadata->tracker_name, metadata->tracker_description, metadata->tracker_family, flags);
 
     arguments = list_create(1);
 
@@ -659,7 +710,7 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
 }
 
 trax_metadata* trax_metadata_create(int region_formats, int image_formats, int channels,
-                                    const char* tracker_name, const char* tracker_description, const char* tracker_family) {
+                                    const char* tracker_name, const char* tracker_description, const char* tracker_family, int flags) {
 
     assert(channels != 0);
 
@@ -674,6 +725,8 @@ trax_metadata* trax_metadata_create(int region_formats, int image_formats, int c
     metadata->tracker_family = (tracker_family) ? strdup(tracker_family) : NULL;
 
     metadata->custom = trax_properties_create();
+
+    metadata->flags = flags;
 
     return metadata;
 
@@ -714,74 +767,90 @@ trax_handle* trax_client_setup_socket(int server, int timeout, const trax_loggin
 
 }
 
-int trax_client_wait(trax_handle* client, trax_region** region, trax_properties* properties) {
+int trax_client_wait(trax_handle* client, trax_object_list** objects, trax_properties* properties) {
 
     trax_properties* tmp_properties;
     string_list* arguments;
     int result = TRAX_ERROR;
 
-    (*region) = NULL;
+    (*objects) = NULL;
 
     VALIDATE_CLIENT_HANDLE(client);
 
-    if (!HANDLE_ALIVE(client))
+    if (!HANDLE_ALIVE(client)) {
+        set_error(client, "Tracker not alive");
         return TRAX_ERROR;
-
-    tmp_properties = trax_properties_create();
-    arguments = list_create(8);
-
-    result = read_message((message_stream*)client->stream, &LOGGER(client), arguments, tmp_properties);
-
-    if (result == TRAX_STATE) {
-
-        region_container *_region = NULL;
-
-        if (list_size(arguments) != 1)
-            goto failure;
-
-        result = TRAX_STATE;
-
-        if (!region_parse(arguments->buffer[0], &_region)) {
-            goto failure;
-        }
-
-        (*region) = _region;
-
-        copy_properties(tmp_properties, properties, 1);
-
-        goto end;
-
-    } else if (result == TRAX_QUIT) {
-
-        if (list_size(arguments) != 0)
-            goto failure;
-
-        if (properties)
-            copy_properties(tmp_properties, properties, 1);
-
-        client->flags |= TRAX_FLAG_TERMINATED;
-
-        goto end;
     }
 
-failure:
-    result = TRAX_ERROR;
+    int oi = 0;
 
-end:
+    (*objects) = trax_object_list_create(client->objects);
 
-    list_destroy(&arguments);
-    trax_properties_release(&tmp_properties);
+    for (int i = 0; i < client->objects; i++) {
+
+        tmp_properties = trax_properties_create();
+        arguments = list_create(8);
+        result = read_message((message_stream*)client->stream, &LOGGER(client), arguments, tmp_properties);
+
+        if (result == TRAX_STATE) {
+
+            region_container *_region = NULL;
+
+            if (list_size(arguments) != 1) {
+                list_destroy(&arguments);
+                trax_properties_release(&tmp_properties);
+                trax_object_list_release(objects);
+                result = TRAX_ERROR;
+                break;
+            }
+            
+            if (!region_parse(arguments->buffer[0], &_region)) {
+                list_destroy(&arguments);
+                trax_properties_release(&tmp_properties);
+                trax_object_list_release(objects);
+                result = TRAX_ERROR;
+                break;
+            }
+
+            trax_object_list_set((*objects), oi, _region);
+            copy_properties(tmp_properties, trax_object_list_properties((*objects), oi), COPY_ALL | COPY_OVERWRITE);
+
+        } else if (result == TRAX_QUIT) {
+
+            if (list_size(arguments) != 0) {
+                list_destroy(&arguments);
+                trax_properties_release(&tmp_properties);
+                trax_object_list_release(objects);
+                result = TRAX_ERROR;
+                break;
+            }
+    
+            if (properties)
+                copy_properties(tmp_properties, properties, COPY_ALL | COPY_OVERWRITE);
+
+            client->flags |= TRAX_FLAG_TERMINATED;
+
+            list_destroy(&arguments);
+            trax_properties_release(&tmp_properties);
+            trax_object_list_release(objects);
+            break;
+        }
+
+        list_destroy(&arguments);
+        trax_properties_release(&tmp_properties);
+
+    }
 
     return result;
 
 }
 
-int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_region* region, trax_properties* properties) {
+int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_object_list* objects, trax_properties* properties) {
 
     char* data = NULL;
-    region_container* _region;
+    trax_region* region;
     string_list* arguments;
-    int i;
+    int i, n;
 
     VALIDATE_CLIENT_HANDLE(client);
 
@@ -792,11 +861,35 @@ int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_re
         return TRAX_ERROR;
     }
 
-    assert(images && region);
+    assert(images && objects);
 
-    _region = REGION(region);
+    n = trax_object_list_count(objects);
 
-    assert(_region->type != SPECIAL);
+    if (n < 1) {
+        set_error(client, "At least one object required");
+        return TRAX_ERROR;
+    }
+
+    if (!IS_MULTI_OBJECT(client) && n > 1) {
+        set_error(client, "Too many objects given");
+        return TRAX_ERROR;
+    }
+
+    if (IS_VERSION_4(client)) {
+        if (client->objects > 0) {
+            write_message((message_stream*)client->stream, &LOGGER(client), TRAX_RESET, NULL, NULL);
+            client->objects = 0;
+        }
+        return trax_client_frame(client, images, objects, properties);
+    }
+
+    // Legacy single target mode from now on.
+
+    region = trax_object_list_get(objects, 0);
+
+    assert(REGION_TYPE(region) != SPECIAL);
+
+    // TODO: verify server version?
 
     arguments = list_create(1);
 
@@ -815,14 +908,7 @@ int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_re
 
     if (!TRAX_SUPPORTS(client->metadata->format_region, REGION_TYPE(region))) {
 
-        trax_region* converted = NULL;
-
-        if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_MASK)
-            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_MASK));
-        else if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_POLYGON)
-            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_POLYGON));
-        else if TRAX_SUPPORTS(client->metadata->format_region, TRAX_REGION_RECTANGLE)
-            converted = region_convert((region_container *)region, REGION_TYPE_BACK(TRAX_REGION_RECTANGLE));
+        trax_region* converted = region_autoconvert(region, client->metadata->format_region);
 
         assert(converted);
 
@@ -841,6 +927,8 @@ int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_re
 
     list_destroy(&arguments);
 
+    client->objects = 1;
+
     return TRAX_OK;
 
 failure:
@@ -851,10 +939,9 @@ failure:
 
 }
 
-int trax_client_frame(trax_handle* client, trax_image_list* images, trax_properties* properties) {
+int trax_client_frame(trax_handle* client, trax_image_list* images, trax_object_list* objects, trax_properties* properties) {
 
     int i;
-    string_list* arguments;
     VALIDATE_CLIENT_HANDLE(client);
 
     clear_error(client);
@@ -864,34 +951,80 @@ int trax_client_frame(trax_handle* client, trax_image_list* images, trax_propert
         return TRAX_ERROR;
     }
 
-    arguments = list_create(1);
+    if (IS_VERSION_4(client)) {
 
-    for (i = 0; i < TRAX_CHANNELS; i++) {
-        if (TRAX_SUPPORTS(client->metadata->channels, TRAX_CHANNEL_ID(i))) {
-            if (!images->images[i]) {
-                set_error(client, "Required image channel not provided (ID: %d)", TRAX_CHANNEL_ID(i));
-                goto failure;
+        int n = (objects) ? trax_object_list_count(objects) : 0;
+
+        if (client->objects + n > 1 && !IS_MULTI_OBJECT(client)) {
+            set_error(client, "Invalid mode");
+            return TRAX_ERROR;
+        }
+
+        for (i = 0; i < n; i++) {
+            char* data = NULL;
+            string_list* arguments;
+            trax_region* region = trax_object_list_get(objects, i);
+
+            arguments = list_create(1);
+
+            if (!TRAX_SUPPORTS(client->metadata->format_region, REGION_TYPE(region))) {
+
+                    trax_region* converted = region_autoconvert(region, client->metadata->format_region);
+                    assert(converted);
+                    data = region_string((region_container *)converted);
+                    trax_region_release(&converted);
+
+            } else data = region_string((region_container *)region);
+
+            if (data) {
+                list_append(arguments, data);
+                free(data);
             }
-            char* buffer = image_encode(images->images[i]);
-            list_append_direct(arguments, buffer);
-        } 
+
+            write_message((message_stream*)client->stream, &LOGGER(client), TRAX_INITIALIZE, arguments, trax_object_list_properties(objects, i));
+
+            list_destroy(&arguments);
+
+        }
+        
+        client->objects += n;
+        
+    } else {
+
+        int n = (objects) ? trax_object_list_count(objects) : 0;
+
+        if (n > 0) {
+            set_error(client, "Unable to add new objects");
+            return TRAX_ERROR;
+        }
+
     }
 
-    write_message((message_stream*)client->stream, &LOGGER(client), TRAX_FRAME, arguments, properties);
+    {
+        string_list* arguments;
+        arguments = list_create(1);
 
-    list_destroy(&arguments);
+        for (i = 0; i < TRAX_CHANNELS; i++) {
+            if (TRAX_SUPPORTS(client->metadata->channels, TRAX_CHANNEL_ID(i))) {
+                if (!images->images[i]) {
+                    set_error(client, "Required image channel not provided (ID: %d)", TRAX_CHANNEL_ID(i));
+                    list_destroy(&arguments);
+                    return TRAX_ERROR;
+                }
+                char* buffer = image_encode(images->images[i]);
+                list_append_direct(arguments, buffer);
+            } 
+        }
 
-    return TRAX_OK;
+        write_message((message_stream*)client->stream, &LOGGER(client), TRAX_FRAME, arguments, properties);
+        list_destroy(&arguments);
 
-failure:
-
-    list_destroy(&arguments);
-
-    return TRAX_ERROR;
+        return TRAX_OK;
+    }
 
 }
 
-trax_handle* trax_server_setup(trax_metadata *metadata, const trax_logging log) {
+trax_handle* trax_server_setup_v(trax_metadata *metadata, const trax_logging log, int version) {
 
     message_stream* stream;
 
@@ -921,18 +1054,18 @@ trax_handle* trax_server_setup(trax_metadata *metadata, const trax_logging log) 
 
     }
 
-    return server_setup(metadata, stream, log);
+    return server_setup(metadata, stream, log, version);
 
 }
 
-trax_handle* trax_server_setup_file(trax_metadata *metadata, int input, int output, const trax_logging log) {
+trax_handle* trax_server_setup_file_v(trax_metadata *metadata, int input, int output, const trax_logging log, int version) {
 
     message_stream* stream = create_message_stream_file(input, output);
 
-    return server_setup(metadata, stream, log);
+    return server_setup(metadata, stream, log, version);
 }
 
-int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region** region, trax_properties* properties) {
+int trax_server_wait_sot(trax_handle* server, trax_image_list** images, trax_region** region, trax_properties* properties) {
 
     int result = TRAX_ERROR;
     int i, j = 0;
@@ -945,6 +1078,11 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
 
     if (!HANDLE_ALIVE(server)) {
         set_error(server, "Server not alive");
+        return TRAX_ERROR;
+    }
+
+    if (IS_VERSION_4(server)) {
+        set_error(server, "Invalid mode");
         return TRAX_ERROR;
     }
 
@@ -978,7 +1116,7 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
         }
 
         if (properties)
-            copy_properties(tmp_properties, properties, COPY_ALL);
+            copy_properties(tmp_properties, properties, COPY_ALL | COPY_OVERWRITE);
         goto end;
 
     } else if (result == TRAX_QUIT) {
@@ -989,7 +1127,7 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
         }   
 
         if (properties)
-            copy_properties(tmp_properties, properties, COPY_ALL);
+            copy_properties(tmp_properties, properties, COPY_ALL | COPY_OVERWRITE);
 
         server->flags |= TRAX_FLAG_TERMINATED;
 
@@ -1022,7 +1160,9 @@ int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region*
         }
 
         if (properties)
-            copy_properties(tmp_properties, properties, COPY_ALL);
+            copy_properties(tmp_properties, properties, COPY_ALL | COPY_OVERWRITE);
+
+        server->objects = 1;
 
         goto end;
     }
@@ -1049,7 +1189,160 @@ end:
     return result;
 }
 
-int trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties) {
+int trax_server_wait_mot(trax_handle* server, trax_image_list** images, trax_object_list** objects, trax_properties* properties) {
+
+    int result = TRAX_ERROR;
+    int i, j = 0;
+    string_list* arguments;
+    trax_properties* tmp_properties;
+    int object_capacity = 1;
+    int object_count = 0;
+    trax_region** object_regions = (trax_region**) malloc(sizeof(trax_region*) * object_capacity);
+    trax_properties** object_properties = (trax_properties**) malloc(sizeof(trax_properties*) * object_capacity);
+
+    VALIDATE_SERVER_HANDLE(server);
+
+    clear_error(server);
+
+    *objects = NULL;
+
+    if (!HANDLE_ALIVE(server)) {
+        set_error(server, "Server not alive");
+        return TRAX_ERROR;
+    }
+
+    int argument_count = trax_image_list_count(server->metadata->channels);
+
+    while (1) {
+        tmp_properties = trax_properties_create();
+        arguments = list_create(8);
+
+        int code = read_message((message_stream*)server->stream, &LOGGER(server), arguments, tmp_properties);
+
+        if (code == TRAX_QUIT) {
+
+            if (list_size(arguments) != 0){
+                set_error(server, "Protocol error, illegal argument number %d != %d", list_size(arguments), 0);
+                goto failure;
+            }   
+
+            if (properties)
+                copy_properties(tmp_properties, properties, COPY_ALL | COPY_OVERWRITE);
+
+            result = TRAX_QUIT;
+            server->flags |= TRAX_FLAG_TERMINATED;
+            goto end;
+        }
+
+        if (code == TRAX_RESET) {
+            result = TRAX_INITIALIZE;
+            server->objects = 0;
+        }
+
+        if (code == TRAX_FRAME) {
+
+            if (result == TRAX_INITIALIZE && object_count == 0) {
+                set_error(server, "No object was given to track");
+                goto failure;
+            }
+
+            if (result != TRAX_INITIALIZE || server->objects > 0) result = TRAX_FRAME;
+
+            if (list_size(arguments) != argument_count) {
+                set_error(server, "Protocol error, illegal argument number %d != %d", list_size(arguments), argument_count);
+                goto failure;
+            }   
+                
+            *images = trax_image_list_create();
+
+            for (i = 0; i < TRAX_CHANNELS; i++) {
+
+                if (TRAX_SUPPORTS(server->metadata->channels, TRAX_CHANNEL_ID(i))) {
+
+                    (*images)->images[i] = image_decode(arguments->buffer[j]);
+                    if (!(*images)->images[i] || !TRAX_SUPPORTS(server->metadata->format_image, (*images)->images[i]->type))
+                        goto failure;
+                    j++;
+
+                }
+
+            }
+
+            if (properties)
+                copy_properties(tmp_properties, properties, COPY_ALL | COPY_OVERWRITE);
+            goto end;
+        }
+
+        if (code == TRAX_INITIALIZE) {
+            if (list_size(arguments) != 1) { // There's also the region info
+                set_error(server, "Protocol error, illegal argument number %d != %d", list_size(arguments), 1);
+                goto failure;
+            }
+
+            object_count++;
+
+            if (object_count > object_capacity) {
+                object_capacity += 10;
+                object_regions = (trax_region**) realloc(object_regions, sizeof(trax_region*) * object_capacity);
+                object_properties = (trax_properties**) realloc(object_properties, sizeof(trax_properties*) * object_capacity);
+            }
+
+            if (!region_parse(arguments->buffer[0], (region_container**)(&object_regions[object_count-1]))) {
+                object_count--;
+                goto failure;
+            }
+
+            object_properties[object_count-1] = trax_properties_create();
+            copy_properties(tmp_properties, object_properties[object_count-1], COPY_ALL | COPY_OVERWRITE);
+
+            result = TRAX_INITIALIZE;
+        }
+
+        list_destroy(&arguments);
+        trax_properties_release(&tmp_properties);
+
+    }
+
+failure:
+
+    result = TRAX_ERROR;
+
+    if (*images) {
+        for (i = 0; i < TRAX_CHANNELS; i++) {
+            if ((*images)->images[i]) trax_image_release(&(*images)->images[i]);
+        }
+        trax_image_list_release(images);
+    }
+
+    for (i = 0; i < object_count; i++) {
+        trax_region_release(&(object_regions[i]));
+        trax_properties_release(&(object_properties[i]));
+    }
+    object_count = 0;
+
+end:
+
+    if (object_count) {
+        *objects = trax_object_list_create(object_count);
+        for (i = 0; i < object_count; i++) {
+            trax_object_list_set(*objects, i, object_regions[i]);
+            copy_properties(object_properties[i], trax_object_list_properties(*objects, i), COPY_ALL | COPY_OVERWRITE);
+            trax_region_release(&(object_regions[i]));
+            trax_properties_release(&(object_properties[i]));
+        }
+        server->objects += object_count;
+    } 
+
+    if (arguments) list_destroy(&arguments);
+    if (tmp_properties) trax_properties_release(&tmp_properties);
+
+    free(object_regions);
+    free(object_properties);
+
+    return result;
+}
+
+int trax_server_reply_sot(trax_handle* server, trax_region* region, trax_properties* properties) {
 
     char* data;
     string_list* arguments;
@@ -1060,6 +1353,11 @@ int trax_server_reply(trax_handle* server, trax_region* region, trax_properties*
 
     if (!HANDLE_ALIVE(server)) {
         set_error(server, "Server not alive");
+        return TRAX_ERROR;
+    }
+
+    if (IS_VERSION_4(server)) {
+        set_error(server, "Invalid mode");
         return TRAX_ERROR;
     }
 
@@ -1078,6 +1376,48 @@ int trax_server_reply(trax_handle* server, trax_region* region, trax_properties*
     return TRAX_OK;
 
 }
+
+int trax_server_reply_mot(trax_handle* server, trax_object_list* objects) {
+
+    int n, i;
+    char* data;
+    string_list* arguments;
+
+    VALIDATE_SERVER_HANDLE(server);
+
+    clear_error(server);
+
+    if (!HANDLE_ALIVE(server)) {
+        set_error(server, "Server not alive");
+        return TRAX_ERROR;
+    }
+
+    assert(objects);
+
+    n = trax_object_list_count(objects);
+
+    if (!IS_MULTI_OBJECT(server) && n != 1) {
+        set_error(server, "Invalid mode");
+        return TRAX_ERROR;
+    }
+
+    if (n != server->objects) {
+        set_error(server, "Invalid object count");
+        return TRAX_ERROR;
+    }
+
+    for (i = 0; i < n; i++) {
+        data = region_string(REGION(trax_object_list_get(objects, i)));
+        if (!data) return TRAX_ERROR;
+        arguments = list_create(1);
+        list_append_direct(arguments, data);
+        write_message((message_stream*)server->stream, &LOGGER(server), TRAX_STATE, arguments, trax_object_list_properties(objects, i));
+        list_destroy(&arguments);
+    }
+
+    return TRAX_OK;
+}
+
 
 const char* trax_get_error(trax_handle* handle) {
 
@@ -1164,10 +1504,13 @@ int trax_get_parameter(trax_handle* handle, int id, int* value) {
         *value = handle->version;
         return 1;
     case TRAX_PARAMETER_CLIENT:
-        *value = !(handle->flags & TRAX_FLAG_SERVER);
+        *value = (!(handle->flags & TRAX_FLAG_SERVER)) ? 1 : 0;
         return 1;
     case TRAX_PARAMETER_SOCKET:
-        *value = (((message_stream*)handle->stream)->flags & TRAX_STREAM_SOCKET);
+        *value = ((((message_stream*)handle->stream)->flags & TRAX_STREAM_SOCKET)) ? 1 : 0;
+        return 1;
+    case TRAX_PARAMETER_MULTIOBJECT:
+        *value = ((handle->metadata->flags) & TRAX_METADATA_MULTI_OBJECT) ? 1 : 0;
         return 1;
     }
 
@@ -1591,6 +1934,15 @@ trax_properties* trax_properties_copy(const trax_properties* original) {
 
 }
 
+void trax_properties_append(const trax_properties* source, trax_properties* drain, int overwrite) {
+
+    int flags = COPY_ALL;
+    if (overwrite) flags |= COPY_OVERWRITE;
+
+    copy_properties(source, drain, flags);
+
+}
+
 void trax_properties_set(trax_properties* properties, const char* key, const char* value) {
 
     sm_put(properties->map, key, value);
@@ -1625,6 +1977,11 @@ char* trax_properties_get(const trax_properties* properties, const char* key) {
     sm_get(properties->map, key, value, size);
 
     return value;
+}
+
+int trax_properties_has(const trax_properties* properties, const char* key) {
+    int size = sm_get(properties->map, key, NULL, 0);
+    return (size < 1)? 0 : 1;
 }
 
 int trax_properties_get_int(const trax_properties* properties, const char* key, int def) {
@@ -1675,6 +2032,92 @@ void trax_properties_enumerate(const trax_properties* properties, trax_enumerato
 
         sm_enum(properties->map, enumerator, object);
     }
+}
+
+
+trax_object_list* trax_object_list_create(int count) {
+
+    int i;
+
+    trax_object_list* list = (trax_object_list*)malloc(sizeof(trax_object_list));
+
+    list->size = count;
+
+    list->regions = (trax_region**) malloc(sizeof(trax_region*) * count);
+    list->properties = (trax_properties**) malloc(sizeof(trax_properties*) * count);
+
+    for (i = 0; i < count; i++) {
+        list->regions[i] = trax_region_create_special(0);
+        list->properties[i] = trax_properties_create();
+    }
+
+    return list;
+}
+
+
+void trax_object_list_release(trax_object_list** list) {
+
+    if (list && *list) {
+        int i;
+        for (i = 0; i < (*list)->size; i++) {
+            trax_region_release(&((*list)->regions[i]));
+            trax_properties_release(&((*list)->properties[i]));
+        }
+        free((*list)->regions);
+        free((*list)->properties);
+        free((*list));
+        *list = 0;
+    }
+}
+
+
+void trax_object_list_set(trax_object_list* list, int index, trax_region* region) {
+
+    if (index < 0 || index >= list->size) return;
+
+    trax_region_release(&(list->regions[index]));
+
+    list->regions[index] = trax_region_clone(region);
+
+}
+
+
+trax_region* trax_object_list_get(trax_object_list* list, int index) {
+
+    if (index < 0 || index >= list->size) return 0;
+    return list->regions[index];
+
+}
+
+trax_properties* trax_object_list_properties(trax_object_list* list, int index) {
+    if (index < 0 || index >= list->size) return 0;
+    return list->properties[index];
+}
+
+int trax_object_list_count(const trax_object_list* list) {
+    return list->size;
+}
+
+int trax_object_list_append(trax_object_list* list, const trax_object_list* src) {
+
+    int i, o;
+
+    assert(list && src);
+
+    o = list->size;
+    list->size += src->size;
+
+    list->regions = (trax_region**) realloc(list->regions, sizeof(trax_region*) * list->size);
+    list->properties = (trax_properties**) realloc(list->properties, sizeof(trax_properties*) * list->size);
+
+    for (i = 0; i < src->size; i++) {
+        list->regions[i + o] = trax_region_clone(src->regions[i]);
+        list->properties[i + o] = trax_properties_create();
+        copy_properties(src->properties[i], list->properties[i + o], COPY_ALL | COPY_OVERWRITE);
+    }
+
+    return list->size;
+
 }
 
 trax_image_list* trax_image_list_create() {

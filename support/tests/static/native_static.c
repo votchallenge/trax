@@ -37,7 +37,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#include "trax.h"
+#include <trax.h>
 
 #if defined(__OS2__) || defined(__WINDOWS__) || defined(WIN32) || defined(WIN64) || defined(_MSC_VER)
 #include <windows.h>
@@ -59,8 +59,13 @@ int main( int argc, char** argv) {
     int run;
     float wait = 0;
     trax_image_list* img = NULL;
+    #ifdef TRAX_LEGACY_SINGLE
     trax_region* reg = NULL;
     trax_region* mem = NULL;
+    #else
+    trax_object_list* mem = NULL;
+    trax_object_list* new = NULL;
+    #endif
 
     int channels = TRAX_CHANNEL_COLOR;
 
@@ -77,8 +82,13 @@ int main( int argc, char** argv) {
     // *****************************************
 
     trax_handle* trax;
+    #ifdef TRAX_LEGACY_SINGLE
     trax_metadata* metadata = trax_metadata_create(TRAX_REGION_ANY, TRAX_IMAGE_ANY, channels,
-                              "Static", "Static demo tracker", "Demo");
+                              "Static", "Static demo tracker", "Demo", 0);
+    #else
+    trax_metadata* metadata = trax_metadata_create(TRAX_REGION_ANY, TRAX_IMAGE_ANY, channels,
+                              "Static", "Static demo tracker", "Demo", TRAX_METADATA_MULTI_OBJECT);
+    #endif
 
     log = argc > 1 ? fopen(argv[1], "w") : NULL;
     trax = trax_server_setup(metadata, log ? trax_logger_setup_file(log) : trax_no_log);
@@ -99,7 +109,13 @@ int main( int argc, char** argv) {
         // and just follow the instructions that the tracker gets.
         // The main function for this is trax_wait that actually listens for commands.
 
-        int tr = trax_server_wait(trax, &img, &reg, prop);
+        int tr = 0;
+
+        #ifdef TRAX_LEGACY_SINGLE
+        tr = trax_server_wait(trax, &img, &reg, prop);
+        #else
+        tr = trax_server_wait(trax, &img, &new, prop);
+        #endif
 
         // There are two important commands. The first one is TRAX_INITIALIZE that tells the
         // tracker how to initialize.
@@ -110,10 +126,16 @@ int main( int argc, char** argv) {
             // Artificial wait period that can be used for testing
             if (wait > 0) sleep_seconds(wait);
 
+            #ifdef TRAX_LEGACY_SINGLE
             if (mem) trax_region_release(&mem);
             mem = trax_region_clone(reg);
-
-            trax_server_reply(trax, mem, NULL);
+            tr = trax_server_reply(trax, mem, NULL);
+            #else
+            if (mem) trax_object_list_release(&mem);
+            mem = trax_object_list_create(0);
+            trax_object_list_append(mem, new);
+            trax_server_reply(trax, mem);
+            #endif
 
             fprintf(stdout, "OUT: INIT\n");
             fprintf(stderr, "ERR: INIT\n");
@@ -128,7 +150,12 @@ int main( int argc, char** argv) {
                 // Note that the tracker also has an option of sending additional data
                 // back to the main program in a form of key-value pairs. We do not use
                 // this option here, so this part is empty.
+                #ifdef TRAX_LEGACY_SINGLE
                 trax_server_reply(trax, mem, NULL);
+                #else
+                if (new) trax_object_list_append(mem, new);
+                trax_server_reply(trax, mem);
+                #endif
 
                 fprintf(stdout, "OUT: FRAME\n");
                 fprintf(stderr, "ERR: FRAME\n");
@@ -149,7 +176,12 @@ int main( int argc, char** argv) {
             trax_image_list_clear(img); // Also delete individual images
             trax_image_list_release(&img);
         }
+
+        #ifdef TRAX_LEGACY_SINGLE
         if (reg) trax_region_release(&reg);
+        #else
+        if (new) trax_object_list_release(&new);
+        #endif
 
         fflush(stdout);
         fflush(stderr);
@@ -158,8 +190,11 @@ int main( int argc, char** argv) {
     fflush(stdout);
     fflush(stderr);
 
+    #ifdef TRAX_LEGACY_SINGLE
     if (mem) trax_region_release(&mem);
-
+    #else
+    if (mem) trax_object_list_release(&mem);
+    #endif
     // *************************************
     // TraX: Call trax_cleanup at the end
     // *************************************

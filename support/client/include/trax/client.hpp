@@ -52,18 +52,26 @@ public:
 
 	Metadata metadata();
 
-	bool ready();
-	bool tracking();
+	bool ready() const;
+	bool tracking() const;
 
 	bool query();
 
+	// Single object tracking only
 	bool initialize(const ImageList& image, const Region& region, const Properties& properties = Properties());
 	bool wait(Region& region, Properties& properties);
 	bool frame(const ImageList& image, const Properties& properties = Properties());
 
+	// Works for single and multi object
+	bool initialize(const ImageList& image, const ObjectList& objects, const Properties& properties = Properties());
+	bool wait(ObjectList& objects, Properties& properties);
+	bool frame(const ImageList& image, const ObjectList& objects, const Properties& properties = Properties());
+
 	bool reset();
 
 	void register_watchdog(WatchdogCallback* callback);
+
+	bool multiobject() const;
 
 private:
 

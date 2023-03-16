@@ -3,6 +3,10 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 ADD_EXECUTABLE(native_static native_static.c)
 TARGET_LINK_LIBRARIES(native_static traxstatic)
 
+ADD_EXECUTABLE(native_static_legacy native_static.c)
+target_compile_definitions(native_static_legacy PRIVATE -DTRAX_LEGACY_SINGLE)
+TARGET_LINK_LIBRARIES(native_static_legacy traxstatic)
+
 ADD_TEST(NAME test_native_static_default COMMAND traxtest -d -- ./native_static WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set_tests_properties(test_native_static_default PROPERTIES TIMEOUT 10)
 

@@ -88,6 +88,7 @@ int __parse_message_type(const char *str) {
     if (strcmpi(str, "status") == 0) return TRAX_STATE;
     if (strcmpi(str, "frame") == 0) return TRAX_FRAME;
     if (strcmpi(str, "quit") == 0) return TRAX_QUIT;
+    if (strcmpi(str, "reset") == 0) return TRAX_RESET;
 
     return -1;
 }
@@ -721,7 +722,7 @@ void write_message(message_stream* stream, trax_logging* log, int type, const st
 
     int i;
 
-    assert(type >= TRAX_HELLO && type <= TRAX_STATE);
+    assert(type >= TRAX_HELLO && type <= TRAX_RESET);
 
     VALIDATE_MESSAGE_STREAM(stream);
 
@@ -746,6 +747,10 @@ void write_message(message_stream* stream, trax_logging* log, int type, const st
             OUTPUT_STRING(TRAX_PREFIX);
             OUTPUT_STRING("quit");
             break;
+        case TRAX_RESET:
+            OUTPUT_STRING(TRAX_PREFIX);
+            OUTPUT_STRING("reset");
+            break;
         default: {
             return;
         }
@@ -753,14 +758,16 @@ void write_message(message_stream* stream, trax_logging* log, int type, const st
 
     OUTPUT_STRING(" ");
 
-    for (i = 0; i < list_size(arguments); i++) {
-        char* arg = arguments->buffer[i];
-        OUTPUT_STRING("\"");
-        OUTPUT_ESCAPED(arg);
-        OUTPUT_STRING("\" ");
+    if (arguments) {
+        for (i = 0; i < list_size(arguments); i++) {
+            char* arg = arguments->buffer[i];
+            OUTPUT_STRING("\"");
+            OUTPUT_ESCAPED(arg);
+            OUTPUT_STRING("\" ");
+        }
     }
 
-    {
+    if (properties) {
 
         file_pair pair;
         pair.stream = stream;
@@ -768,12 +775,10 @@ void write_message(message_stream* stream, trax_logging* log, int type, const st
 
         trax_properties_enumerate(properties, __output_properties, &pair);
 
-        OUTPUT_STRING("\n");
-
-        LOG_BUFFER(log, NULL, 0); // Flush the log stream
-
     }
 
+    OUTPUT_STRING("\n");
+    LOG_BUFFER(log, NULL, 0); // Flush the log stream
 
 }
 

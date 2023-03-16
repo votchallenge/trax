@@ -274,6 +274,8 @@ int main(int argc, char** argv) {
         else
             throw std::runtime_error("No supported image format allowed");
 
+        bool multiobject = tracker.multiobject();
+
         Region initialization_region = Region::create_rectangle(130, 80, 70, 110);
 
         int frame = 0;
@@ -284,8 +286,20 @@ int main(int argc, char** argv) {
                 throw std::runtime_error("Tracker process not alive anymore.");
             }
 
-            if (!tracker.initialize(image, initialization_region, properties)) {
-                throw std::runtime_error("Unable to initialize tracker.");
+            if (multiobject) {
+                ObjectList list(3);
+                list.set(0, initialization_region);
+                list.set(1, initialization_region);
+                list.set(2, initialization_region);
+
+                if (!tracker.initialize(image, list, properties)) {
+                    throw std::runtime_error("Unable to initialize tracker.");
+                }
+
+            } else {
+                if (!tracker.initialize(image, initialization_region, properties)) {
+                    throw std::runtime_error("Unable to initialize tracker.");
+                }
             }
 
             initializations++;
@@ -294,10 +308,15 @@ int main(int argc, char** argv) {
 
             while (frame < 20) {
                 // Repeat while tracking the target.
-                Region status;
+                bool result = false;
                 Properties additional;
-
-                bool result = tracker.wait(status, additional);
+                if (multiobject) {
+                    ObjectList status;
+                    result = tracker.wait(status, additional);
+                } else {
+                    Region status;
+                    result = tracker.wait(status, additional);
+                }
 
                 if (result) {
                     // Default option, the tracker returns a valid status.
@@ -316,8 +335,17 @@ int main(int argc, char** argv) {
                 }
 
                 Properties no_properties;
-                if (!tracker.frame(image, no_properties))
-                    throw std::runtime_error("Unable to send new frame.");
+
+                if (multiobject && frame % 5 == 3) {
+                    ObjectList list(1); list.set(0, initialization_region);
+                    if (!tracker.frame(image, list, properties)) {
+                       throw std::runtime_error("Unable to send new frame.");
+                    }
+                } else {
+                    if (!tracker.frame(image, no_properties))
+                        throw std::runtime_error("Unable to send new frame.");
+
+                }
 
                 frame++;
 

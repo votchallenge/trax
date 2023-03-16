@@ -99,7 +99,7 @@ void Wrapper::release() {
 
 Metadata::Metadata() {
 
-    wrap(trax_metadata_create(0, 0, TRAX_CHANNEL_COLOR, NULL, NULL, NULL));
+    wrap(trax_metadata_create(0, 0, TRAX_CHANNEL_COLOR, NULL, NULL, NULL, 0));
 }
 
 Metadata::Metadata(const Metadata& original) : Wrapper(original) {
@@ -109,12 +109,12 @@ Metadata::Metadata(const Metadata& original) : Wrapper(original) {
 
 Metadata::Metadata(int region_formats, int image_formats, int channels,
                    std::string tracker_name, std::string tracker_description,
-                   std::string tracker_family) {
+                   std::string tracker_family, int flags) {
 
     wrap(trax_metadata_create(region_formats, image_formats, channels,
 		(tracker_name.empty()) ? NULL : tracker_name.c_str(),
 		(tracker_description.empty()) ? NULL : tracker_description.c_str(),
-		(tracker_family.empty()) ? NULL : tracker_family.c_str()
+		(tracker_family.empty()) ? NULL : tracker_family.c_str(), flags
 		));
 
 }
@@ -122,7 +122,7 @@ Metadata::Metadata(int region_formats, int image_formats, int channels,
 Metadata::Metadata(trax_metadata* metadata) {
 
     wrap(trax_metadata_create(metadata->format_region, metadata->format_image, metadata->channels,
-		metadata->tracker_name, metadata->tracker_description, metadata->tracker_family));
+		metadata->tracker_name, metadata->tracker_description, metadata->tracker_family, metadata->flags));
 
 }
 
@@ -282,14 +282,44 @@ int Client::wait(Region& region, Properties& properties) {
 
 	if (!claims()) return -1;
 
+	trax_object_list* tobjects = NULL;
 	trax_region* tregion = NULL;
 
 	properties.ensure_unique();
 
-	int result = trax_client_wait(handle, &tregion, properties.properties);
+	int result = trax_client_wait(handle, &tobjects, properties.properties);
 
-	if (tregion)
-		region.wrap(tregion);
+	if (tobjects) {
+		if (trax_object_list_count(tobjects) > 1) {
+			trax_object_list_release(&tobjects);
+			return TRAX_ERROR;
+		}
+
+		if (trax_object_list_count(tobjects) == 1) {
+			tregion = trax_region_clone(trax_object_list_get(tobjects, 0));
+			region.wrap(tregion);
+			trax_properties_append(trax_object_list_properties(tobjects, 0), properties.properties, 0);
+		}
+		trax_object_list_release(&tobjects);
+	}
+	
+	return result;
+
+}
+
+int Client::wait(ObjectList& objects, Properties& properties) {
+
+	if (!claims()) return -1;
+
+	trax_object_list* tobjects = NULL;
+
+	properties.ensure_unique();
+
+	int result = trax_client_wait(handle, &tobjects, properties.properties);
+
+	if (tobjects) {
+		objects.wrap(tobjects);
+	}
 
 	return result;
 
@@ -298,28 +328,50 @@ int Client::wait(Region& region, Properties& properties) {
 int Client::initialize(const ImageList& image, const Region& region, const Properties& properties) {
 	if (!claims()) return -1;
 
-	return trax_client_initialize(handle, image.list, region.region, properties.properties);
+	trax_object_list* objects = trax_object_list_create(1);
+	trax_object_list_set(objects, 0, region.region);
+
+	int result = trax_client_initialize(handle, image.list, objects, properties.properties);
+
+	trax_object_list_release(&objects);
+
+	return result;
+
+}
+
+int Client::initialize(const ImageList& image, const ObjectList& objects, const Properties& properties) {
+	if (!claims()) return -1;
+
+	return trax_client_initialize(handle, image.list, objects.list, properties.properties);
 
 }
 
 int Client::frame(const ImageList& image, const Properties& properties) {
 	if (!claims()) return -1;
 
-	return trax_client_frame(handle, image.list, properties.properties);
+	return trax_client_frame(handle, image.list, NULL, properties.properties);
 
 }
 
-Server::Server(Metadata metadata, Logging log) {
+int Client::frame(const ImageList& image, const ObjectList& objects, const Properties& properties) {
 
-	wrap(trax_server_setup(metadata.metadata, log));
+	if (!claims()) return -1;
+
+	return trax_client_frame(handle, image.list, objects.list, properties.properties);
 
 }
 
-Server::~Server() {
+ServerSOT::ServerSOT(Metadata metadata, Logging log) {
+
+	wrap(trax_server_setup_v(metadata.metadata, log, 3));
+
+}
+
+ServerSOT::~ServerSOT() {
 	// Cleanup done in Handle
 }
 
-int Server::wait(ImageList& image, Region& region, Properties& properties) {
+int ServerSOT::wait(ImageList& image, Region& region, Properties& properties) {
 
 	if (!claims()) return -1;
 
@@ -329,7 +381,7 @@ int Server::wait(ImageList& image, Region& region, Properties& properties) {
 
 	properties.ensure_unique();
 
-    int result = trax_server_wait(handle, &timagelist, &tregion, properties.properties);
+    int result = trax_server_wait_sot(handle, &timagelist, &tregion, properties.properties);
 
 	if (tregion)
 		region.wrap(tregion);
@@ -342,11 +394,52 @@ int Server::wait(ImageList& image, Region& region, Properties& properties) {
 
 }
 
-int Server::reply(const Region& region, const Properties& properties) {
+int ServerSOT::reply(const Region& region, const Properties& properties) {
 
 	if (!claims()) return -1;
 
-	return trax_server_reply(handle, region.region, properties.properties);
+	return trax_server_reply_sot(handle, region.region, properties.properties);
+
+}
+
+ServerMOT::ServerMOT(Metadata metadata, Logging log) {
+
+	wrap(trax_server_setup_v(metadata.metadata, log, 0));
+
+}
+
+ServerMOT::~ServerMOT() {
+	// Cleanup done in Handle
+}
+
+int ServerMOT::wait(ImageList& image, Region& region, Properties& properties) {
+
+	if (!claims()) return -1;
+
+	trax_region* tregion = NULL;
+
+    trax_image_list* timagelist = NULL;
+
+	properties.ensure_unique();
+
+    int result = trax_server_wait_sot(handle, &timagelist, &tregion, properties.properties);
+
+	if (tregion)
+		region.wrap(tregion);
+
+	if (timagelist) {
+		image.wrap(timagelist);		
+	}
+
+	return result;
+
+}
+
+int ServerMOT::reply(const Region& region, const Properties& properties) {
+
+	if (!claims()) return -1;
+
+	return trax_server_reply_sot(handle, region.region, properties.properties);
 
 }
 
@@ -435,6 +528,83 @@ Image& Image::operator=(Image lhs) throw() {
 	swap(lhs);
 	return *this;
 }
+
+ObjectList::ObjectList() {
+	list = NULL;
+}
+
+ObjectList::ObjectList(int count) {
+	list = trax_object_list_create(count);
+	_regions.resize(count);
+	_properties.resize(count);
+}
+
+ObjectList::ObjectList(const ObjectList& original) {
+	if (original.list) acquire();
+	list = original.list;
+	_regions = original._regions;
+	_properties = original._properties;
+}
+
+ObjectList::~ObjectList() {
+	release();
+}
+
+Region ObjectList::get(int index) const {
+	return _regions[index];
+}
+
+void ObjectList::set(int index, Region region) {
+	_regions[index] = region;
+	list->regions[index] = region.region;
+	// Do not use C function as it will try to free old region
+	// trax_object_list_set(list, index, region.region);
+}
+
+Properties ObjectList::properties(int index) const {
+	return _properties[index];
+}
+
+ObjectList& ObjectList::operator=(ObjectList lhs) throw() {
+	std::swap(list, lhs.list);
+	std::swap(_regions, lhs._regions);
+	std::swap(_properties, lhs._properties);
+	swap(lhs);
+	return *this;
+}
+
+int ObjectList::size() const {
+	if (!list) return 0;
+	return trax_object_list_count(list);
+}
+
+
+void ObjectList::cleanup() {
+	// Only free the structure, regions and properties will be 
+	// released by proxies
+	//trax_object_list_release(&list);
+	free(list->regions);
+	free(list->properties);
+	free(list);
+	_regions.clear();
+	_properties.clear();
+}
+
+void ObjectList::wrap(trax_object_list* obj) {
+	if (!obj) return;
+	release();
+	list = obj;
+	if (list) acquire();
+
+	_regions.resize(trax_object_list_count(obj));
+	_properties.resize(trax_object_list_count(obj));
+
+	for (int i = 0; i < trax_object_list_count(obj); i++) {
+		_regions[i].wrap(obj->regions[i]);
+		_properties[i].wrap(obj->properties[i]);
+	}
+}
+
 
 ImageList::ImageList()  {
 	list = trax_image_list_create();

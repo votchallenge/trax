@@ -39,7 +39,7 @@
 #define TRAX_NO_LOG -1
 #endif
 
-#define TRAX_VERSION 3
+#define TRAX_VERSION 4
 
 #define TRAX_ERROR -1
 #define TRAX_OK 0
@@ -48,6 +48,8 @@
 #define TRAX_FRAME 3
 #define TRAX_QUIT 4
 #define TRAX_STATE 5
+// TraX 4 additional messages
+#define TRAX_RESET 6
 
 #define TRAX_IMAGE_EMPTY 0
 #define TRAX_IMAGE_PATH 1
@@ -72,7 +74,7 @@
 #define TRAX_REGION_POLYGON 4
 #define TRAX_REGION_MASK 8
 
-#define TRAX_REGION_ANY (TRAX_REGION_RECTANGLE | TRAX_REGION_POLYGON)
+#define TRAX_REGION_ANY (TRAX_REGION_RECTANGLE | TRAX_REGION_POLYGON | TRAX_REGION_MASK)
 
 #define TRAX_FLAG_VALID 1
 #define TRAX_FLAG_SERVER 2
@@ -83,6 +85,7 @@
 #define TRAX_PARAMETER_SOCKET 2
 #define TRAX_PARAMETER_REGION 3
 #define TRAX_PARAMETER_IMAGE 4
+#define TRAX_PARAMETER_MULTIOBJECT 5
 
 #define TRAX_CHANNELS 3
 #define TRAX_CHANNEL_COLOR 1
@@ -100,6 +103,21 @@
     (I) == 2 ? TRAX_CHANNEL_IR : -1)))
 
 #define TRAX_LOCALHOST "127.0.0.1"
+
+// Metadata flags
+#define TRAX_METADATA_MULTI_OBJECT 1
+
+#ifdef TRAX_LEGACY_SINGLE
+#define trax_server_wait trax_server_wait_sot
+#define trax_server_reply trax_server_reply_sot
+#define trax_server_setup(M, L) trax_server_setup_v(M, L, 3)
+#define trax_server_setup_file(M, I, O, L) trax_server_setup_file_v(M, I, O, L, 3)
+#else
+#define trax_server_wait trax_server_wait_mot
+#define trax_server_reply trax_server_reply_mot
+#define trax_server_setup(M, L) trax_server_setup_v(M, L, 0)
+#define trax_server_setup_file(M, I, O, L) trax_server_setup_file_v(M, I, O, L, 0)
+#endif
 
 #define TRAX_SUPPORTS(F, M) (((F) & (M)) != 0)
 
@@ -130,6 +148,16 @@ typedef void trax_region;
 **/
 typedef struct trax_properties trax_properties;
 
+/**
+ * A placeholder for object list structure. Use the trax_object_list_* functions to manipulate
+ * the data.
+**/
+typedef struct trax_object_list {
+    int size;
+    trax_region** regions;
+    trax_properties** properties; 
+} trax_object_list;
+
 typedef struct trax_bounds {
 
     float top;
@@ -159,6 +187,7 @@ typedef struct trax_metadata {
     int format_region;
     int format_image;
     int channels; // Encodes the number of channels (RGB, RGB+D, RGB+IR)
+    int flags;
     char* tracker_name;
     char* tracker_description;
     char* tracker_family;
@@ -177,13 +206,14 @@ typedef struct trax_handle {
     trax_logging logging;
     trax_metadata* metadata;
     char* error;
+    int objects;
 } trax_handle;
 
 /**
  * Array for keeping images (RGB, Depth, IR)
 **/
 typedef struct trax_image_list {
-    trax_image* images[3];
+    trax_image* images[TRAX_CHANNELS];
 } trax_image_list;
 
 __TRAX_EXPORT extern const trax_logging trax_no_log;
@@ -196,10 +226,10 @@ __TRAX_EXPORT extern const trax_bounds trax_no_bounds;
 __TRAX_EXPORT const char* trax_version();
 
 /**
- * Create a tracker metadata structure.
+ * Create a tracker metadata structure. The last argument contains metadata flags that influence communication modes.
 **/
 __TRAX_EXPORT trax_metadata* trax_metadata_create(int region_formats, int image_formats, int channels,
-    const char* tracker_name, const char* tracker_description, const char* tracker_family);
+    const char* tracker_name, const char* tracker_description, const char* tracker_family, int flags);
 
 /**
  * Correctly releases a metadata structure.
@@ -229,37 +259,47 @@ __TRAX_EXPORT trax_handle* trax_client_setup_socket(int server, int timeout, con
 /**
  * Waits for a valid protocol message from the server.
 **/
-__TRAX_EXPORT int trax_client_wait(trax_handle* client, trax_region** region, trax_properties* properties);
+__TRAX_EXPORT int trax_client_wait(trax_handle* client, trax_object_list** objects, trax_properties* properties);
 
 /**
- * Sends an initialize message.
+ * Sends an initialize message, tracking state should be reset.
 **/
-__TRAX_EXPORT int trax_client_initialize(trax_handle* client, trax_image_list* image, trax_region* region, trax_properties* properties);
+__TRAX_EXPORT int trax_client_initialize(trax_handle* client, trax_image_list* image, trax_object_list* objects, trax_properties* properties);
 
 /**
  * Sends a frame message.
 **/
-__TRAX_EXPORT int trax_client_frame(trax_handle* client, trax_image_list* images, trax_properties* properties);
+__TRAX_EXPORT int trax_client_frame(trax_handle* client, trax_image_list* images, trax_object_list* objects, trax_properties* properties);
 
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_server_setup(trax_metadata *metadata, const trax_logging log);
+__TRAX_EXPORT trax_handle* trax_server_setup_v(trax_metadata *metadata, const trax_logging log, int version);
 
 /**
  * Setups the protocol for the server side and returns a handle object.
 **/
-__TRAX_EXPORT trax_handle* trax_server_setup_file(trax_metadata *metadata, int input, int output, const trax_logging log);
+__TRAX_EXPORT trax_handle* trax_server_setup_file_v(trax_metadata *metadata, int input, int output, const trax_logging log, int version);
 
 /**
- * Waits for a valid protocol message from the client.
+ * Waits for a valid protocol message from the client. This method can only be used in single-object tracking mode.
 **/
-__TRAX_EXPORT int trax_server_wait(trax_handle* server, trax_image_list** images, trax_region** region, trax_properties* properties);
+__TRAX_EXPORT int trax_server_wait_sot(trax_handle* server, trax_image_list** images, trax_region** region, trax_properties* properties);
 
 /**
- * Sends a status reply to the client.
+ * Sends a status reply to the client. This method can only be used in single-object tracking mode.
 **/
-__TRAX_EXPORT int trax_server_reply(trax_handle* server, trax_region* region, trax_properties* properties);
+__TRAX_EXPORT int trax_server_reply_sot(trax_handle* server, trax_region* region, trax_properties* properties);
+
+/**
+ * Waits for a valid protocol message from the client. This method can only be used in multi-object tracking mode.
+**/
+__TRAX_EXPORT int trax_server_wait_mot(trax_handle* server, trax_image_list** images, trax_object_list** objects, trax_properties* properties);
+
+/**
+ * Sends a status reply to the client. This method can only be used in single-object tracking mode.
+**/
+__TRAX_EXPORT int trax_server_reply_mot(trax_handle* server, trax_object_list* objects);
 
 /**
  * Used in client and server. Closes communication, sends quit message if needed.
@@ -473,6 +513,41 @@ __TRAX_EXPORT char* trax_region_encode(const trax_region* region);
 __TRAX_EXPORT trax_region* trax_region_decode(const char* data);
 
 /**
+* Allocate memory for storing multi object data.
+**/
+__TRAX_EXPORT trax_object_list* trax_object_list_create(int count);
+
+/**
+ * Destroy a object list object and clean up the memory, this also releases all objects.
+ **/
+__TRAX_EXPORT void trax_object_list_release(trax_object_list** list);
+
+/**
+ * Set a region of an object in a list. 
+ **/
+__TRAX_EXPORT void trax_object_list_set(trax_object_list* list, int index, trax_region* region);
+
+/**
+ * Set a region of an object in a list.
+ **/
+__TRAX_EXPORT trax_region* trax_object_list_get(trax_object_list* list, int index);
+
+/**
+ * Retrieve pointer to properties of a specific object in list.
+ **/
+__TRAX_EXPORT trax_properties* trax_object_list_properties(trax_object_list* list, int index);
+
+/**
+ * Get a number of objects in a list.
+ **/
+__TRAX_EXPORT int trax_object_list_count(const trax_object_list* list);
+
+/**
+ * Append one object list to another.
+ **/
+__TRAX_EXPORT int trax_object_list_append(trax_object_list* list, const trax_object_list* src);
+
+/**
  * Destroy a properties object and clean up the memory.
  **/
 __TRAX_EXPORT void trax_properties_release(trax_properties** properties);
@@ -491,6 +566,11 @@ __TRAX_EXPORT trax_properties* trax_properties_create();
  * Create a property object using values from extisting property object.
  **/
 __TRAX_EXPORT trax_properties* trax_properties_copy(const trax_properties* original);
+
+/**
+ * Returns non-zero value if the entry exits and zero otherwise.
+ **/
+__TRAX_EXPORT int trax_properties_has(const trax_properties* properties, const char* key);
 
 /**
  * Set a string property (the value string is cloned).
@@ -537,6 +617,11 @@ __TRAX_EXPORT int trax_properties_count(const trax_properties* properties);
 __TRAX_EXPORT void trax_properties_enumerate(const trax_properties* properties, trax_enumerator enumerator, const void* object);
 
 /**
+ * Append all properties from source to drain, optionally overwriting existing properties with same keys.
+ **/
+__TRAX_EXPORT void trax_properties_append(const trax_properties* source, trax_properties* drain, int overwrite);
+
+/**
 * Allocate memory for storing the input images
 **/
 __TRAX_EXPORT trax_image_list* trax_image_list_create();
@@ -562,7 +647,7 @@ __TRAX_EXPORT trax_image* trax_image_list_get(const trax_image_list* list, int c
 __TRAX_EXPORT void trax_image_list_set(trax_image_list* list, trax_image* image, int channel);
 
 /**
-* Count the channels in descriptor bit-set
+* Size of the image list
 **/
 __TRAX_EXPORT int trax_image_list_count(int channels);
 
@@ -579,6 +664,7 @@ namespace trax {
 
 class Image;
 class ImageList;
+class ObjectList;
 class Region;
 class Properties;
 
@@ -638,12 +724,14 @@ private:
 
 class Handle;
 class Client;
-class Server;
+class ServerSOT;
+class ServerMOT;
 
 class __TRAX_EXPORT Metadata : public Wrapper {
 friend class Handle;
 friend class Client;
-friend class Server;
+friend class ServerSOT;
+friend class ServerMOT;
 public:
 
     Metadata();
@@ -652,7 +740,7 @@ public:
 
     Metadata(int region_formats, int image_formats, int channels = TRAX_CHANNEL_COLOR,
         std::string tracker_name = std::string(), std::string tracker_description = std::string(),
-        std::string tracker_family = std::string());
+        std::string tracker_family = std::string(), int flags = 0);
 
     virtual ~Metadata();
 
@@ -747,14 +835,19 @@ public:
     /**
      * Sets up the protocol for the client side and returns a handle object.
     **/
-    Client(int server, Logging logger,  int timeout = -1);
+    Client(int server, Logging logger, int timeout = -1);
 
     virtual ~Client();
 
     /**
-    * Waits for a valid protocol message from the server.
+    * Waits for a valid protocol message from the server. Only works in single-object mode
     **/
     int wait(Region& region, Properties& properties);
+
+    /**
+    * Waits for a valid protocol message from the server. Returns the state of one or more objects.
+    **/
+    int wait(ObjectList& objects, Properties& properties);
 
     /**
     * Sends an initialize message.
@@ -762,9 +855,19 @@ public:
     int initialize(const ImageList& image, const Region& region, const Properties& properties);
 
     /**
+    * Sends an initialize message with one or more objects.
+    **/
+    int initialize(const ImageList& image, const ObjectList& objects, const Properties& properties);
+
+    /**
     * Sends a frame message.
     **/
     int frame(const ImageList& image, const Properties& properties);
+
+    /**
+    * Sends a frame message that adds new objects (in multi-object mode).
+    **/
+    int frame(const ImageList& image, const ObjectList& objects, const Properties& properties);
 
 protected:
 
@@ -776,15 +879,50 @@ private:
 
 };
 
-class __TRAX_EXPORT Server: public Handle {
+class __TRAX_EXPORT ServerMOT: public Handle {
 public:
 
     /**
      * Sets up the protocol for the server side and returns a handle object.
     **/
-    Server(Metadata metadata, Logging log);
+    ServerMOT(Metadata metadata, Logging log);
 
-    virtual ~Server();
+    virtual ~ServerMOT();
+
+    /**
+     * Waits for a valid protocol message from the client.
+    **/
+    int wait(ImageList& image, Region& region, Properties& properties);
+
+    /**
+     * Sends a status reply to the client.
+    **/
+    int reply(const Region& region, const Properties& properties);
+
+    /**
+     * Waits for a valid protocol message from the client.
+    **/
+    int wait(ImageList& image, ObjectList& objects, Properties& properties);
+
+    /**
+     * Sends a status reply to the client.
+    **/
+    int reply(const ObjectList& objects, const Properties& properties);
+
+private:
+    ServerMOT& operator=(ServerMOT p) throw();
+
+};
+
+class __TRAX_EXPORT ServerSOT: public Handle {
+public:
+
+    /**
+     * Sets up the protocol for the server side and returns a handle object.
+    **/
+    ServerSOT(Metadata metadata, Logging log);
+
+    virtual ~ServerSOT();
 
     /**
      * Waits for a valid protocol message from the client.
@@ -797,14 +935,16 @@ public:
     int reply(const Region& region, const Properties& properties);
 
 private:
-    Server& operator=(Server p) throw();
+    ServerSOT& operator=(ServerSOT p) throw();
 
 };
 
 class __TRAX_EXPORT Image : public Wrapper {
 friend class Client;
-friend class Server;
+friend class ServerSOT;
+friend class ServerMOT;
 friend class ImageList;
+friend class ObjectList;
 public:
 
     Image();
@@ -895,7 +1035,8 @@ private:
 
 class __TRAX_EXPORT ImageList : public Wrapper {
 friend class Client;
-friend class Server;
+friend class ServerSOT;
+friend class ServerMOT;
 public:
 
     ImageList();
@@ -940,11 +1081,61 @@ private:
 
 };
 
+class __TRAX_EXPORT ObjectList : public Wrapper {
+friend class Client;
+friend class ServerSOT;
+friend class ServerMOT;
+public:
+    ObjectList();
 
+    ObjectList(int count);
+
+    ObjectList(const ObjectList& original);
+
+    /**
+     * Releases object list and frees allocated memory.
+    **/
+    virtual ~ObjectList();
+
+    /**
+    * Get object region at a specific index
+    **/
+    Region get(int index) const;
+
+    /**
+    * Set object region at a specific index
+    **/
+    void set(int index, Region region);
+
+    /**
+    * Get object properties at a specific index
+    **/
+    Properties properties(int index) const;
+
+    ObjectList& operator=(ObjectList lhs) throw();
+
+    int size() const;
+
+protected:
+
+    virtual void cleanup();
+
+    void wrap(trax_object_list* obj);
+
+private:
+
+    std::vector<Region> _regions;
+    std::vector<Properties> _properties;
+
+    trax_object_list* list;
+
+};
 
 class __TRAX_EXPORT Region : public Wrapper {
 friend class Client;
-friend class Server;
+friend class ServerSOT;
+friend class ServerMOT;
+friend class ObjectList;
 public:
 
     Region();
@@ -1069,7 +1260,9 @@ private:
 
 class __TRAX_EXPORT Properties : public Wrapper {
 friend class Client;
-friend class Server;
+friend class ServerSOT;
+friend class ServerMOT;
+friend class ObjectList;
 public:
 
     /**
@@ -1169,6 +1362,11 @@ private:
 
 };
 
+#ifdef TRAX_LEGACY_SINGLE
+typedef ServerSOT Server;
+#else
+typedef ServerMOT Server;
+#endif
 
 }
 
