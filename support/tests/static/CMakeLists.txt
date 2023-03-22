@@ -16,7 +16,7 @@ set_tests_properties(test_python_static_default PROPERTIES TIMEOUT 10)
 set_tests_properties(test_python_static_default PROPERTIES ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR};PYTHONPATH=${PYTHONPATH}:${CMAKE_BINARY_DIR}/python/")
 ENDIF()
 
-IF (OCTAVE)
+IF (BUILD_OCTAVE AND OCTAVE)
 ADD_TEST(NAME test_octave_static_default COMMAND traxtest -d -- ${OCTAVE} --no-window-system --no-gui --path ${CMAKE_CURRENT_SOURCE_DIR} --eval "matlab_static" WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set_tests_properties(test_octave_static_default PROPERTIES TIMEOUT 10)
 ENDIF()
@@ -29,7 +29,7 @@ ADD_TEST(NAME test_python_static_timeout COMMAND traxtest -t 3 -p time_wait=5 -d
 set_tests_properties(test_python_static_timeout PROPERTIES TIMEOUT 10 WILL_FAIL TRUE)
 ENDIF()
 
-IF (OCTAVE)
+IF (BUILD_OCTAVE AND OCTAVE)
 ADD_TEST(NAME test_octave_static_timeout COMMAND traxtest -d -t 3 -p time_wait=5 -- ${OCTAVE} --no-window-system --no-gui --path ${CMAKE_CURRENT_SOURCE_DIR} --eval "matlab_static" WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set_tests_properties(test_octave_static_timeout PROPERTIES TIMEOUT 10 WILL_FAIL TRUE)
 ENDIF()

@@ -1,12 +1,12 @@
 
 
-IF (OCTAVE)
+IF (BUILD_OCTAVE AND OCTAVE)
 ADD_TEST(NAME test_octave_client COMMAND ${OCTAVE} --no-window-system --no-gui --path ${CMAKE_CURRENT_SOURCE_DIR} --eval "simple_client('./native_static', false)" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 set_tests_properties(test_octave_client PROPERTIES ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}")
 
 ADD_TEST(NAME test_octave_client_multichannel COMMAND ${OCTAVE} --no-window-system --no-gui --path ${CMAKE_CURRENT_SOURCE_DIR} --eval "simple_client('./native_static', true)" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 set_tests_properties(test_octave_client_multichannel PROPERTIES ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}")
-
+ENDIF()
 
 FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/images.txt "")
 FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/groundtruth.txt "")
@@ -20,5 +20,3 @@ ADD_TEST(NAME test_native_client_multichannel COMMAND traxclient -I ${CMAKE_CURR
 
 # TODO: test native client
 
-
-ENDIF()

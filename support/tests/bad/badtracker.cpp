@@ -9,19 +9,20 @@ int main( int argc, char** argv) {
   int timetobreak = (rand() % 10) + 1;
   int breaktype = 1;
 
-  trax::Region memory;
+  trax::ObjectList memory;
 
   while (true) {
 
     trax::ImageList image;
-    trax::Region region;
+    trax::ObjectList objects;
     trax::Properties properties;
 
-    int tr = handle.wait(image, region, properties);
+    int tr = handle.wait(image, objects, properties);
+
+    fprintf(stderr, "Response %d \n", tr);
     if (tr == TRAX_INITIALIZE) {
 
       timetobreak = properties.get("break_time", 5);
-
       std::string type = properties.get("break_type", "sigabrt");
       if (type == "sigsegv")
         breaktype = 2;
@@ -30,13 +31,13 @@ int main( int argc, char** argv) {
       else
         breaktype = 1;
 
-      handle.reply(region, trax::Properties());
+      handle.reply(objects);
 
-      memory = region;
-
+      memory = objects;
+      fprintf(stderr, "Reply %d \n", memory.size());
     } else if (tr == TRAX_FRAME) {
-
-      handle.reply(memory, trax::Properties());
+      fprintf(stderr, "Reply %d \n", memory.size());
+      handle.reply(memory);
 
     }
     else break;
