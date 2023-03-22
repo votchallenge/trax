@@ -4,14 +4,19 @@ import traceback
 import weakref
 from ctypes import py_object, c_void_p, cast, byref, POINTER
 
-from .internal import \
+from ._ctypes import \
     trax_properties_enumerate, trax_properties_create, trax_enumerator, \
-    trax_properties_get, trax_properties_set, trax_properties_p, \
-    trax_image_release, trax_region_release, \
+    trax_properties_get, trax_properties_set, trax_object_list, \
+    trax_image_release, trax_region_release, trax_object_list_release, \
     trax_cleanup, trax_properties_release, trax_image_list_release, \
     struct_trax_handle, struct_trax_image, struct_trax_image_list, \
-    struct_trax_metadata, struct_trax_properties, POINTER_T
+    struct_trax_properties, struct_trax_object_list, POINTER
 
+trax_image_p = POINTER(struct_trax_image)
+trax_image_list_p = POINTER(struct_trax_image_list)
+trax_region_p = c_void_p
+trax_object_list_p = POINTER(trax_object_list)
+trax_properties_p = POINTER(struct_trax_properties)
 class TraxException(Exception):
     pass
 
@@ -146,30 +151,40 @@ class Wrapper(object):
     def __nonzero__(self):
         return not self.ref is None
 
+def _debug_wrapper(cb, message):
+    def wrapper(*args, **kwargs):
+        print(message, args, kwargs)
+        cb(*args, **kwargs)
+    return wrapper
 class ImageWrapper(Wrapper):
 
     def __init__(self, reference, owner=True):
-        super().__init__(POINTER_T(struct_trax_image), reference, lambda x: trax_image_release(byref(x)) if owner else None)
+        super().__init__(POINTER(struct_trax_image), reference, lambda x: trax_image_release(byref(x)) if owner else None)
 
 class ImageListWrapper(Wrapper):
 
     def __init__(self, reference, owner=True):
-        super().__init__(POINTER_T(struct_trax_image_list), reference, lambda x: trax_image_list_release(byref(x)) if owner else None)
+        super().__init__(POINTER(struct_trax_image_list), reference, lambda x: trax_image_list_release(byref(x)) if owner else None)
+
+class ObjectListWrapper(Wrapper):
+
+    def __init__(self, reference, owner=True):
+        super().__init__(POINTER(struct_trax_object_list), reference, lambda x: trax_object_list_release(byref(x)) if owner else None)
 
 class RegionWrapper(Wrapper):
 
     def __init__(self, reference, owner=True):
-        super().__init__(c_void_p, reference, lambda x: trax_region_release(byref(cast(x, c_void_p))) if owner else None)
+        super().__init__(int, reference, lambda x: trax_region_release(byref(cast(x, c_void_p))) if owner else None)
 
 class PropertiesWrapper(Wrapper):
 
     def __init__(self, reference, owner=True):
-        super().__init__(POINTER_T(struct_trax_properties), reference, lambda x: trax_properties_release(byref(x)) if owner else None)
+        super().__init__(POINTER(struct_trax_properties), reference, lambda x: trax_properties_release(byref(x)) if owner else None)
 
 class HandleWrapper(Wrapper):
 
     def __init__(self, reference, owner=True):
-        super().__init__(POINTER_T(struct_trax_handle), reference, lambda x: trax_cleanup(byref(x)) if owner else None)
+        super().__init__(POINTER(struct_trax_handle), reference, lambda x: trax_cleanup(byref(x)) if owner else None)
 
 
 class Properties(object):
@@ -183,6 +198,10 @@ class Properties(object):
             self._ref = PropertiesWrapper(trax_properties_create())
             for key, value in data.items():
                 trax_properties_set(self._ref.reference, key.encode('utf8'), str(value).encode('utf8'))
+
+    def copy(self, source: "Properties"):
+        for k, v in source.dict().items():
+            self[k] = v
 
     @property
     def reference(self):

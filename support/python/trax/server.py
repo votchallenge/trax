@@ -8,16 +8,21 @@ import collections
 from ctypes import byref, cast, py_object
 
 from . import TraxException, TraxStatus, Properties, HandleWrapper, ConsoleLogger, FileLogger
-from .internal import \
-        trax_metadata_create, trax_server_setup, \
-        trax_logger_setup, trax_image_list_p, \
+from . import trax_image_list_p, trax_region_p, trax_properties_p, trax_object_list_p
+
+from ._ctypes import \
+        trax_metadata_create, trax_server_setup_v, \
+        trax_logger_setup, \
         trax_image_list_get, trax_metadata_release, \
         trax_server_wait, trax_server_reply, \
-        trax_image_list_release, trax_region_p, \
-        trax_properties_p, trax_logger, trax_terminate, \
-        trax_is_alive, trax_get_error
+        trax_image_list_release,  \
+        trax_logger, trax_terminate, \
+        trax_is_alive, trax_get_error, trax_object_list_count, \
+        trax_object_list_get, trax_object_list_properties, \
+        trax_region_clone, trax_object_list_release
 from .image import ImageChannel, Image
 from .region import Region
+from .client import wrap_objects
 
 def wrap_image_list(list):
 
@@ -32,9 +37,19 @@ def wrap_image_list(list):
 
     return wrapped
 
-class Request(collections.namedtuple('Request', ['type', 'image', 'region', 'properties'])):
+def wrap_object_list(list):
+    objects = []
+    for i in range(trax_object_list_count(list)):
+        region = trax_object_list_get(list, i)
+        properties = Properties(trax_object_list_properties(list, i), False).dict()
+        r = trax_region_clone(region)
+        print(type(r), type(region))
+        objects.append((Region.wrap(r), properties))
+    return objects
 
-    """ A container class for client requests. Contains fileds type, image, region and parameters. """
+class Request(collections.namedtuple('Request', ['type', 'image', 'objects', 'properties'])):
+
+    """ A container class for client requests. Contains fileds type, image, objects and parameters. """
 
 def _logger(buf, len, obj):
 
@@ -46,18 +61,18 @@ class Server(object):
 
     """ TraX server."""
 
-    def __init__(self, region_formats, image_formats, image_channels=["color"], trackerName="", trackerDescription="", trackerFamily="", customMetadata=None, log=False):
+    def __init__(self, region_formats, image_formats, image_channels=["color"], trackerName="", trackerDescription="", trackerFamily="", customMetadata=None, log=False, multitarget=False):
 
         if isinstance(log, bool) and log:
             self._logger = trax_logger(ConsoleLogger())
         elif isinstance(log, str):
             self._logger = trax_logger(FileLogger(log))
         else:
-            self._logger = None
+            self._logger = trax_logger()
 
         mdata = trax_metadata_create(Region.encode_list(region_formats),
             Image.encode_list(image_formats), ImageChannel.encode_list(image_channels),
-            trackerName.encode('utf-8'), trackerDescription.encode('utf-8'), trackerFamily.encode('utf-8'))
+            trackerName.encode('utf-8'), trackerDescription.encode('utf-8'), trackerFamily.encode('utf-8'), 0)
 
         if isinstance(customMetadata, dict):
             custom = Properties(mdata.contents.custom, False)
@@ -66,7 +81,7 @@ class Server(object):
 
         logger = trax_logger_setup(self._logger, None, 0)
 
-        handle = trax_server_setup(mdata, logger)
+        handle = trax_server_setup_v(mdata, logger, 0)
 
         trax_metadata_release(byref(mdata))
 
@@ -88,43 +103,47 @@ class Server(object):
         """
 
         timage = trax_image_list_p()
-        tregion = trax_region_p()
-        tproperties = trax_properties_p()
+        tobjects = trax_object_list_p()
+        properties = Properties()
 
-        status = TraxStatus.decode(trax_server_wait(self._handle.reference, byref(timage), byref(tregion), tproperties))
+        status = TraxStatus.decode(trax_server_wait(self._handle.reference, byref(timage), byref(tobjects), properties.reference))
 
         if status == TraxStatus.QUIT:
-            properties = Properties(tproperties)
             return Request(status, None, None, properties)
 
         if status == TraxStatus.INITIALIZE:
             image = wrap_image_list(timage)
+            objects = wrap_object_list(tobjects)
             trax_image_list_release(byref(timage))
-            region = Region.wrap(tregion)
-            properties = Properties(tproperties)
-            return Request(status, image, region, properties)
+            trax_object_list_release(byref(tobjects))
+            return Request(status, image, objects, properties)
 
         if status == TraxStatus.FRAME:
             image = wrap_image_list(timage)
             trax_image_list_release(byref(timage))
-            properties = Properties(tproperties)
-            return Request(status, image, None, properties)
+            if tobjects:
+                objects = wrap_object_list(tobjects)
+                trax_object_list_release(byref(tobjects))
+            else:
+                objects = None
+            return Request(status, image, objects, properties)
 
         else:
             message = trax_get_error(self._handle.reference)
             message = message.decode('utf-8') if not message is None else "Unknown"
             raise TraxException("Exception when waiting for command: {}".format(message))
 
-    def status(self, region, properties=None):
+    def status(self, objects, properties=None):
         """ Reply to client with a status region and optional properties.
 
 
-            :param trax.region.Region region: Resulting region object.
+            :param List[Region, Mapping] objects: Resulting status of tracked objects.
             :param dict properties: Optional arguments as a dictionary.
         """
-        assert(isinstance(region, Region))
+        assert(isinstance(objects, list))
         tproperties = Properties(properties)
-        status = TraxStatus.decode(trax_server_reply(self._handle.reference, cast(region.reference, trax_region_p), tproperties.reference))
+        tobjects = wrap_objects(objects)
+        status = TraxStatus.decode(trax_server_reply(self._handle.reference, tobjects.reference, tproperties.reference))
 
         if status == TraxStatus.ERROR:
             message = trax_get_error(self._handle.reference)

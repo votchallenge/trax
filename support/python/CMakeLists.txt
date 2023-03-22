@@ -4,7 +4,7 @@ SET(SOURCES_PY
   ${CMAKE_CURRENT_SOURCE_DIR}/trax/__init__.py
   ${CMAKE_CURRENT_SOURCE_DIR}/trax/image.py
   ${CMAKE_CURRENT_SOURCE_DIR}/trax/region.py
-  ${CMAKE_CURRENT_SOURCE_DIR}/trax/internal.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/trax/_ctypes.py
   ${CMAKE_CURRENT_SOURCE_DIR}/trax/server.py
   ${CMAKE_CURRENT_SOURCE_DIR}/trax/client.py)
 SET(BUILD_PYTHON_DIR "${CMAKE_BINARY_DIR}/python")

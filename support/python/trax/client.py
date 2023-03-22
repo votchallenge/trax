@@ -9,16 +9,16 @@ import collections
 from ctypes import byref, cast
 
 from . import TraxException, TraxStatus, Properties, HandleWrapper, ImageListWrapper, \
-    ConsoleLogger, FileLogger, ProxyLogger
+    ConsoleLogger, FileLogger, ProxyLogger, ObjectListWrapper, trax_region_p
     
-from .internal import \
+from ._ctypes import \
     trax_image_list_set, trax_client_initialize, \
-    trax_client_wait, trax_region_p, trax_properties_p, \
-    trax_image_create_path, trax_client_frame, \
+    trax_client_wait, trax_client_frame, trax_object_list_create, \
     trax_client_setup_file, trax_client_setup_socket, \
     trax_image_list_create, trax_logger_setup, trax_logger, \
-    trax_properties_create, trax_terminate, trax_get_error, \
-    trax_is_alive
+    trax_terminate, trax_get_error, trax_is_alive, \
+    trax_properties_append, trax_object_list_set, trax_object_list_properties
+
 from .image import ImageChannel, Image
 from .region import Region
 
@@ -35,6 +35,16 @@ def wrap_images(images):
 
     return tlist
 
+def wrap_objects(objects):
+
+    tlist = ObjectListWrapper(trax_object_list_create(len(objects)))
+
+    for i, (region, properties) in enumerate(objects):
+        properties =  Properties(properties, False)
+        trax_object_list_set(tlist.reference, i, region.reference)
+        trax_properties_append(trax_object_list_properties(tlist.reference, i), properties.reference, 0)
+
+    return tlist
 
 class Client(object):
 

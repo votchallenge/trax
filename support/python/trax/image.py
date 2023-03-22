@@ -4,13 +4,10 @@ Image description classes.
 
 #from __future__ import absolute
 
-import sys
-import traceback
-import weakref
 from abc import abstractmethod
 from ctypes import memmove, byref, c_int, string_at
 
-from .internal import \
+from ._ctypes import \
         trax_image_create_path, trax_image_create_memory, \
         trax_image_get_memory_header, trax_image_get_type, \
         trax_image_get_path, trax_image_get_url, \
@@ -186,7 +183,11 @@ try:
     class MemoryImage(Image):
 
         @staticmethod
-        def create(image):
+        def create(image: np.ndarray):
+
+            assert(isinstance(image, np.ndarray))
+
+            image = np.ascontiguousarray(image)
 
             width = image.shape[1]
             height = image.shape[0]
@@ -206,7 +207,8 @@ try:
             timage = trax_image_create_memory(width, height, format)
 
             data = trax_image_write_memory_row(timage, 0)
-            memmove(data, image.ctypes.data, image.nbytes)
+            
+            memmove(data, image.ctypes, image.nbytes)
             return MemoryImage(timage)
 
         def __str__(self):
@@ -226,9 +228,10 @@ try:
             height = c_int()
             format = c_int()
             trax_image_get_memory_header(self.reference, byref(width), byref(height), byref(format))
-            mat = np.empty((height.value, width.value, _image_memory_map_ch[format.value]), dtype=_image_memory_map_dtype[format.value])
+            mat = np.ones((height.value, width.value, _image_memory_map_ch[format.value]), dtype=_image_memory_map_dtype[format.value])
 
             data = trax_image_get_memory_row(self.reference, 0)
+
             memmove(mat.ctypes.data, data, mat.nbytes)
 
             return mat
@@ -241,7 +244,6 @@ except ImportError:
             height = c_int()
             format = c_int()
             trax_image_get_memory_header(self.reference, byref(width), byref(height), byref(format))
-
             return "Raw image of size {}x{}, format {}".format(width.value, height.value, _image_memory_map_string[format.value])
 
         def type(self):

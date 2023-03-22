@@ -9,7 +9,7 @@ from functools import reduce
 import numpy as np
 import six
 
-from .internal import trax_region_bounds, trax_region_create_polygon, \
+from ._ctypes import trax_region_create_polygon, \
     trax_region_create_rectangle, trax_region_get_polygon_count, trax_region_get_polygon_point, \
     trax_region_get_special, trax_region_get_type, trax_region_get_rectangle, \
     trax_region_set_polygon_point, trax_region_create_special, trax_region_create_mask, \
