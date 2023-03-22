@@ -698,7 +698,11 @@ protected:
 
     Wrapper(const Wrapper& count);
 
+    Wrapper(Wrapper&& count);
+
     void swap(Wrapper& lhs);
+
+    void acquire(const Wrapper& lhs);
 
     long claims() const;
 
@@ -738,6 +742,8 @@ public:
 
     Metadata(const Metadata& original);
 
+    Metadata(Metadata&& original);
+
     Metadata(int region_formats, int image_formats, int channels = TRAX_CHANNEL_COLOR,
         std::string tracker_name = std::string(), std::string tracker_description = std::string(),
         std::string tracker_family = std::string(), int flags = 0);
@@ -760,7 +766,9 @@ public:
 
     void set_custom(const std::string key, const std::string value);
 
-    Metadata& operator=(Metadata p) throw();
+    Metadata& operator=(const Metadata& p) throw();
+
+    Metadata& operator=(Metadata&& p) throw();
 
 protected:
 
@@ -821,6 +829,8 @@ protected:
     Handle();
 
     Handle(const Handle& original);
+
+    Handle(Handle&& original);
 
     trax_handle* handle;
 };
@@ -907,7 +917,7 @@ public:
     /**
      * Sends a status reply to the client.
     **/
-    int reply(const ObjectList& objects, const Properties& properties);
+    int reply(const ObjectList& objects);
 
 private:
     ServerMOT& operator=(ServerMOT p) throw();
@@ -950,6 +960,8 @@ public:
     Image();
 
     Image(const Image& original);
+
+    Image(Image&& original);
 
     /**
      * Creates a file-system path image description.
@@ -1019,7 +1031,10 @@ public:
     **/
     const char* get_buffer(int* length, int* format) const;
 
-    Image& operator=(Image lhs) throw();
+    Image& operator=(const Image& lhs) throw();
+
+    Image& operator=(Image&& lhs) throw();
+
 
 protected:
 
@@ -1043,6 +1058,8 @@ public:
 
     ImageList(const ImageList& original);
 
+    ImageList(ImageList&& original);
+
     /**
      * Releases image list structure, frees allocated memory.
     **/
@@ -1063,9 +1080,11 @@ public:
     **/
     void set(Image image, int channel_num);
 
-    ImageList& operator=(ImageList lhs) throw();
-
     int size() const;
+
+    ImageList& operator=(const ImageList& lhs) throw();
+
+    ImageList& operator=(ImageList&& lhs) throw();
 
 protected:
 
@@ -1092,6 +1111,8 @@ public:
 
     ObjectList(const ObjectList& original);
 
+    ObjectList(ObjectList&& original);
+
     /**
      * Releases object list and frees allocated memory.
     **/
@@ -1112,9 +1133,11 @@ public:
     **/
     Properties properties(int index) const;
 
-    ObjectList& operator=(ObjectList lhs) throw();
-
     int size() const;
+
+    ObjectList& operator=(const ObjectList& lhs) throw();
+
+    ObjectList& operator=(ObjectList&& lhs) throw();
 
 protected:
 
@@ -1141,6 +1164,9 @@ public:
     Region();
 
     Region(const Region& original);
+
+    Region(Region&& original);
+
 
     /**
      * Creates a special region object. Only one paramter (region code) required.
@@ -1239,13 +1265,15 @@ public:
 
     float overlap(const Region& region, const Bounds& bounds = Bounds()) const;
 
-    Region& operator=(Region lhs) throw();
-
     operator std::string () const;
 
     friend __TRAX_EXPORT std::ostream& operator<< (std::ostream& output, const Region& region);
 
     friend __TRAX_EXPORT std::istream& operator>> (std::istream& input, Region &D);
+
+    Region& operator=(const Region& lhs) throw();
+
+    Region& operator=(Region&& lhs) throw();
 
 protected:
 
@@ -1274,6 +1302,11 @@ public:
      * A copy constructor.
      **/
     Properties(const Properties& original);
+
+    /**
+     * A move constructor.
+     **/
+    Properties(Properties&& original);
 
     /**
      * Destroy a properties object and clean up the memory.
@@ -1344,9 +1377,11 @@ public:
 
     void to_vector(std::vector<std::string>& v) const;
 
-    Properties& operator=(Properties lhs) throw();
-
     friend __TRAX_EXPORT std::ostream& operator<< (std::ostream& output, const Properties& properties);
+
+    Properties& operator=(const Properties& lhs) throw();
+
+    Properties& operator=(Properties&& lhs) throw();
 
 protected:
 

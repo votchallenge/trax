@@ -59,11 +59,22 @@ Wrapper::Wrapper() : pn(NULL) {
 }
 
 Wrapper::Wrapper(const Wrapper& count) : pn(count.pn) {
+	acquire();
+}
 
+
+Wrapper::Wrapper(Wrapper&& count) : pn(count.pn) {
+	count.pn = NULL;
 }
 
 Wrapper::~Wrapper() {
 
+}
+
+void Wrapper::acquire(const Wrapper& lhs) {
+	release();
+	pn = lhs.pn;
+	acquire();
 }
 
 void Wrapper::swap(Wrapper& lhs) {
@@ -98,12 +109,14 @@ void Wrapper::release() {
 }
 
 Metadata::Metadata() {
-
     wrap(trax_metadata_create(0, 0, TRAX_CHANNEL_COLOR, NULL, NULL, NULL, 0));
 }
 
+Metadata::Metadata(Metadata&& original) : Wrapper(std::move(original)) {
+	metadata = original.metadata;
+}
+
 Metadata::Metadata(const Metadata& original) : Wrapper(original) {
-	if (original.metadata) acquire();
 	metadata = original.metadata;
 }
 
@@ -178,12 +191,16 @@ void Metadata::wrap(trax_metadata* obj) {
 	metadata = obj;
 }
 
-Metadata& Metadata::operator=(Metadata lhs) throw() {
-
-	std::swap(metadata, lhs.metadata);
-	swap(lhs);
+Metadata& Metadata::operator=(const Metadata& lhs) throw() {
+	acquire(lhs);
+	metadata = lhs.metadata;
 	return *this;
+}
 
+Metadata& Metadata::operator=(Metadata&& lhs) throw() {
+	swap(lhs);
+	std::swap(metadata, lhs.metadata);
+	return *this;
 }
 
 std::string Metadata::get_custom(const std::string key) const {
@@ -209,7 +226,10 @@ Handle::Handle() {
 }
 
 Handle::Handle(const Handle& original) : Wrapper(original) {
-	if (original.handle) acquire();
+	handle = original.handle;
+}
+
+Handle::Handle(Handle&& original) : Wrapper(original) {
 	handle = original.handle;
 }
 
@@ -416,19 +436,28 @@ int ServerMOT::wait(ImageList& image, Region& region, Properties& properties) {
 
 	if (!claims()) return -1;
 
-	trax_region* tregion = NULL;
-
+	trax_object_list* tobjects = NULL;
     trax_image_list* timagelist = NULL;
+	trax_region* tregion = NULL;
 
 	properties.ensure_unique();
 
-    int result = trax_server_wait_sot(handle, &timagelist, &tregion, properties.properties);
-
-	if (tregion)
-		region.wrap(tregion);
+    int result = trax_server_wait_mot(handle, &timagelist, &tobjects, properties.properties);
 
 	if (timagelist) {
 		image.wrap(timagelist);		
+	}
+
+	if (tobjects) {
+		if (trax_object_list_count(tobjects) > 1) {
+			trax_object_list_release(&tobjects);
+			return TRAX_ERROR;
+		}
+		if (trax_object_list_count(tobjects) == 1) {
+			tregion = trax_region_clone(trax_object_list_get(tobjects, 0));
+			region.wrap(tregion);
+			trax_properties_append(trax_object_list_properties(tobjects, 0), properties.properties, 0);
+		}
 	}
 
 	return result;
@@ -439,7 +468,45 @@ int ServerMOT::reply(const Region& region, const Properties& properties) {
 
 	if (!claims()) return -1;
 
-	return trax_server_reply_sot(handle, region.region, properties.properties);
+	trax_object_list* objects = trax_object_list_create(1);
+	trax_object_list_set(objects, 0, region.region);
+	trax_properties_append(trax_object_list_properties(objects, 0), properties.properties, 0);
+
+	int result = trax_server_reply_mot(handle, objects);
+
+	trax_object_list_release(&objects);
+
+	return result;
+
+}
+
+int ServerMOT::wait(ImageList& image, ObjectList& objects, Properties& properties) {
+
+	trax_object_list* tobjects = NULL;
+    trax_image_list* timagelist = NULL;
+
+	properties.ensure_unique();
+
+	int result = trax_server_wait_mot(handle, &timagelist, &tobjects, properties.properties);
+
+	if (timagelist) {
+		image.wrap(timagelist);		
+	}
+
+	if (tobjects) {
+		objects.wrap(tobjects);
+	}
+
+	return result;
+
+}
+
+
+int ServerMOT::reply(const ObjectList& objects) {
+
+	if (!claims()) return -1;
+
+	return trax_server_reply_mot(handle, objects.list);
 
 }
 
@@ -448,8 +515,23 @@ Image::Image() {
 }
 
 Image::Image(const Image& original) : Wrapper(original) {
-	if (original.image) acquire();
 	image = original.image;
+}
+
+Image::Image(Image&& original) : Wrapper(std::move(original)) {
+	image = original.image;
+}
+
+Image& Image::operator=(const Image& lhs) throw() {
+	acquire(lhs);
+	image = lhs.image;
+	return *this;
+}
+
+Image& Image::operator=(Image&& lhs) throw() {
+	swap(lhs);
+	std::swap(image, lhs.image);
+	return *this;
 }
 
 Image Image::create_path(const std::string& path) {
@@ -513,6 +595,7 @@ const char* Image::get_buffer(int* length, int* format) const {
 }
 
 void Image::cleanup() {
+	if (!image) return;
 	trax_image_release(&image);
 }
 
@@ -521,12 +604,6 @@ void Image::wrap(trax_image* obj) {
 	release();
 	image = obj;
 	if (image) acquire();
-}
-
-Image& Image::operator=(Image lhs) throw() {
-	std::swap(image, lhs.image);
-	swap(lhs);
-	return *this;
 }
 
 ObjectList::ObjectList() {
@@ -539,11 +616,33 @@ ObjectList::ObjectList(int count) {
 	_properties.resize(count);
 }
 
-ObjectList::ObjectList(const ObjectList& original) {
-	if (original.list) acquire();
+ObjectList::ObjectList(const ObjectList& original) : Wrapper(original) {
 	list = original.list;
 	_regions = original._regions;
 	_properties = original._properties;
+}
+
+ObjectList::ObjectList(ObjectList&& original) : Wrapper(std::move(original)) {
+	std::swap(list, original.list);
+	std::swap(_regions, original._regions);
+	std::swap(_properties, original._properties);
+}
+
+
+ObjectList& ObjectList::operator=(const ObjectList& original) throw() {
+	acquire(original);
+	list = original.list;
+	_regions = original._regions;
+	_properties = original._properties;
+	return *this;
+}
+
+ObjectList& ObjectList::operator=(ObjectList&& original) throw() {
+	swap(original);
+	std::swap(list, original.list);
+	std::swap(_regions, original._regions);
+	std::swap(_properties, original._properties);
+	return *this;
 }
 
 ObjectList::~ObjectList() {
@@ -565,14 +664,6 @@ Properties ObjectList::properties(int index) const {
 	return _properties[index];
 }
 
-ObjectList& ObjectList::operator=(ObjectList lhs) throw() {
-	std::swap(list, lhs.list);
-	std::swap(_regions, lhs._regions);
-	std::swap(_properties, lhs._properties);
-	swap(lhs);
-	return *this;
-}
-
 int ObjectList::size() const {
 	if (!list) return 0;
 	return trax_object_list_count(list);
@@ -580,9 +671,9 @@ int ObjectList::size() const {
 
 
 void ObjectList::cleanup() {
+	if (!list) return;
 	// Only free the structure, regions and properties will be 
 	// released by proxies
-	//trax_object_list_release(&list);
 	free(list->regions);
 	free(list->properties);
 	free(list);
@@ -612,9 +703,27 @@ ImageList::ImageList()  {
 }
 
 ImageList::ImageList(const ImageList& original)  : Wrapper(original) {
-	if (original.list) acquire();
 	list = original.list;
 	images = original.images;
+}
+
+ImageList::ImageList(ImageList&& original)  : Wrapper(std::move(original)) {
+	std::swap(list, original.list);
+	std::swap(images, original.images);
+}
+
+ImageList& ImageList::operator=(const ImageList& original) throw() {
+	acquire(original);
+	list = original.list;
+	images = original.images;
+	return *this;
+}
+
+ImageList& ImageList::operator=(ImageList&& original) throw() {
+	swap(original);
+	std::swap(list, original.list);
+	std::swap(images, original.images);
+	return *this;
 }
 
 ImageList::~ImageList() {
@@ -654,15 +763,8 @@ int ImageList::size() const {
 	return count;
 }
 
-ImageList& ImageList::operator=(ImageList lhs) throw() {
-	std::swap(list, lhs.list);
-	std::swap(images, lhs.images);
-	swap(lhs);
-	return *this;
-}
-
 void ImageList::cleanup() {
-
+	if (!list) return;
 	trax_image_list_release(&list);
 
 }
@@ -685,8 +787,23 @@ Region::Region() {
 }
 
 Region::Region(const Region& original) : Wrapper(original) {
-	if (original.region) acquire();
 	region = original.region;
+}
+
+Region::Region(Region&& original) : Wrapper(std::move(original)) {
+	std::swap(region, original.region);
+}
+
+Region& Region::operator=(const Region& original) throw() {
+	acquire(original);
+	region = original.region;
+	return *this;
+}
+
+Region& Region::operator=(Region&& original) throw() {
+	swap(original);
+	std::swap(region, original.region);
+	return *this;
 }
 
 Region Region::create_special(int code) {
@@ -813,6 +930,7 @@ bool Region::contains(float x, float y) const {
 }
 
 void Region::cleanup() {
+	if (!region) return;
 	trax_region_release(&region);
 }
 
@@ -828,12 +946,6 @@ void Region::wrap(trax_region* obj) {
 	release();
 	if (obj) acquire();
 	region = obj;
-}
-
-Region& Region::operator=(Region lhs) throw() {
-	std::swap(region, lhs.region);
-	swap(lhs);
-	return *this;
 }
 
 Region::operator std::string () const {
@@ -921,8 +1033,17 @@ Properties::Properties() {
 }
 
 Properties::Properties(const Properties& original) : Wrapper(original) {
-	if (original.properties) acquire();
 	properties = original.properties;
+}
+
+Properties::Properties(Properties&& original) : Wrapper(std::move(original)) {
+	std::swap(properties, original.properties);
+}
+
+Properties& Properties::operator=(const Properties& original) throw() {
+	acquire(original);
+	properties = original.properties;
+	return *this;
 }
 
 Properties::~Properties() {
@@ -998,8 +1119,8 @@ void Properties::enumerate(Enumerator enumerator, void* object)  {
 }
 
 void Properties::cleanup() {
-	if (properties)
-		trax_properties_release(&properties);
+	if (!properties) return;
+	trax_properties_release(&properties);
 }
 
 void Properties::wrap(trax_properties* obj) {
@@ -1007,12 +1128,6 @@ void Properties::wrap(trax_properties* obj) {
 	release();
 	properties = obj;
 	acquire();
-}
-
-Properties& Properties::operator=(Properties lhs) throw() {
-	std::swap(properties, lhs.properties);
-	swap(lhs);
-	return *this;
 }
 
 void copy_enumerator(const char *key, const char *value, const void *obj) {

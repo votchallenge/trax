@@ -7,3 +7,5 @@ docs/_*
 .vscode/
 *.egg-info
 dist/
+MANIFEST
+act

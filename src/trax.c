@@ -834,6 +834,11 @@ int trax_client_wait(trax_handle* client, trax_object_list** objects, trax_prope
             trax_properties_release(&tmp_properties);
             trax_object_list_release(objects);
             break;
+        } else if (result == TRAX_ERROR) {
+            list_destroy(&arguments);
+            trax_properties_release(&tmp_properties);
+            trax_object_list_release(objects);
+            break;
         }
 
         list_destroy(&arguments);
@@ -1218,6 +1223,10 @@ int trax_server_wait_mot(trax_handle* server, trax_image_list** images, trax_obj
         arguments = list_create(8);
 
         int code = read_message((message_stream*)server->stream, &LOGGER(server), arguments, tmp_properties);
+
+        if (code == TRAX_ERROR) {
+            goto failure;
+        }
 
         if (code == TRAX_QUIT) {
 
