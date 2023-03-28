@@ -88,7 +88,6 @@ int __parse_message_type(const char *str) {
     if (strcmpi(str, "status") == 0) return TRAX_STATE;
     if (strcmpi(str, "frame") == 0) return TRAX_FRAME;
     if (strcmpi(str, "quit") == 0) return TRAX_QUIT;
-    if (strcmpi(str, "reset") == 0) return TRAX_RESET;
 
     return -1;
 }
@@ -746,10 +745,6 @@ void write_message(message_stream* stream, trax_logging* log, int type, const st
         case TRAX_QUIT:
             OUTPUT_STRING(TRAX_PREFIX);
             OUTPUT_STRING("quit");
-            break;
-        case TRAX_RESET:
-            OUTPUT_STRING(TRAX_PREFIX);
-            OUTPUT_STRING("reset");
             break;
         default: {
             return;

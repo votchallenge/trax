@@ -2,49 +2,24 @@
 Bindings for the TraX sever.
 """
 
-import os
 import time
-import collections
 
-from ctypes import byref, cast
+from ctypes import byref
 
-from . import TraxException, TraxStatus, Properties, HandleWrapper, ImageListWrapper, \
-    ConsoleLogger, FileLogger, ProxyLogger, ObjectListWrapper, trax_region_p
+from . import TraxException, TraxStatus, Properties, HandleWrapper, \
+    ConsoleLogger, FileLogger, ProxyLogger, trax_object_list_p
     
+from . import wrap_images, wrap_objects, wrap_object_list, ObjectListWrapper
+
 from ._ctypes import \
-    trax_image_list_set, trax_client_initialize, \
-    trax_client_wait, trax_client_frame, trax_object_list_create, \
+    trax_client_initialize, \
+    trax_client_wait, trax_client_frame, \
     trax_client_setup_file, trax_client_setup_socket, \
-    trax_image_list_create, trax_logger_setup, trax_logger, \
-    trax_terminate, trax_get_error, trax_is_alive, \
-    trax_properties_append, trax_object_list_set, trax_object_list_properties
+    trax_logger_setup, trax_logger, \
+    trax_terminate, trax_get_error, trax_is_alive
 
 from .image import ImageChannel, Image
 from .region import Region
-
-def wrap_images(images):
-
-    channels = [ImageChannel.COLOR, ImageChannel.DEPTH, ImageChannel.IR]
-    tlist = ImageListWrapper(trax_image_list_create())
-
-    for channel in channels:
-        if not channel in images:
-            continue
-
-        trax_image_list_set(tlist.reference, images[channel].reference, ImageChannel.encode(channel))
-
-    return tlist
-
-def wrap_objects(objects):
-
-    tlist = ObjectListWrapper(trax_object_list_create(len(objects)))
-
-    for i, (region, properties) in enumerate(objects):
-        properties =  Properties(properties, False)
-        trax_object_list_set(tlist.reference, i, region.reference)
-        trax_properties_append(trax_object_list_properties(tlist.reference, i), properties.reference, 0)
-
-    return tlist
 
 class Client(object):
 
@@ -143,13 +118,13 @@ class Client(object):
             return self._custom[key]
         return None
 
-    def initialize(self, images, region, properties):
+    def initialize(self, images, objects, properties):
 
         timage = wrap_images(images)
-        tregion = region.reference
+        tobjects = wrap_objects(objects)
         tproperties = Properties(properties)
 
-        status = TraxStatus.decode(trax_client_initialize(self._handle.reference, timage.reference, tregion, tproperties.reference))
+        status = TraxStatus.decode(trax_client_initialize(self._handle.reference, timage.reference, tobjects.reference, tproperties.reference))
 
         if self._logger and self._logger.interrupted:
             raise KeyboardInterrupt("Interrupted by user in log callback")
@@ -159,14 +134,15 @@ class Client(object):
             message = message.decode('utf-8') if not message is None else "Unknown"
             raise TraxException("Exception when initializing tracker: {}".format(message))
 
-        tregion = trax_region_p()
-        properties = Properties()
+        tobjects = trax_object_list_p()
 
         start = time.time()
 
-        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), properties.reference))
+        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tobjects)))
 
         elapsed = time.time() - start
+
+        tobjects = ObjectListWrapper(tobjects)
 
         if self._logger and self._logger.interrupted:
             raise KeyboardInterrupt("Interrupted by user in log callback")
@@ -185,16 +161,15 @@ class Client(object):
             message = message.decode('utf-8') if not message is None else "Unknown"
             raise TraxException("Exception when waiting for response: {}".format(message))
 
-        region = Region.wrap(tregion)
+        return wrap_objects(tobjects.reference), elapsed
 
-        return region, properties, elapsed
-
-    def frame(self, images, properties = dict()):
+    def frame(self, images, properties = dict(), objects = None):
 
         timage = wrap_images(images)
+        tobjects = wrap_objects(objects)
         tproperties = Properties(properties)
 
-        status = TraxStatus.decode(trax_client_frame(self._handle.reference, timage.reference, tproperties.reference))
+        status = TraxStatus.decode(trax_client_frame(self._handle.reference, timage.reference, tobjects.reference, tproperties.reference))
 
         if self._logger and self._logger.interrupted:
             raise KeyboardInterrupt("Interrupted by user in log callback")
@@ -204,14 +179,16 @@ class Client(object):
             message = message.decode('utf-8') if not message is None else "Unknown"
             raise TraxException("Exception when sending frame to tracker: {}".format(message))
 
-        tregion = trax_region_p()
+        tobjects = trax_object_list_p()
         properties = Properties()
 
         start = time.time()
 
-        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tregion), properties.reference))
+        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tobjects), properties.reference))
 
         elapsed = time.time() - start
+
+        tobjects = ObjectListWrapper(tobjects)
 
         if self._logger and self._logger.interrupted:
             raise KeyboardInterrupt("Interrupted by user in log callback")
@@ -227,9 +204,7 @@ class Client(object):
             else:
                 raise TraxException("Server terminated the session: {}".format(reason))
             
-        region = Region.wrap(tregion)
-
-        return region, properties, elapsed
+        return wrap_object_list(tobjects.reference), elapsed
 
     def quit(self, reason=None):
         """ Sends quit message and end terminates communication. """

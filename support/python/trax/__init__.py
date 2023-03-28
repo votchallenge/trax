@@ -174,7 +174,7 @@ class ObjectListWrapper(Wrapper):
 class RegionWrapper(Wrapper):
 
     def __init__(self, reference, owner=True):
-        super().__init__(int, reference, lambda x: trax_region_release(byref(cast(x, c_void_p))) if owner else None)
+        super().__init__(c_void_p, reference, lambda x: trax_region_release(byref(cast(x, c_void_p))) if owner else None)
 
 class PropertiesWrapper(Wrapper):
 
@@ -186,7 +186,60 @@ class HandleWrapper(Wrapper):
     def __init__(self, reference, owner=True):
         super().__init__(POINTER(struct_trax_handle), reference, lambda x: trax_cleanup(byref(x)) if owner else None)
 
+def wrap_image_list(list):
+    from ._ctypes import trax_image_list_get
 
+    channels = [ImageChannel.COLOR, ImageChannel.DEPTH, ImageChannel.IR]
+    wrapped = {}
+
+    for channel in channels:
+        img = trax_image_list_get(list, ImageChannel.encode(channel))
+        if not img:
+            continue
+        wrapped[channel] = Image.wrap(img)
+
+    return wrapped
+
+def wrap_object_list(list):
+    from ._ctypes import trax_object_list_count, \
+        trax_object_list_get, trax_object_list_properties, \
+        trax_region_clone
+    import ctypes
+
+    objects = []
+    for i in range(trax_object_list_count(list)):
+        region = trax_object_list_get(list, i)
+        properties = Properties(trax_object_list_properties(list, i), False).dict()
+        r = trax_region_clone(region)
+        objects.append((Region.wrap(ctypes.cast(r, c_void_p)), properties))
+    return objects
+
+
+def wrap_images(images):
+    from ._ctypes import trax_image_list_create, trax_image_list_set
+
+    channels = [ImageChannel.COLOR, ImageChannel.DEPTH, ImageChannel.IR]
+    tlist = ImageListWrapper(trax_image_list_create())
+
+    for channel in channels:
+        if not channel in images:
+            continue
+
+        trax_image_list_set(tlist.reference, images[channel].reference, ImageChannel.encode(channel))
+
+    return tlist
+
+def wrap_objects(objects):
+    from ._ctypes import trax_properties_append, trax_object_list_set, \
+         trax_object_list_properties, trax_object_list_create
+    tlist = ObjectListWrapper(trax_object_list_create(len(objects)))
+
+    for i, (region, properties) in enumerate(objects):
+        properties =  Properties(properties, False)
+        trax_object_list_set(tlist.reference, i, region.reference)
+        trax_properties_append(trax_object_list_properties(tlist.reference, i), properties.reference, 0)
+
+    return tlist
 class Properties(object):
 
     def __init__(self, data=None, owner=True):

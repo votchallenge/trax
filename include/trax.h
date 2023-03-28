@@ -48,8 +48,6 @@
 #define TRAX_FRAME 3
 #define TRAX_QUIT 4
 #define TRAX_STATE 5
-// TraX 4 additional messages
-#define TRAX_RESET 6
 
 #define TRAX_IMAGE_EMPTY 0
 #define TRAX_IMAGE_PATH 1

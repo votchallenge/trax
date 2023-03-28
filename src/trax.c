@@ -882,7 +882,8 @@ int trax_client_initialize(trax_handle* client, trax_image_list* images, trax_ob
 
     if (IS_VERSION_4(client)) {
         if (client->objects > 0) {
-            write_message((message_stream*)client->stream, &LOGGER(client), TRAX_RESET, NULL, NULL);
+            // Reset object count with an empty initialize message
+            write_message((message_stream*)client->stream, &LOGGER(client), TRAX_INITIALIZE, NULL, NULL);
             client->objects = 0;
         }
         return trax_client_frame(client, images, objects, properties);
@@ -1236,16 +1237,11 @@ int trax_server_wait_mot(trax_handle* server, trax_image_list** images, trax_obj
             }   
 
             if (properties)
-                copy_properties(tmp_properties, properties, COPY_ALL | COPY_OVERWRITE);
+                copy_properties(tmp_properties, properties, COPY_EXTERNAL | COPY_OVERWRITE);
 
             result = TRAX_QUIT;
             server->flags |= TRAX_FLAG_TERMINATED;
             goto end;
-        }
-
-        if (code == TRAX_RESET) {
-            result = TRAX_INITIALIZE;
-            server->objects = 0;
         }
 
         if (code == TRAX_FRAME) {
@@ -1283,6 +1279,13 @@ int trax_server_wait_mot(trax_handle* server, trax_image_list** images, trax_obj
         }
 
         if (code == TRAX_INITIALIZE) {
+
+            if (list_size(arguments) == 0) {
+                result = TRAX_INITIALIZE;
+                server->objects = 0;
+                continue;
+            }
+
             if (list_size(arguments) != 1) { // There's also the region info
                 set_error(server, "Protocol error, illegal argument number %d != %d", list_size(arguments), 1);
                 goto failure;

@@ -8,44 +8,17 @@ import collections
 from ctypes import byref, cast, py_object
 
 from . import TraxException, TraxStatus, Properties, HandleWrapper, ConsoleLogger, FileLogger
-from . import trax_image_list_p, trax_region_p, trax_properties_p, trax_object_list_p
+from . import trax_image_list_p, trax_object_list_p, wrap_image_list, wrap_object_list, wrap_objects
 
 from ._ctypes import \
         trax_metadata_create, trax_server_setup_v, \
-        trax_logger_setup, \
-        trax_image_list_get, trax_metadata_release, \
+        trax_logger_setup, trax_metadata_release, \
         trax_server_wait, trax_server_reply, \
         trax_image_list_release,  \
         trax_logger, trax_terminate, \
-        trax_is_alive, trax_get_error, trax_object_list_count, \
-        trax_object_list_get, trax_object_list_properties, \
-        trax_region_clone, trax_object_list_release
+        trax_is_alive, trax_get_error, trax_object_list_release
 from .image import ImageChannel, Image
 from .region import Region
-from .client import wrap_objects
-
-def wrap_image_list(list):
-
-    channels = [ImageChannel.COLOR, ImageChannel.DEPTH, ImageChannel.IR]
-    wrapped = {}
-
-    for channel in channels:
-        img = trax_image_list_get(list, ImageChannel.encode(channel))
-        if not img:
-            continue
-        wrapped[channel] = Image.wrap(img)
-
-    return wrapped
-
-def wrap_object_list(list):
-    objects = []
-    for i in range(trax_object_list_count(list)):
-        region = trax_object_list_get(list, i)
-        properties = Properties(trax_object_list_properties(list, i), False).dict()
-        r = trax_region_clone(region)
-        print(type(r), type(region))
-        objects.append((Region.wrap(r), properties))
-    return objects
 
 class Request(collections.namedtuple('Request', ['type', 'image', 'objects', 'properties'])):
 
