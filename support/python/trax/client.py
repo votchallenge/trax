@@ -135,10 +135,11 @@ class Client(object):
             raise TraxException("Exception when initializing tracker: {}".format(message))
 
         tobjects = trax_object_list_p()
+        properties = Properties()
 
         start = time.time()
 
-        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tobjects)))
+        status = TraxStatus.decode(trax_client_wait(self._handle.reference, byref(tobjects), properties.reference))
 
         elapsed = time.time() - start
 
@@ -161,7 +162,7 @@ class Client(object):
             message = message.decode('utf-8') if not message is None else "Unknown"
             raise TraxException("Exception when waiting for response: {}".format(message))
 
-        return wrap_objects(tobjects.reference), elapsed
+        return wrap_object_list(tobjects.reference), elapsed
 
     def frame(self, images, properties = dict(), objects = None):
 
