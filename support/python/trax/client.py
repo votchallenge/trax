@@ -4,7 +4,7 @@ Bindings for the TraX sever.
 
 import time
 
-from ctypes import byref
+from ctypes import byref, c_int
 
 from . import TraxException, TraxStatus, Properties, HandleWrapper, \
     ConsoleLogger, FileLogger, ProxyLogger, trax_object_list_p
@@ -15,8 +15,8 @@ from ._ctypes import \
     trax_client_initialize, \
     trax_client_wait, trax_client_frame, \
     trax_client_setup_file, trax_client_setup_socket, \
-    trax_logger_setup, trax_logger, \
-    trax_terminate, trax_get_error, trax_is_alive
+    trax_logger_setup, trax_logger, trax_get_parameter, \
+    trax_terminate, trax_get_error, trax_is_alive, TRAX_PARAMETER_MULTIOBJECT
 
 from .image import ImageChannel, Image
 from .region import Region
@@ -88,6 +88,11 @@ class Client(object):
         custom = Properties(metadata.contents.custom, False)
 
         self._custom = custom.dict()
+
+        value = c_int(value=0)   
+        trax_get_parameter(handle, TRAX_PARAMETER_MULTIOBJECT, byref(value))
+
+        self._custom["multiobject"] = bool(value.value)
 
     @property
     def channels(self):

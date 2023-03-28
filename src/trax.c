@@ -782,8 +782,6 @@ int trax_client_wait(trax_handle* client, trax_object_list** objects, trax_prope
         return TRAX_ERROR;
     }
 
-    int oi = 0;
-
     (*objects) = trax_object_list_create(client->objects);
 
     for (int i = 0; i < client->objects; i++) {
@@ -812,8 +810,8 @@ int trax_client_wait(trax_handle* client, trax_object_list** objects, trax_prope
                 break;
             }
 
-            trax_object_list_set((*objects), oi, _region);
-            copy_properties(tmp_properties, trax_object_list_properties((*objects), oi), COPY_ALL | COPY_OVERWRITE);
+            trax_object_list_set((*objects), i, _region);
+            copy_properties(tmp_properties, trax_object_list_properties((*objects), i), COPY_ALL | COPY_OVERWRITE);
 
         } else if (result == TRAX_QUIT) {
 
