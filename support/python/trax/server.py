@@ -34,7 +34,9 @@ class Server(object):
 
     """ TraX server."""
 
-    def __init__(self, region_formats, image_formats, image_channels=["color"], trackerName="", trackerDescription="", trackerFamily="", customMetadata=None, log=False, multitarget=False):
+    def __init__(self, region_formats, image_formats, image_channels=["color"], tracker_name="", tracker_description="", tracker_family="", metadata=None, log=False, multiobject=False):
+
+        from ._ctypes import TRAX_METADATA_MULTI_OBJECT
 
         if isinstance(log, bool) and log:
             self._logger = trax_logger(ConsoleLogger())
@@ -43,13 +45,18 @@ class Server(object):
         else:
             self._logger = trax_logger()
 
+        flags = 0
+
+        if multiobject:
+            flags |= TRAX_METADATA_MULTI_OBJECT
+
         mdata = trax_metadata_create(Region.encode_list(region_formats),
             Image.encode_list(image_formats), ImageChannel.encode_list(image_channels),
-            trackerName.encode('utf-8'), trackerDescription.encode('utf-8'), trackerFamily.encode('utf-8'), 0)
+            tracker_name.encode('utf-8'), tracker_description.encode('utf-8'), tracker_family.encode('utf-8'), flags)
 
-        if isinstance(customMetadata, dict):
+        if isinstance(metadata, dict):
             custom = Properties(mdata.contents.custom, False)
-            for key, value in customMetadata.items():
+            for key, value in metadata.items():
                 custom.set(key, value)
 
         logger = trax_logger_setup(self._logger, None, 0)
