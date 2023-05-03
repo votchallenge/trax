@@ -1240,12 +1240,6 @@ try:
 except:
     pass
 
-# /home/lukacu/Checkouts/vot/trax/include/trax.h: 52
-try:
-    TRAX_RESET = 6
-except:
-    pass
-
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 54
 try:
     TRAX_IMAGE_EMPTY = 0

@@ -721,7 +721,7 @@ void write_message(message_stream* stream, trax_logging* log, int type, const st
 
     int i;
 
-    assert(type >= TRAX_HELLO && type <= TRAX_RESET);
+    assert(type >= TRAX_HELLO);
 
     VALIDATE_MESSAGE_STREAM(stream);
 
