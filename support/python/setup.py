@@ -54,7 +54,6 @@ try:
 
 except ImportError:
     bdist_wheel = None
-
 try:
     with open(os.path.join(root, "VERSION"), encoding='utf-8') as fp:
         VERSION = fp.readline().strip()
@@ -63,9 +62,8 @@ except IOError:
     VERSION = os.getenv("TRAX_VERSION", "unknown")
 
 try:
-    with open(os.path.join(root, 'README.md'), encoding='utf-8') as f:
+    with open(os.path.join(root, 'README.rst'), encoding='utf-8') as f:
         long_description = f.read()
-
 except IOError:
     long_description = ""
 
