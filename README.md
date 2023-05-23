@@ -1,7 +1,6 @@
 Visual Tracking eXchange protocol
 =================================
 
-[![Download](https://api.bintray.com/packages/votchallenge/trax/stable/images/download.svg)](https://bintray.com/votchallenge/trax/stable/_latestVersion)
 [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/e12tdjnekrv7qivl/branch/master?svg=true)](https://ci.appveyor.com/project/lukacu/trax/branch/master)
 [![Documentation Status](https://readthedocs.org/projects/trax/badge/?version=latest)](http://trax.readthedocs.io/en/latest/?badge=latest)
 
