@@ -99,6 +99,7 @@ void print_help() {
     cout << "\t-h\tPrint this help and exit\n";
     cout << "\t-p\tTracker parameter (multiple occurences allowed)\n";
     cout << "\t-t\tSet timeout period\n";
+    cout << "\t-I\tNumber of attempted initializations\n";
     cout << "\t-x\tUse explicit streams, not standard ones.\n";
     cout << "\t-X\tUse TCP/IP sockets instead of file streams.\n";
     cout << "\n";
@@ -167,7 +168,7 @@ void print_debug(const char *format, ...) {
 }
 
 
-#define CMD_OPTIONS "hdt:p:e:xX"
+#define CMD_OPTIONS "hdt:p:e:xXI"
 
 int main(int argc, char** argv) {
 
@@ -175,6 +176,7 @@ int main(int argc, char** argv) {
     opterr = 0;
     int result = 0;
     int timeout = 30;
+    int reinitializations = 1;
 
     string tracker_command;
 
@@ -201,6 +203,9 @@ int main(int argc, char** argv) {
                 break;
             case 't':
                 timeout = MAX(0, atoi(optarg));
+                break;
+            case 'I':
+                reinitializations = MAX(1, atoi(optarg));
                 break;
             case 'e': {
                 char* var = optarg;
@@ -280,7 +285,7 @@ int main(int argc, char** argv) {
 
         int frame = 0;
         int initializations = 0;
-        while (initializations < 5) {
+        while (initializations < reinitializations) {
 
             if (!tracker.ready()) {
                 throw std::runtime_error("Tracker process not alive anymore.");
