@@ -811,6 +811,7 @@ int trax_client_wait(trax_handle* client, trax_object_list** objects, trax_prope
             }
 
             trax_object_list_set((*objects), i, _region);
+            region_release(&_region);
             copy_properties(tmp_properties, trax_object_list_properties((*objects), i), COPY_ALL | COPY_OVERWRITE);
 
         } else if (result == TRAX_QUIT) {
