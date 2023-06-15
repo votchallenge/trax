@@ -2,7 +2,6 @@
 import io
 import numpy as np
 from trax import MemoryImage, BufferImage
-from PIL import Image
 
 image1 = (np.random.random((100, 100, 3)) * 255).astype(np.uint8)
 
@@ -16,12 +15,21 @@ timage2 = MemoryImage.create(image2)
 
 assert(np.array_equal(image2, timage2.array()))
 
+try:
+    # Optional test if PIL is installed
+    from PIL import Image
 
-image3 = Image.fromarray(image1)
-bimage = io.BytesIO()
-image3.save(bimage, format='JPEG')
-simage = bimage.getvalue()
+    image3 = Image.fromarray(image1)
+    bimage = io.BytesIO()
+    image3.save(bimage, format='JPEG')
+    simage = bimage.getvalue()
 
-timage3 = BufferImage.create(simage)
+    timage3 = BufferImage.create(simage)
 
-assert(simage == timage3.buffer())
+    assert(simage == timage3.buffer())
+
+except ImportError:
+    print("PIL not installed, skipping file buffer test")
+
+
+
