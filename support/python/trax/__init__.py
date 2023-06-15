@@ -237,7 +237,7 @@ def wrap_objects(objects):
     for i, (region, properties) in enumerate(objects):
         properties =  Properties(properties, False)
         trax_object_list_set(tlist.reference, i, region.reference)
-        trax_properties_append(trax_object_list_properties(tlist.reference, i), properties.reference, 0)
+        trax_properties_append(properties.reference, trax_object_list_properties(tlist.reference, i), 0)
 
     return tlist
 class Properties(object):
