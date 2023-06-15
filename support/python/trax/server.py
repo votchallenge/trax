@@ -21,8 +21,14 @@ from .image import ImageChannel, Image
 from .region import Region
 
 class Request(collections.namedtuple('Request', ['type', 'image', 'objects', 'properties'])):
-
-    """ A container class for client requests. Contains fileds type, image, objects and parameters. """
+    """ A container class for client requests. Contains fileds type, image, objects and parameters.
+    
+    Args:
+        type (TraxStatus): Type of the request.
+        image (List[Image]): List of images.
+        objects (List[Region]): List of regions.
+        properties (dict): Optional arguments as a dictionary.
+    """
 
 def _logger(buf, len, obj):
 

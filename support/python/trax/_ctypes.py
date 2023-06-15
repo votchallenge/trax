@@ -492,7 +492,6 @@ def add_library_search_dirs(other_dirs):
             path = os.path.abspath(path)
         load_library.other_dirs.append(path)
 
-
 del loaderclass
 
 # End loader
