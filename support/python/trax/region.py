@@ -2,6 +2,8 @@
 Region description classes. These are used to describe the object location in the image.
 """
 
+__all__ = ['Region', 'Special', 'Rectangle', 'Polygon', 'Mask']
+
 import sys
 from abc import abstractmethod
 from ctypes import memmove, byref, c_int, c_float, cast, c_void_p
@@ -14,7 +16,6 @@ from ._ctypes import trax_region_create_polygon, \
     trax_region_get_special, trax_region_get_type, trax_region_get_rectangle, \
     trax_region_set_polygon_point, trax_region_create_special, trax_region_create_mask, \
     trax_region_get_mask_header, trax_region_get_mask_row, trax_region_write_mask_row
-from trax import RegionWrapper
 
 class Region(object):
     """Base class for region descriptions."""
@@ -30,6 +31,7 @@ class Region(object):
         Args:
             internal (c_void_p): Internal region pointer.
         """
+        from . import RegionWrapper
         self._ref = RegionWrapper(internal)
 
     @property
@@ -282,12 +284,34 @@ class Polygon(Region):
         return Region.POLYGON
 
     def size(self):
+        """Number of points in the polygon
+        
+        Returns:
+            int: number of points in the polygon
+        """
         return trax_region_get_polygon_count(self.reference)
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: int) -> tuple:
+        """Get point at index i
+        
+        Args:
+            i (int): index of the point
+        
+        Returns:
+            tuple: point at index i
+        """
         return self.get(i)
 
-    def get(self, i):
+    def get(self, i: int) -> tuple:
+        """Get point at index i
+
+        Args:
+            i (int): index of the point
+
+        Returns:
+            tuple: point at index i
+        """
+
         if i < 0 or i >= self.size():
             raise IndexError("Index {} is invalid".format(i))
         x = c_float()
@@ -296,8 +320,12 @@ class Polygon(Region):
         return x.value, y.value
 
     def __iter__(self):
+        """Iterator over the points in the polygon
+        
+        Returns:
+            PolygonIterator: iterator over the points in the polygon
+        """
         return PolygonIterator(self)
-
 
 class Mask(Region):
     """Mask region wrapper.

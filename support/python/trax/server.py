@@ -7,8 +7,12 @@ import collections
 
 from ctypes import byref, cast, py_object
 
-from . import TraxException, TraxStatus, Properties, HandleWrapper, ConsoleLogger, FileLogger
-from . import trax_image_list_p, trax_object_list_p, wrap_image_list, wrap_object_list, wrap_objects
+__all__ = \
+    ['Server', 'Rquest']
+
+from .image import ImageChannel, Image
+from .region import Region
+
 
 from ._ctypes import \
         trax_metadata_create, trax_server_setup_v, \
@@ -17,8 +21,7 @@ from ._ctypes import \
         trax_image_list_release,  \
         trax_logger, trax_terminate, \
         trax_is_alive, trax_get_error, trax_object_list_release
-from .image import ImageChannel, Image
-from .region import Region
+
 
 class Request(collections.namedtuple('Request', ['type', 'image', 'objects', 'properties'])):
     """ A container class for client requests. Contains fileds type, image, objects and parameters.
@@ -42,6 +45,7 @@ class Server(object):
 
     def __init__(self, region_formats, image_formats, image_channels=["color"], tracker_name="", tracker_description="", tracker_family="", metadata=None, log=False, multiobject=False):
 
+        from . import TraxException, ConsoleLogger, FileLogger, Properties, HandleWrapper
         from ._ctypes import TRAX_METADATA_MULTI_OBJECT
 
         if isinstance(log, bool) and log:
@@ -87,6 +91,7 @@ class Server(object):
             :returns: A request structure
             :rtype: trax.server.Request
         """
+        from . import TraxException, Properties, TraxStatus, wrap_image_list, wrap_object_list, trax_image_list_p, trax_object_list_p
 
         timage = trax_image_list_p()
         tobjects = trax_object_list_p()
@@ -126,6 +131,8 @@ class Server(object):
             :param List[Region, Mapping] objects: Resulting status of tracked objects.
             :param dict properties: Optional arguments as a dictionary.
         """
+        from . import TraxException, TraxStatus, Properties, wrap_objects
+
         assert(isinstance(objects, list))
         tproperties = Properties(properties)
         tobjects = wrap_objects(objects)
@@ -152,6 +159,8 @@ class Server(object):
 
     def quit(self, reason=None):
         """ Sends quit message and end terminates communication. """
+        from . import TraxException, TraxStatus
+
         if not reason is None:
             status = TraxStatus.decode(trax_terminate(self._handle.reference, reason.encode('utf-8')))
         else:
@@ -163,5 +172,3 @@ class Server(object):
             raise TraxException("Exception when terminating: {}".format(message))
 
         self._handle = None
-
-

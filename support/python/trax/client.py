@@ -1,6 +1,9 @@
 """
-Bindings for the TraX sever.
+Bindings for the TraX client object.
 """
+
+__all__ = \
+    ['Client']
 
 import time
 
@@ -22,10 +25,16 @@ from .image import ImageChannel, Image
 from .region import Region
 
 class Client(object):
-
-    """ TraX client."""
+    """ TraX client object. """
 
     def __init__(self, stream=None, timeout=30, log=False):
+        """ Create a new client object.
+        
+        Args:
+            stream: A tuple (host, port) or a port number to connect to.
+            timeout: A timeout in seconds.
+            log: A boolean value or a string. If True, the log is written to the console. If False, no log is written. If a string, the log is written to the file with the given name.
+        """
 
         if isinstance(log, bool) and log:
             self._logger = ConsoleLogger()
@@ -96,6 +105,11 @@ class Client(object):
 
     @property
     def channels(self):
+        """ List of supported channels.
+        
+        Returns:
+            A list of ImageChannel objects.
+        """
         return self._channels
 
     @property
@@ -104,26 +118,61 @@ class Client(object):
 
     @property
     def region_formats(self):
+        """ List of supported region formats.
+        
+        Returns:
+            A list of Region objects.
+        """
         return self._format_region
 
     @property
-    def tracker_name(self):
+    def tracker_name(self) -> str:
+        """ Tracker name.
+        
+        Returns:
+            A string with the tracker name.
+        """
         return self._tracker_name
 
     @property
-    def tracker_family(self):
+    def tracker_family(self) -> str:
+        """ Tracker family property.
+        
+        Returns:
+            A string with the tracker family.
+        """
         return self._tracker_family
 
     @property
-    def tracker_description(self):
+    def tracker_description(self) -> str:
+        """ Tracker description property.
+        
+        Returns:
+            A string with the tracker description.
+        """
         return self._tracker_description
 
-    def get(self, key):
+    def get(self, key) -> str:
+        """ Get a custom property provided by the tracker.
+        
+        Args:
+            key: A string with the property name.
+            
+        Returns:
+            A string with the property value.
+        """
         if key in self._custom:
             return self._custom[key]
         return None
 
     def initialize(self, images, objects, properties):
+        """ Initialize the tracker. The response is returned as a tuple of objects and elapsed time.
+        
+        Args:
+            images (list of Image): List of images to be sent to the tracker.
+            objects (list of Region): List of objects to be sent to the tracker.
+            properties (dict): Dictionary of properties to be sent to the tracker.
+        """
 
         timage = wrap_images(images)
         tobjects = wrap_objects(objects)
@@ -170,6 +219,18 @@ class Client(object):
         return wrap_object_list(tobjects.reference), elapsed
 
     def frame(self, images, properties = dict(), objects = None):
+        """ Send a frame to the tracker and wait for the response. The response is returned as a tuple of objects and elapsed time.
+        The objects are returned as a list of tuples of region and property objects.
+        The elapsed time is the time it took for the tracker to process the frame in seconds.
+        
+        Args:
+            images (list of Image): The list of images to send to the tracker.
+            properties (dict, optional): The properties to send to the tracker.
+            objects (list of Region, optional): The list of regions to send to the tracker.
+
+        Returns:
+            list: The tuple of objects and elapsed time.
+        """
 
         timage = wrap_images(images)
         tobjects = wrap_objects(objects)
@@ -212,8 +273,12 @@ class Client(object):
             
         return wrap_object_list(tobjects.reference), elapsed
 
-    def quit(self, reason=None):
-        """ Sends quit message and end terminates communication. """
+    def quit(self, reason: str = None):
+        """ Sends quit message and end terminates communication.
+        
+        Args:
+            reason (str): Optional reason for quitting.
+        """
         if not reason is None:
             trax_terminate(self._handle.reference, reason.encode('utf-8'))
         else:
