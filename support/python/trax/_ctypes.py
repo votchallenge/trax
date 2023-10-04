@@ -499,7 +499,7 @@ del loaderclass
 add_library_search_dirs([os.path.dirname(__file__)])
 
 # Begin libraries
-_libs["libtrax"] = load_library("libtrax")
+_libs["trax"] = load_library("trax")
 
 # 1 libraries
 # End libraries
@@ -676,512 +676,512 @@ trax_image_list = struct_trax_image_list# /home/lukacu/Checkouts/vot/trax/includ
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 219
 try:
-    trax_no_log = (trax_logging).in_dll(_libs["libtrax"], "trax_no_log")
+    trax_no_log = (trax_logging).in_dll(_libs["trax"], "trax_no_log")
 except:
     pass
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 221
 try:
-    trax_no_bounds = (trax_bounds).in_dll(_libs["libtrax"], "trax_no_bounds")
+    trax_no_bounds = (trax_bounds).in_dll(_libs["trax"], "trax_no_bounds")
 except:
     pass
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 226
-if _libs["libtrax"].has("trax_version", "cdecl"):
-    trax_version = _libs["libtrax"].get("trax_version", "cdecl")
+if _libs["trax"].has("trax_version", "cdecl"):
+    trax_version = _libs["trax"].get("trax_version", "cdecl")
     trax_version.argtypes = []
     trax_version.restype = ctypes.c_char_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 231
-if _libs["libtrax"].has("trax_metadata_create", "cdecl"):
-    trax_metadata_create = _libs["libtrax"].get("trax_metadata_create", "cdecl")
+if _libs["trax"].has("trax_metadata_create", "cdecl"):
+    trax_metadata_create = _libs["trax"].get("trax_metadata_create", "cdecl")
     trax_metadata_create.argtypes = [c_int, c_int, c_int, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, c_int]
     trax_metadata_create.restype = POINTER(trax_metadata)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 237
-if _libs["libtrax"].has("trax_metadata_release", "cdecl"):
-    trax_metadata_release = _libs["libtrax"].get("trax_metadata_release", "cdecl")
+if _libs["trax"].has("trax_metadata_release", "cdecl"):
+    trax_metadata_release = _libs["trax"].get("trax_metadata_release", "cdecl")
     trax_metadata_release.argtypes = [POINTER(POINTER(trax_metadata))]
     trax_metadata_release.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 242
-if _libs["libtrax"].has("trax_logger_setup", "cdecl"):
-    trax_logger_setup = _libs["libtrax"].get("trax_logger_setup", "cdecl")
+if _libs["trax"].has("trax_logger_setup", "cdecl"):
+    trax_logger_setup = _libs["trax"].get("trax_logger_setup", "cdecl")
     trax_logger_setup.argtypes = [trax_logger, ctypes.c_void_p, c_int]
     trax_logger_setup.restype = trax_logging
 
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 252
-if _libs["libtrax"].has("trax_client_setup_file", "cdecl"):
-    trax_client_setup_file = _libs["libtrax"].get("trax_client_setup_file", "cdecl")
+if _libs["trax"].has("trax_client_setup_file", "cdecl"):
+    trax_client_setup_file = _libs["trax"].get("trax_client_setup_file", "cdecl")
     trax_client_setup_file.argtypes = [c_int, c_int, trax_logging]
     trax_client_setup_file.restype = POINTER(trax_handle)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 257
-if _libs["libtrax"].has("trax_client_setup_socket", "cdecl"):
-    trax_client_setup_socket = _libs["libtrax"].get("trax_client_setup_socket", "cdecl")
+if _libs["trax"].has("trax_client_setup_socket", "cdecl"):
+    trax_client_setup_socket = _libs["trax"].get("trax_client_setup_socket", "cdecl")
     trax_client_setup_socket.argtypes = [c_int, c_int, trax_logging]
     trax_client_setup_socket.restype = POINTER(trax_handle)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 262
-if _libs["libtrax"].has("trax_client_wait", "cdecl"):
-    trax_client_wait = _libs["libtrax"].get("trax_client_wait", "cdecl")
+if _libs["trax"].has("trax_client_wait", "cdecl"):
+    trax_client_wait = _libs["trax"].get("trax_client_wait", "cdecl")
     trax_client_wait.argtypes = [POINTER(trax_handle), POINTER(POINTER(trax_object_list)), POINTER(trax_properties)]
     trax_client_wait.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 267
-if _libs["libtrax"].has("trax_client_initialize", "cdecl"):
-    trax_client_initialize = _libs["libtrax"].get("trax_client_initialize", "cdecl")
+if _libs["trax"].has("trax_client_initialize", "cdecl"):
+    trax_client_initialize = _libs["trax"].get("trax_client_initialize", "cdecl")
     trax_client_initialize.argtypes = [POINTER(trax_handle), POINTER(trax_image_list), POINTER(trax_object_list), POINTER(trax_properties)]
     trax_client_initialize.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 272
-if _libs["libtrax"].has("trax_client_frame", "cdecl"):
-    trax_client_frame = _libs["libtrax"].get("trax_client_frame", "cdecl")
+if _libs["trax"].has("trax_client_frame", "cdecl"):
+    trax_client_frame = _libs["trax"].get("trax_client_frame", "cdecl")
     trax_client_frame.argtypes = [POINTER(trax_handle), POINTER(trax_image_list), POINTER(trax_object_list), POINTER(trax_properties)]
     trax_client_frame.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 277
-if _libs["libtrax"].has("trax_server_setup_v", "cdecl"):
-    trax_server_setup_v = _libs["libtrax"].get("trax_server_setup_v", "cdecl")
+if _libs["trax"].has("trax_server_setup_v", "cdecl"):
+    trax_server_setup_v = _libs["trax"].get("trax_server_setup_v", "cdecl")
     trax_server_setup_v.argtypes = [POINTER(trax_metadata), trax_logging, c_int]
     trax_server_setup_v.restype = POINTER(trax_handle)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 282
-if _libs["libtrax"].has("trax_server_setup_file_v", "cdecl"):
-    trax_server_setup_file_v = _libs["libtrax"].get("trax_server_setup_file_v", "cdecl")
+if _libs["trax"].has("trax_server_setup_file_v", "cdecl"):
+    trax_server_setup_file_v = _libs["trax"].get("trax_server_setup_file_v", "cdecl")
     trax_server_setup_file_v.argtypes = [POINTER(trax_metadata), c_int, c_int, trax_logging, c_int]
     trax_server_setup_file_v.restype = POINTER(trax_handle)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 287
-if _libs["libtrax"].has("trax_server_wait_sot", "cdecl"):
-    trax_server_wait_sot = _libs["libtrax"].get("trax_server_wait_sot", "cdecl")
+if _libs["trax"].has("trax_server_wait_sot", "cdecl"):
+    trax_server_wait_sot = _libs["trax"].get("trax_server_wait_sot", "cdecl")
     trax_server_wait_sot.argtypes = [POINTER(trax_handle), POINTER(POINTER(trax_image_list)), POINTER(ctypes.c_void_p), POINTER(trax_properties)]
     trax_server_wait_sot.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 292
-if _libs["libtrax"].has("trax_server_reply_sot", "cdecl"):
-    trax_server_reply_sot = _libs["libtrax"].get("trax_server_reply_sot", "cdecl")
+if _libs["trax"].has("trax_server_reply_sot", "cdecl"):
+    trax_server_reply_sot = _libs["trax"].get("trax_server_reply_sot", "cdecl")
     trax_server_reply_sot.argtypes = [POINTER(trax_handle), ctypes.c_void_p, POINTER(trax_properties)]
     trax_server_reply_sot.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 297
-if _libs["libtrax"].has("trax_server_wait_mot", "cdecl"):
-    trax_server_wait_mot = _libs["libtrax"].get("trax_server_wait_mot", "cdecl")
+if _libs["trax"].has("trax_server_wait_mot", "cdecl"):
+    trax_server_wait_mot = _libs["trax"].get("trax_server_wait_mot", "cdecl")
     trax_server_wait_mot.argtypes = [POINTER(trax_handle), POINTER(POINTER(trax_image_list)), POINTER(POINTER(trax_object_list)), POINTER(trax_properties)]
     trax_server_wait_mot.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 302
-if _libs["libtrax"].has("trax_server_reply_mot", "cdecl"):
-    trax_server_reply_mot = _libs["libtrax"].get("trax_server_reply_mot", "cdecl")
+if _libs["trax"].has("trax_server_reply_mot", "cdecl"):
+    trax_server_reply_mot = _libs["trax"].get("trax_server_reply_mot", "cdecl")
     trax_server_reply_mot.argtypes = [POINTER(trax_handle), POINTER(trax_object_list)]
     trax_server_reply_mot.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 307
-if _libs["libtrax"].has("trax_terminate", "cdecl"):
-    trax_terminate = _libs["libtrax"].get("trax_terminate", "cdecl")
+if _libs["trax"].has("trax_terminate", "cdecl"):
+    trax_terminate = _libs["trax"].get("trax_terminate", "cdecl")
     trax_terminate.argtypes = [POINTER(trax_handle), ctypes.c_char_p]
     trax_terminate.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 312
-if _libs["libtrax"].has("trax_get_error", "cdecl"):
-    trax_get_error = _libs["libtrax"].get("trax_get_error", "cdecl")
+if _libs["trax"].has("trax_get_error", "cdecl"):
+    trax_get_error = _libs["trax"].get("trax_get_error", "cdecl")
     trax_get_error.argtypes = [POINTER(trax_handle)]
     trax_get_error.restype = ctypes.c_char_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 318
-if _libs["libtrax"].has("trax_is_alive", "cdecl"):
-    trax_is_alive = _libs["libtrax"].get("trax_is_alive", "cdecl")
+if _libs["trax"].has("trax_is_alive", "cdecl"):
+    trax_is_alive = _libs["trax"].get("trax_is_alive", "cdecl")
     trax_is_alive.argtypes = [POINTER(trax_handle)]
     trax_is_alive.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 324
-if _libs["libtrax"].has("trax_cleanup", "cdecl"):
-    trax_cleanup = _libs["libtrax"].get("trax_cleanup", "cdecl")
+if _libs["trax"].has("trax_cleanup", "cdecl"):
+    trax_cleanup = _libs["trax"].get("trax_cleanup", "cdecl")
     trax_cleanup.argtypes = [POINTER(POINTER(trax_handle))]
     trax_cleanup.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 329
-if _libs["libtrax"].has("trax_set_parameter", "cdecl"):
-    trax_set_parameter = _libs["libtrax"].get("trax_set_parameter", "cdecl")
+if _libs["trax"].has("trax_set_parameter", "cdecl"):
+    trax_set_parameter = _libs["trax"].get("trax_set_parameter", "cdecl")
     trax_set_parameter.argtypes = [POINTER(trax_handle), c_int, c_int]
     trax_set_parameter.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 334
-if _libs["libtrax"].has("trax_get_parameter", "cdecl"):
-    trax_get_parameter = _libs["libtrax"].get("trax_get_parameter", "cdecl")
+if _libs["trax"].has("trax_get_parameter", "cdecl"):
+    trax_get_parameter = _libs["trax"].get("trax_get_parameter", "cdecl")
     trax_get_parameter.argtypes = [POINTER(trax_handle), c_int, POINTER(c_int)]
     trax_get_parameter.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 339
-if _libs["libtrax"].has("trax_image_release", "cdecl"):
-    trax_image_release = _libs["libtrax"].get("trax_image_release", "cdecl")
+if _libs["trax"].has("trax_image_release", "cdecl"):
+    trax_image_release = _libs["trax"].get("trax_image_release", "cdecl")
     trax_image_release.argtypes = [POINTER(POINTER(trax_image))]
     trax_image_release.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 344
-if _libs["libtrax"].has("trax_image_create_path", "cdecl"):
-    trax_image_create_path = _libs["libtrax"].get("trax_image_create_path", "cdecl")
+if _libs["trax"].has("trax_image_create_path", "cdecl"):
+    trax_image_create_path = _libs["trax"].get("trax_image_create_path", "cdecl")
     trax_image_create_path.argtypes = [ctypes.c_char_p]
     trax_image_create_path.restype = POINTER(trax_image)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 349
-if _libs["libtrax"].has("trax_image_create_url", "cdecl"):
-    trax_image_create_url = _libs["libtrax"].get("trax_image_create_url", "cdecl")
+if _libs["trax"].has("trax_image_create_url", "cdecl"):
+    trax_image_create_url = _libs["trax"].get("trax_image_create_url", "cdecl")
     trax_image_create_url.argtypes = [ctypes.c_char_p]
     trax_image_create_url.restype = POINTER(trax_image)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 354
-if _libs["libtrax"].has("trax_image_create_memory", "cdecl"):
-    trax_image_create_memory = _libs["libtrax"].get("trax_image_create_memory", "cdecl")
+if _libs["trax"].has("trax_image_create_memory", "cdecl"):
+    trax_image_create_memory = _libs["trax"].get("trax_image_create_memory", "cdecl")
     trax_image_create_memory.argtypes = [c_int, c_int, c_int]
     trax_image_create_memory.restype = POINTER(trax_image)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 359
-if _libs["libtrax"].has("trax_image_create_buffer", "cdecl"):
-    trax_image_create_buffer = _libs["libtrax"].get("trax_image_create_buffer", "cdecl")
+if _libs["trax"].has("trax_image_create_buffer", "cdecl"):
+    trax_image_create_buffer = _libs["trax"].get("trax_image_create_buffer", "cdecl")
     trax_image_create_buffer.argtypes = [c_int, ctypes.c_char_p]
     trax_image_create_buffer.restype = POINTER(trax_image)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 364
-if _libs["libtrax"].has("trax_image_get_type", "cdecl"):
-    trax_image_get_type = _libs["libtrax"].get("trax_image_get_type", "cdecl")
+if _libs["trax"].has("trax_image_get_type", "cdecl"):
+    trax_image_get_type = _libs["trax"].get("trax_image_get_type", "cdecl")
     trax_image_get_type.argtypes = [POINTER(trax_image)]
     trax_image_get_type.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 370
-if _libs["libtrax"].has("trax_image_get_path", "cdecl"):
-    trax_image_get_path = _libs["libtrax"].get("trax_image_get_path", "cdecl")
+if _libs["trax"].has("trax_image_get_path", "cdecl"):
+    trax_image_get_path = _libs["trax"].get("trax_image_get_path", "cdecl")
     trax_image_get_path.argtypes = [POINTER(trax_image)]
     trax_image_get_path.restype = ctypes.c_char_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 376
-if _libs["libtrax"].has("trax_image_get_url", "cdecl"):
-    trax_image_get_url = _libs["libtrax"].get("trax_image_get_url", "cdecl")
+if _libs["trax"].has("trax_image_get_url", "cdecl"):
+    trax_image_get_url = _libs["trax"].get("trax_image_get_url", "cdecl")
     trax_image_get_url.argtypes = [POINTER(trax_image)]
     trax_image_get_url.restype = ctypes.c_char_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 381
-if _libs["libtrax"].has("trax_image_get_memory_header", "cdecl"):
-    trax_image_get_memory_header = _libs["libtrax"].get("trax_image_get_memory_header", "cdecl")
+if _libs["trax"].has("trax_image_get_memory_header", "cdecl"):
+    trax_image_get_memory_header = _libs["trax"].get("trax_image_get_memory_header", "cdecl")
     trax_image_get_memory_header.argtypes = [POINTER(trax_image), POINTER(c_int), POINTER(c_int), POINTER(c_int)]
     trax_image_get_memory_header.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 386
-if _libs["libtrax"].has("trax_image_write_memory_row", "cdecl"):
-    trax_image_write_memory_row = _libs["libtrax"].get("trax_image_write_memory_row", "cdecl")
+if _libs["trax"].has("trax_image_write_memory_row", "cdecl"):
+    trax_image_write_memory_row = _libs["trax"].get("trax_image_write_memory_row", "cdecl")
     trax_image_write_memory_row.argtypes = [POINTER(trax_image), c_int]
     trax_image_write_memory_row.restype = POINTER(ctypes.c_char)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 391
-if _libs["libtrax"].has("trax_image_get_memory_row", "cdecl"):
-    trax_image_get_memory_row = _libs["libtrax"].get("trax_image_get_memory_row", "cdecl")
+if _libs["trax"].has("trax_image_get_memory_row", "cdecl"):
+    trax_image_get_memory_row = _libs["trax"].get("trax_image_get_memory_row", "cdecl")
     trax_image_get_memory_row.argtypes = [POINTER(trax_image), c_int]
     trax_image_get_memory_row.restype = POINTER(ctypes.c_char)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 397
-if _libs["libtrax"].has("trax_image_get_buffer", "cdecl"):
-    trax_image_get_buffer = _libs["libtrax"].get("trax_image_get_buffer", "cdecl")
+if _libs["trax"].has("trax_image_get_buffer", "cdecl"):
+    trax_image_get_buffer = _libs["trax"].get("trax_image_get_buffer", "cdecl")
     trax_image_get_buffer.argtypes = [POINTER(trax_image), POINTER(c_int), POINTER(c_int)]
     trax_image_get_buffer.restype = POINTER(ctypes.c_char)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 402
-if _libs["libtrax"].has("trax_region_release", "cdecl"):
-    trax_region_release = _libs["libtrax"].get("trax_region_release", "cdecl")
+if _libs["trax"].has("trax_region_release", "cdecl"):
+    trax_region_release = _libs["trax"].get("trax_region_release", "cdecl")
     trax_region_release.argtypes = [POINTER(ctypes.c_void_p)]
     trax_region_release.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 407
-if _libs["libtrax"].has("trax_region_get_type", "cdecl"):
-    trax_region_get_type = _libs["libtrax"].get("trax_region_get_type", "cdecl")
+if _libs["trax"].has("trax_region_get_type", "cdecl"):
+    trax_region_get_type = _libs["trax"].get("trax_region_get_type", "cdecl")
     trax_region_get_type.argtypes = [ctypes.c_void_p]
     trax_region_get_type.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 412
-if _libs["libtrax"].has("trax_region_create_special", "cdecl"):
-    trax_region_create_special = _libs["libtrax"].get("trax_region_create_special", "cdecl")
+if _libs["trax"].has("trax_region_create_special", "cdecl"):
+    trax_region_create_special = _libs["trax"].get("trax_region_create_special", "cdecl")
     trax_region_create_special.argtypes = [c_int]
     trax_region_create_special.restype = ctypes.c_void_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 417
-if _libs["libtrax"].has("trax_region_set_special", "cdecl"):
-    trax_region_set_special = _libs["libtrax"].get("trax_region_set_special", "cdecl")
+if _libs["trax"].has("trax_region_set_special", "cdecl"):
+    trax_region_set_special = _libs["trax"].get("trax_region_set_special", "cdecl")
     trax_region_set_special.argtypes = [ctypes.c_void_p, c_int]
     trax_region_set_special.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 422
-if _libs["libtrax"].has("trax_region_get_special", "cdecl"):
-    trax_region_get_special = _libs["libtrax"].get("trax_region_get_special", "cdecl")
+if _libs["trax"].has("trax_region_get_special", "cdecl"):
+    trax_region_get_special = _libs["trax"].get("trax_region_get_special", "cdecl")
     trax_region_get_special.argtypes = [ctypes.c_void_p]
     trax_region_get_special.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 427
-if _libs["libtrax"].has("trax_region_create_rectangle", "cdecl"):
-    trax_region_create_rectangle = _libs["libtrax"].get("trax_region_create_rectangle", "cdecl")
+if _libs["trax"].has("trax_region_create_rectangle", "cdecl"):
+    trax_region_create_rectangle = _libs["trax"].get("trax_region_create_rectangle", "cdecl")
     trax_region_create_rectangle.argtypes = [c_float, c_float, c_float, c_float]
     trax_region_create_rectangle.restype = ctypes.c_void_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 432
-if _libs["libtrax"].has("trax_region_set_rectangle", "cdecl"):
-    trax_region_set_rectangle = _libs["libtrax"].get("trax_region_set_rectangle", "cdecl")
+if _libs["trax"].has("trax_region_set_rectangle", "cdecl"):
+    trax_region_set_rectangle = _libs["trax"].get("trax_region_set_rectangle", "cdecl")
     trax_region_set_rectangle.argtypes = [ctypes.c_void_p, c_float, c_float, c_float, c_float]
     trax_region_set_rectangle.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 437
-if _libs["libtrax"].has("trax_region_get_rectangle", "cdecl"):
-    trax_region_get_rectangle = _libs["libtrax"].get("trax_region_get_rectangle", "cdecl")
+if _libs["trax"].has("trax_region_get_rectangle", "cdecl"):
+    trax_region_get_rectangle = _libs["trax"].get("trax_region_get_rectangle", "cdecl")
     trax_region_get_rectangle.argtypes = [ctypes.c_void_p, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)]
     trax_region_get_rectangle.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 443
-if _libs["libtrax"].has("trax_region_create_polygon", "cdecl"):
-    trax_region_create_polygon = _libs["libtrax"].get("trax_region_create_polygon", "cdecl")
+if _libs["trax"].has("trax_region_create_polygon", "cdecl"):
+    trax_region_create_polygon = _libs["trax"].get("trax_region_create_polygon", "cdecl")
     trax_region_create_polygon.argtypes = [c_int]
     trax_region_create_polygon.restype = ctypes.c_void_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 448
-if _libs["libtrax"].has("trax_region_set_polygon_point", "cdecl"):
-    trax_region_set_polygon_point = _libs["libtrax"].get("trax_region_set_polygon_point", "cdecl")
+if _libs["trax"].has("trax_region_set_polygon_point", "cdecl"):
+    trax_region_set_polygon_point = _libs["trax"].get("trax_region_set_polygon_point", "cdecl")
     trax_region_set_polygon_point.argtypes = [ctypes.c_void_p, c_int, c_float, c_float]
     trax_region_set_polygon_point.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 453
-if _libs["libtrax"].has("trax_region_get_polygon_point", "cdecl"):
-    trax_region_get_polygon_point = _libs["libtrax"].get("trax_region_get_polygon_point", "cdecl")
+if _libs["trax"].has("trax_region_get_polygon_point", "cdecl"):
+    trax_region_get_polygon_point = _libs["trax"].get("trax_region_get_polygon_point", "cdecl")
     trax_region_get_polygon_point.argtypes = [ctypes.c_void_p, c_int, POINTER(c_float), POINTER(c_float)]
     trax_region_get_polygon_point.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 458
-if _libs["libtrax"].has("trax_region_get_polygon_count", "cdecl"):
-    trax_region_get_polygon_count = _libs["libtrax"].get("trax_region_get_polygon_count", "cdecl")
+if _libs["trax"].has("trax_region_get_polygon_count", "cdecl"):
+    trax_region_get_polygon_count = _libs["trax"].get("trax_region_get_polygon_count", "cdecl")
     trax_region_get_polygon_count.argtypes = [ctypes.c_void_p]
     trax_region_get_polygon_count.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 463
-if _libs["libtrax"].has("trax_region_create_mask", "cdecl"):
-    trax_region_create_mask = _libs["libtrax"].get("trax_region_create_mask", "cdecl")
+if _libs["trax"].has("trax_region_create_mask", "cdecl"):
+    trax_region_create_mask = _libs["trax"].get("trax_region_create_mask", "cdecl")
     trax_region_create_mask.argtypes = [c_int, c_int, c_int, c_int]
     trax_region_create_mask.restype = ctypes.c_void_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 468
-if _libs["libtrax"].has("trax_region_get_mask_header", "cdecl"):
-    trax_region_get_mask_header = _libs["libtrax"].get("trax_region_get_mask_header", "cdecl")
+if _libs["trax"].has("trax_region_get_mask_header", "cdecl"):
+    trax_region_get_mask_header = _libs["trax"].get("trax_region_get_mask_header", "cdecl")
     trax_region_get_mask_header.argtypes = [ctypes.c_void_p, POINTER(c_int), POINTER(c_int), POINTER(c_int), POINTER(c_int)]
     trax_region_get_mask_header.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 473
-if _libs["libtrax"].has("trax_region_write_mask_row", "cdecl"):
-    trax_region_write_mask_row = _libs["libtrax"].get("trax_region_write_mask_row", "cdecl")
+if _libs["trax"].has("trax_region_write_mask_row", "cdecl"):
+    trax_region_write_mask_row = _libs["trax"].get("trax_region_write_mask_row", "cdecl")
     trax_region_write_mask_row.argtypes = [ctypes.c_void_p, c_int]
     trax_region_write_mask_row.restype = POINTER(ctypes.c_char)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 478
-if _libs["libtrax"].has("trax_region_get_mask_row", "cdecl"):
-    trax_region_get_mask_row = _libs["libtrax"].get("trax_region_get_mask_row", "cdecl")
+if _libs["trax"].has("trax_region_get_mask_row", "cdecl"):
+    trax_region_get_mask_row = _libs["trax"].get("trax_region_get_mask_row", "cdecl")
     trax_region_get_mask_row.argtypes = [ctypes.c_void_p, c_int]
     trax_region_get_mask_row.restype = POINTER(ctypes.c_char)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 483
-if _libs["libtrax"].has("trax_region_bounds", "cdecl"):
-    trax_region_bounds = _libs["libtrax"].get("trax_region_bounds", "cdecl")
+if _libs["trax"].has("trax_region_bounds", "cdecl"):
+    trax_region_bounds = _libs["trax"].get("trax_region_bounds", "cdecl")
     trax_region_bounds.argtypes = [ctypes.c_void_p]
     trax_region_bounds.restype = trax_bounds
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 488
-if _libs["libtrax"].has("trax_region_contains", "cdecl"):
-    trax_region_contains = _libs["libtrax"].get("trax_region_contains", "cdecl")
+if _libs["trax"].has("trax_region_contains", "cdecl"):
+    trax_region_contains = _libs["trax"].get("trax_region_contains", "cdecl")
     trax_region_contains.argtypes = [ctypes.c_void_p, c_float, c_float]
     trax_region_contains.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 493
-if _libs["libtrax"].has("trax_region_clone", "cdecl"):
-    trax_region_clone = _libs["libtrax"].get("trax_region_clone", "cdecl")
+if _libs["trax"].has("trax_region_clone", "cdecl"):
+    trax_region_clone = _libs["trax"].get("trax_region_clone", "cdecl")
     trax_region_clone.argtypes = [ctypes.c_void_p]
     trax_region_clone.restype = ctypes.c_void_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 498
-if _libs["libtrax"].has("trax_region_convert", "cdecl"):
-    trax_region_convert = _libs["libtrax"].get("trax_region_convert", "cdecl")
+if _libs["trax"].has("trax_region_convert", "cdecl"):
+    trax_region_convert = _libs["trax"].get("trax_region_convert", "cdecl")
     trax_region_convert.argtypes = [ctypes.c_void_p, c_int]
     trax_region_convert.restype = ctypes.c_void_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 503
-if _libs["libtrax"].has("trax_region_overlap", "cdecl"):
-    trax_region_overlap = _libs["libtrax"].get("trax_region_overlap", "cdecl")
+if _libs["trax"].has("trax_region_overlap", "cdecl"):
+    trax_region_overlap = _libs["trax"].get("trax_region_overlap", "cdecl")
     trax_region_overlap.argtypes = [ctypes.c_void_p, ctypes.c_void_p, trax_bounds]
     trax_region_overlap.restype = c_float
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 508
-if _libs["libtrax"].has("trax_region_encode", "cdecl"):
-    trax_region_encode = _libs["libtrax"].get("trax_region_encode", "cdecl")
+if _libs["trax"].has("trax_region_encode", "cdecl"):
+    trax_region_encode = _libs["trax"].get("trax_region_encode", "cdecl")
     trax_region_encode.argtypes = [ctypes.c_void_p]
     trax_region_encode.restype = POINTER(ctypes.c_char)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 513
-if _libs["libtrax"].has("trax_region_decode", "cdecl"):
-    trax_region_decode = _libs["libtrax"].get("trax_region_decode", "cdecl")
+if _libs["trax"].has("trax_region_decode", "cdecl"):
+    trax_region_decode = _libs["trax"].get("trax_region_decode", "cdecl")
     trax_region_decode.argtypes = [ctypes.c_char_p]
     trax_region_decode.restype = ctypes.c_void_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 518
-if _libs["libtrax"].has("trax_object_list_create", "cdecl"):
-    trax_object_list_create = _libs["libtrax"].get("trax_object_list_create", "cdecl")
+if _libs["trax"].has("trax_object_list_create", "cdecl"):
+    trax_object_list_create = _libs["trax"].get("trax_object_list_create", "cdecl")
     trax_object_list_create.argtypes = [c_int]
     trax_object_list_create.restype = POINTER(trax_object_list)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 523
-if _libs["libtrax"].has("trax_object_list_release", "cdecl"):
-    trax_object_list_release = _libs["libtrax"].get("trax_object_list_release", "cdecl")
+if _libs["trax"].has("trax_object_list_release", "cdecl"):
+    trax_object_list_release = _libs["trax"].get("trax_object_list_release", "cdecl")
     trax_object_list_release.argtypes = [POINTER(POINTER(trax_object_list))]
     trax_object_list_release.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 528
-if _libs["libtrax"].has("trax_object_list_set", "cdecl"):
-    trax_object_list_set = _libs["libtrax"].get("trax_object_list_set", "cdecl")
+if _libs["trax"].has("trax_object_list_set", "cdecl"):
+    trax_object_list_set = _libs["trax"].get("trax_object_list_set", "cdecl")
     trax_object_list_set.argtypes = [POINTER(trax_object_list), c_int, ctypes.c_void_p]
     trax_object_list_set.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 533
-if _libs["libtrax"].has("trax_object_list_get", "cdecl"):
-    trax_object_list_get = _libs["libtrax"].get("trax_object_list_get", "cdecl")
+if _libs["trax"].has("trax_object_list_get", "cdecl"):
+    trax_object_list_get = _libs["trax"].get("trax_object_list_get", "cdecl")
     trax_object_list_get.argtypes = [POINTER(trax_object_list), c_int]
     trax_object_list_get.restype = ctypes.c_void_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 538
-if _libs["libtrax"].has("trax_object_list_properties", "cdecl"):
-    trax_object_list_properties = _libs["libtrax"].get("trax_object_list_properties", "cdecl")
+if _libs["trax"].has("trax_object_list_properties", "cdecl"):
+    trax_object_list_properties = _libs["trax"].get("trax_object_list_properties", "cdecl")
     trax_object_list_properties.argtypes = [POINTER(trax_object_list), c_int]
     trax_object_list_properties.restype = POINTER(trax_properties)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 543
-if _libs["libtrax"].has("trax_object_list_count", "cdecl"):
-    trax_object_list_count = _libs["libtrax"].get("trax_object_list_count", "cdecl")
+if _libs["trax"].has("trax_object_list_count", "cdecl"):
+    trax_object_list_count = _libs["trax"].get("trax_object_list_count", "cdecl")
     trax_object_list_count.argtypes = [POINTER(trax_object_list)]
     trax_object_list_count.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 548
-if _libs["libtrax"].has("trax_object_list_append", "cdecl"):
-    trax_object_list_append = _libs["libtrax"].get("trax_object_list_append", "cdecl")
+if _libs["trax"].has("trax_object_list_append", "cdecl"):
+    trax_object_list_append = _libs["trax"].get("trax_object_list_append", "cdecl")
     trax_object_list_append.argtypes = [POINTER(trax_object_list), POINTER(trax_object_list)]
     trax_object_list_append.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 553
-if _libs["libtrax"].has("trax_properties_release", "cdecl"):
-    trax_properties_release = _libs["libtrax"].get("trax_properties_release", "cdecl")
+if _libs["trax"].has("trax_properties_release", "cdecl"):
+    trax_properties_release = _libs["trax"].get("trax_properties_release", "cdecl")
     trax_properties_release.argtypes = [POINTER(POINTER(trax_properties))]
     trax_properties_release.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 558
-if _libs["libtrax"].has("trax_properties_clear", "cdecl"):
-    trax_properties_clear = _libs["libtrax"].get("trax_properties_clear", "cdecl")
+if _libs["trax"].has("trax_properties_clear", "cdecl"):
+    trax_properties_clear = _libs["trax"].get("trax_properties_clear", "cdecl")
     trax_properties_clear.argtypes = [POINTER(trax_properties)]
     trax_properties_clear.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 563
-if _libs["libtrax"].has("trax_properties_create", "cdecl"):
-    trax_properties_create = _libs["libtrax"].get("trax_properties_create", "cdecl")
+if _libs["trax"].has("trax_properties_create", "cdecl"):
+    trax_properties_create = _libs["trax"].get("trax_properties_create", "cdecl")
     trax_properties_create.argtypes = []
     trax_properties_create.restype = POINTER(trax_properties)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 568
-if _libs["libtrax"].has("trax_properties_copy", "cdecl"):
-    trax_properties_copy = _libs["libtrax"].get("trax_properties_copy", "cdecl")
+if _libs["trax"].has("trax_properties_copy", "cdecl"):
+    trax_properties_copy = _libs["trax"].get("trax_properties_copy", "cdecl")
     trax_properties_copy.argtypes = [POINTER(trax_properties)]
     trax_properties_copy.restype = POINTER(trax_properties)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 573
-if _libs["libtrax"].has("trax_properties_has", "cdecl"):
-    trax_properties_has = _libs["libtrax"].get("trax_properties_has", "cdecl")
+if _libs["trax"].has("trax_properties_has", "cdecl"):
+    trax_properties_has = _libs["trax"].get("trax_properties_has", "cdecl")
     trax_properties_has.argtypes = [POINTER(trax_properties), ctypes.c_char_p]
     trax_properties_has.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 578
-if _libs["libtrax"].has("trax_properties_set", "cdecl"):
-    trax_properties_set = _libs["libtrax"].get("trax_properties_set", "cdecl")
+if _libs["trax"].has("trax_properties_set", "cdecl"):
+    trax_properties_set = _libs["trax"].get("trax_properties_set", "cdecl")
     trax_properties_set.argtypes = [POINTER(trax_properties), ctypes.c_char_p, ctypes.c_char_p]
     trax_properties_set.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 583
-if _libs["libtrax"].has("trax_properties_set_int", "cdecl"):
-    trax_properties_set_int = _libs["libtrax"].get("trax_properties_set_int", "cdecl")
+if _libs["trax"].has("trax_properties_set_int", "cdecl"):
+    trax_properties_set_int = _libs["trax"].get("trax_properties_set_int", "cdecl")
     trax_properties_set_int.argtypes = [POINTER(trax_properties), ctypes.c_char_p, c_int]
     trax_properties_set_int.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 588
-if _libs["libtrax"].has("trax_properties_set_float", "cdecl"):
-    trax_properties_set_float = _libs["libtrax"].get("trax_properties_set_float", "cdecl")
+if _libs["trax"].has("trax_properties_set_float", "cdecl"):
+    trax_properties_set_float = _libs["trax"].get("trax_properties_set_float", "cdecl")
     trax_properties_set_float.argtypes = [POINTER(trax_properties), ctypes.c_char_p, c_float]
     trax_properties_set_float.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 594
-if _libs["libtrax"].has("trax_properties_get", "cdecl"):
-    trax_properties_get = _libs["libtrax"].get("trax_properties_get", "cdecl")
+if _libs["trax"].has("trax_properties_get", "cdecl"):
+    trax_properties_get = _libs["trax"].get("trax_properties_get", "cdecl")
     trax_properties_get.argtypes = [POINTER(trax_properties), ctypes.c_char_p]
     trax_properties_get.restype = ctypes.c_char_p
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 600
-if _libs["libtrax"].has("trax_properties_get_int", "cdecl"):
-    trax_properties_get_int = _libs["libtrax"].get("trax_properties_get_int", "cdecl")
+if _libs["trax"].has("trax_properties_get_int", "cdecl"):
+    trax_properties_get_int = _libs["trax"].get("trax_properties_get_int", "cdecl")
     trax_properties_get_int.argtypes = [POINTER(trax_properties), ctypes.c_char_p, c_int]
     trax_properties_get_int.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 606
-if _libs["libtrax"].has("trax_properties_get_float", "cdecl"):
-    trax_properties_get_float = _libs["libtrax"].get("trax_properties_get_float", "cdecl")
+if _libs["trax"].has("trax_properties_get_float", "cdecl"):
+    trax_properties_get_float = _libs["trax"].get("trax_properties_get_float", "cdecl")
     trax_properties_get_float.argtypes = [POINTER(trax_properties), ctypes.c_char_p, c_float]
     trax_properties_get_float.restype = c_float
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 611
-if _libs["libtrax"].has("trax_properties_count", "cdecl"):
-    trax_properties_count = _libs["libtrax"].get("trax_properties_count", "cdecl")
+if _libs["trax"].has("trax_properties_count", "cdecl"):
+    trax_properties_count = _libs["trax"].get("trax_properties_count", "cdecl")
     trax_properties_count.argtypes = [POINTER(trax_properties)]
     trax_properties_count.restype = c_int
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 617
-if _libs["libtrax"].has("trax_properties_enumerate", "cdecl"):
-    trax_properties_enumerate = _libs["libtrax"].get("trax_properties_enumerate", "cdecl")
+if _libs["trax"].has("trax_properties_enumerate", "cdecl"):
+    trax_properties_enumerate = _libs["trax"].get("trax_properties_enumerate", "cdecl")
     trax_properties_enumerate.argtypes = [POINTER(struct_trax_properties), trax_enumerator, ctypes.py_object]
     trax_properties_enumerate.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 622
-if _libs["libtrax"].has("trax_properties_append", "cdecl"):
-    trax_properties_append = _libs["libtrax"].get("trax_properties_append", "cdecl")
+if _libs["trax"].has("trax_properties_append", "cdecl"):
+    trax_properties_append = _libs["trax"].get("trax_properties_append", "cdecl")
     trax_properties_append.argtypes = [POINTER(trax_properties), POINTER(trax_properties), c_int]
     trax_properties_append.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 627
-if _libs["libtrax"].has("trax_image_list_create", "cdecl"):
-    trax_image_list_create = _libs["libtrax"].get("trax_image_list_create", "cdecl")
+if _libs["trax"].has("trax_image_list_create", "cdecl"):
+    trax_image_list_create = _libs["trax"].get("trax_image_list_create", "cdecl")
     trax_image_list_create.argtypes = []
     trax_image_list_create.restype = POINTER(trax_image_list)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 632
-if _libs["libtrax"].has("trax_image_list_release", "cdecl"):
-    trax_image_list_release = _libs["libtrax"].get("trax_image_list_release", "cdecl")
+if _libs["trax"].has("trax_image_list_release", "cdecl"):
+    trax_image_list_release = _libs["trax"].get("trax_image_list_release", "cdecl")
     trax_image_list_release.argtypes = [POINTER(POINTER(trax_image_list))]
     trax_image_list_release.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 637
-if _libs["libtrax"].has("trax_image_list_clear", "cdecl"):
-    trax_image_list_clear = _libs["libtrax"].get("trax_image_list_clear", "cdecl")
+if _libs["trax"].has("trax_image_list_clear", "cdecl"):
+    trax_image_list_clear = _libs["trax"].get("trax_image_list_clear", "cdecl")
     trax_image_list_clear.argtypes = [POINTER(trax_image_list)]
     trax_image_list_clear.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 642
-if _libs["libtrax"].has("trax_image_list_get", "cdecl"):
-    trax_image_list_get = _libs["libtrax"].get("trax_image_list_get", "cdecl")
+if _libs["trax"].has("trax_image_list_get", "cdecl"):
+    trax_image_list_get = _libs["trax"].get("trax_image_list_get", "cdecl")
     trax_image_list_get.argtypes = [POINTER(trax_image_list), c_int]
     trax_image_list_get.restype = POINTER(trax_image)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 647
-if _libs["libtrax"].has("trax_image_list_set", "cdecl"):
-    trax_image_list_set = _libs["libtrax"].get("trax_image_list_set", "cdecl")
+if _libs["trax"].has("trax_image_list_set", "cdecl"):
+    trax_image_list_set = _libs["trax"].get("trax_image_list_set", "cdecl")
     trax_image_list_set.argtypes = [POINTER(trax_image_list), POINTER(trax_image), c_int]
     trax_image_list_set.restype = None
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 652
-if _libs["libtrax"].has("trax_image_list_count", "cdecl"):
-    trax_image_list_count = _libs["libtrax"].get("trax_image_list_count", "cdecl")
+if _libs["trax"].has("trax_image_list_count", "cdecl"):
+    trax_image_list_count = _libs["trax"].get("trax_image_list_count", "cdecl")
     trax_image_list_count.argtypes = [c_int]
     trax_image_list_count.restype = c_int
 
