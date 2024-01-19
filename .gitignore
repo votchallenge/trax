@@ -9,3 +9,4 @@ docs/_*
 dist/
 MANIFEST
 act
+install/
