@@ -30,7 +30,7 @@
 #endif
 
 namespace trax {
-	
+
 __TRAX_OPENCV_EXPORT cv::Mat image_to_mat(const Image& image);
 
 __TRAX_OPENCV_EXPORT cv::Rect region_to_rect(const Region& region);

@@ -2,7 +2,7 @@
 Example Python implementation of the a static tracker
 """
 
-from trax import *
+from trax import Server, Region, Image, TraxStatus
 import time
 import os
 import signal

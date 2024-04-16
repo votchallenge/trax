@@ -4,7 +4,7 @@
 __all__ = \
     ['TraxException', 'FileImage', 'URLImage', 'Server',
     'MemoryImage', 'BufferImage', 'Region', 'Image', 'Polygon',
-    'Rectangle', 'Special', 'Mask', 'TraxStatus', 'Properties', "Client"]
+    'Rectangle', 'Special', 'Mask', 'TraxStatus', 'Properties']
 
 import os
 import traceback
