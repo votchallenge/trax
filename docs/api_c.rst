@@ -470,9 +470,9 @@ Region
 
     Polygon region type. Three or more points available with x and y coordinates.
 
-... c:macro::  TRAX_REGION_MASK
+.. c:macro::  TRAX_REGION_MASK
 
-..    Mask region type. A per-pixel binary mask.
+    Mask region type. A per-pixel binary mask.
 
 .. c:macro::  TRAX_REGION_ANY
 

@@ -17,8 +17,6 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-import sys
-sys.path.insert(0, os.path.abspath('../python'))
 
 # -- General configuration ------------------------------------------------
 
@@ -29,7 +27,7 @@ sys.path.insert(0, os.path.abspath('../python'))
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc']
+extensions = ['autoapi.extension']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -51,7 +49,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'TraX'
-copyright = u'2017, Luka Cehovin'
+copyright = u'2023, Luka Cehovin Zajc'
 author = u'Luka Cehovin'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -76,7 +74,7 @@ release = version
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -270,7 +268,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'TraX.tex', u'TraX Documentation',
-     u'Luka Cehovin', 'manual'),
+     u'Luka Cehovin Zajc', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -346,3 +344,11 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #
 # texinfo_no_detailmenu = False
+
+autoapi_dirs = ["../support/python"]
+
+autoapi_generate_api_docs = False
+
+#autoapi_keep_files = True
+
+autoapi_options = [ 'members', 'show-inheritance', 'show-module-summary', 'special-members' ]

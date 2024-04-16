@@ -9,35 +9,9 @@ The Python wrapper requires only core Python libraries and numpy for handling ma
 Documentation
 -------------
 
-Main module
-~~~~~~~~~~~
-
-.. automodule:: trax
+.. autoapimodule:: trax
    :members:
-
-Server-side communication
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: trax.server
-   :members:
-
-Client-side communication
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: trax.client
-   :members:
-
-Image module
-~~~~~~~~~~~~
-
-.. automodule:: trax.image
-   :members:
-
-Region module
-~~~~~~~~~~~~~
-
-.. automodule:: trax.region
-   :members:
+   :no-undoc-members:
 
 Integration example
 -------------------

@@ -46,16 +46,17 @@ Below we list the valid messages of the protocol as well as the states of the cl
   * ``trax.image`` (string): Specifies the supported image format. See Section `Image formats`_ for the list of supported formats. By default it is assumed that the tracker can accept file paths as image source.
   * ``trax.region`` (string): Specifies the supported region format. See Section `Region formats`_ for the list of supported formats. By default it is assumed that the tracker can accept rectangles as region specification. 
   * ``trax.channels`` (string, version 2+): Specifies support for multi-modal images. See Section `Image channels`_ for more information.
+  * ``trax.multiobject`` (string, version 4+): Specifies support for multi-object tracking sessions. See Section `Multi-object tracking`_ for more information.
 
- - ``initialize`` (client): This message is sent by the client to initialize the tracker. The message contains the image data (for one or more images) and the region of the object. The actual format of the required arguments is determined by the image and region formats specified by the server.
+ - ``initialize`` (client): This message is sent by the client to initialize the tracker for an object. Prior to version 4 the message contains the image data (for one or more images) and the region of the object, after version 4, only region of the object is allowed.
  - ``frame`` (client): This message is sent by the client to request processing of a new image (or multiple images). The message contains the image data. The actual format of the required argument is determined by the image format specified by the server.
  - ``state`` (server): This message is used by the server to send the new region to the client. The message contains region data in arbitrary supported format (most commonly the same format that the server proposed in the introduction message).
  - ``quit`` (client, server): This message can be sent by both parties to terminate the session. The server process should exit after the message is sent or received. This message specifies no mandatory arguments.
 
-The state diagram of server and client is defined by a simple automata, shown in figure below. The state changes upon receiving appropriate messages from the opposite party. The client state automata consists of the following states:
+The state diagram of server and client is defined by a simple automata, shown in the figure below. The state changes upon receiving appropriate messages from the opposite party. The client state automata consists of the following states:
 
  - **Introduction**: The client waits for ``hello`` message from the server. In this message the server describes its capabilities that the client can accept and continue the conversation by moving to *initialization* state, or reject it and terminate the session by sending the ``quit`` message.
- - **Initialization**: The client sends a ``initialize`` message with the image and the object region data. Then the client moves to *observing* state.
+ - **Initialization**: The client sends an ``initialize`` message. In version 4 the message may be repeated   Then the client moves to *observing* state.
  - **Observing**: The client waits for a message from the server. If the received message is ``state`` then the client processes the incoming state data and either moves to *initialization*, *termination* or stays in *observing* state. If the received message is ``quit`` then the client moves to *termination* state.
  - **Termination**: If initiated internally, the client sends the ``quit`` message. If the server does not terminate in a certain amount of time, the client can terminate the server process.
 
@@ -70,6 +71,20 @@ The server state automata consists of the following states:
    :align: center
    :alt: A graphical representation of client and server automata together with protocol states.
 
+Multi-object tracking (version 4)
+---------------------------------
+
+Version 4 of the protocol introduced support for multi-object sessions. Version 4 also changes the session and message format to accomodate this extension.
+
+The client can send multiple ``initialize`` messages, each with a different object, followed by a ``frame`` message. New objects may be initialited during 
+The server must then send multiple ``state`` messages, each with a different object. The number of the ``state`` messages must match the number of the ``initialize`` messages.
+
+
+The order of the objects is not specified and the client should be able to match the objects based on the object identifier. 
+The object identifier is specified in the ``initialize`` message and is returned in the ``state`` message.
+
+
+
 Region formats
 --------------
 
@@ -79,7 +94,8 @@ The region can be encoded in two point-based formats. All two formats are comma-
 
  - **Polygon** (``polygon``): A more complex and flexible region description that is specified by even number of at least six values, separated by commas that define points in the polygon (``x`` and ``y`` coordinates).
 
-.. - **Binary mask** (``mask``): The most precise region description is a binary mask. The binary mask description starts with symbol ``mask:``
+ - **Binary mask** (``mask``): The most precise object-agnostic image-based object description is a binary mask. This description was introduced in TraX version 3. The binary mask description starts with symbol ``mask:``, the maks is encoded using RLE encoding with an offset. The offset is specified as a pair of numbers separated by a comma. 
+      The offset specifies the position of the top-left corner of the mask in the image. The RLE encoding is a sequence of numbers separated by commas. The sequence starts with the number of zeros, followed by the number of ones, followed by the number of zeros, etc. The sequence is terminated by a zero. The sequence is decoded by repeating the number of zeros and ones specified by the sequence. The decoded sequence is then reshaped to a 2D array using the width and height of the region. The mask is then applied to the image by multiplying the image with the mask. The mask is assumed to be binary, i.e. it contains only zeros and ones. The mask is assumed to be in the same format as the image, i.e. if the image is encoded as ``gray8`` then the mask is also encoded as ``gray8``.
 
 .. figure:: images/region.png
    :align: center
@@ -95,16 +111,13 @@ The image can be encoded in a form of Uniform Resource Identifiers. Currently th
  - **Data** (``data``): The image is encoded as a data URI using JPEG or PNG format and encoded using Base64 encoding. The server has to support decoding the image from the memory buffer directly. An example of the first part of such data is ``data:image/jpeg;base64;...``
  - **URL** (``url``): Image is specified by a general URL for the image resource which does not fall into any of the above categories. Tipically HTTP remote resources, such as ``http://example.com/sequence/0001.jpg``. 
 
-
 Image channels
 --------------
 
 Version 2 of the protocol also specifies support for multi-modal images, encoded in multiple image planes. To use this feature, the server must sent the ``trax.channels`` argument in the introduction message. The content of this argument is a comma-separated list of channels that are required. Currently supported channels are:
 
     - **Visible light** (``color``): Image is in visible light spectrum, by default only this channel is available.
-
     - **Depth** (``depth``): Channel contains depth information, useful for RGBD data.
-
     - **Infra Red** (``ir``): Infra red information, useful for IR sequences or for RGB + IR seqences.
 
 Upon receiving the intorduction, the client evaluates if it can provide the data in requested format. If it proceeds, each channel is sent to the server as one or more arguments, encoded as specified in Section `Image formats`_. The order of the images is always the same as the order of the identifier list elements. 
