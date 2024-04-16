@@ -456,7 +456,7 @@ class PosixLibraryLoader(LibraryLoader):
 class WindowsLibraryLoader(LibraryLoader):
     """Library loader for Microsoft Windows"""
 
-    name_formats = ["%s.dll", "lib%s.dll", "%slib.dll", "%s"]
+    name_formats = ["%s.dll", "%sd.dll", "lib%s.dll", "%slib.dll", "%s"]
 
     class Lookup(LibraryLoader.Lookup):
         """Lookup class for Windows libraries..."""
