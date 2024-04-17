@@ -1,0 +1,131 @@
+name: Build release binaries
+
+on:
+  release:
+    types: [published]
+
+env:
+  BUILD_TYPE: Release
+  # Limit wheel builds to most used architectures
+  CIBW_ARCHS_MACOS: "x86_64 arm64"
+  CIBW_ARCHS_LINUX: "x86_64"
+  CIBW_ARCHS_WINDOWS: "x86_64"
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: [ubuntu-20.04, windows-2019, macOS-11]
+
+    steps:
+    - name: Setup Python
+      uses: actions/setup-python@v3
+
+    - name: Install cibuildwheel
+      run: python -m pip install cibuildwheel==2.17 numpy>=1.16 six setuptools
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v1.13
+      with:
+        cmake-version: '3.22.x'
+
+    - uses: actions/checkout@v3
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_TESTS=ON -DBUILD_CLIENT=ON -DBUILD_PYTHON=ON -DBUILD_PLATFORM="${RUNNER_OS}_${RUNNER_ARCH}" 
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    #- name: Install Python dependencies from setup.py
+    #  working-directory: ${{github.workspace}}/build/python
+    #  run: python -m pip install -e .
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+
+    - name: Build ZIP package
+      working-directory: ${{github.workspace}}/build
+      run: cpack -C ${{env.BUILD_TYPE}} --config CPackConfig.cmake
+
+    - name: Build Python source package
+      working-directory: ${{github.workspace}}/build/python
+      run: python setup.py sdist
+
+    - name: Build Python wheels
+      working-directory: ${{github.workspace}}/build/python
+      run: python -m cibuildwheel --output-dir dist
+
+    - name: Upload ZIP artifacts
+      uses: actions/upload-artifact@v2
+      if: ${{ !env.ACT }}
+      with:
+        name: zip-${{ matrix.os }}-${{ matrix.version }}
+        path: ${{github.workspace}}/build/trax*.zip
+
+    - name: Upload wheel artifacts
+      uses: actions/upload-artifact@v2
+      if: ${{ !env.ACT }}
+      with:
+        name: wheel-${{ matrix.os }}-${{ matrix.version }}
+        path: ${{github.workspace}}/build/python/dist/*.*
+
+    - name: Copy artifacts to output directory
+      if: ${{ env.ACT }}
+      run: |
+        mkdir -p /output
+        cp ${{github.workspace}}/build/python/dist/*.* /output/
+        cp ${{github.workspace}}/build/*.zip /output/
+      
+  publish-pypi:
+    runs-on: ubuntu-20.04
+    needs: build
+    environment:
+      name: pypi
+      url: https://pypi.org/p/vot-trax
+    permissions:
+      id-token: write 
+    steps:
+
+    - name: Get artifacts from build job
+      uses: actions/download-artifact@v2
+      if: ${{ !env.ACT }}
+      with:
+        pattern: wheel-*
+        merge-multiple: true
+        path: ${{github.workspace}}/dist
+
+    - name: Publish package to PyPI using OCID
+      uses: pypa/gh-action-pypi-publish@release/v1
+      if: ${{ !env.ACT }} 
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        packages-dir: ${{github.workspace}}/dist
+
+  publish-github:
+    runs-on: ubuntu-20.04
+    needs: build
+    environment:
+      name: github
+      url: 
+    permissions:
+      id-token: write
+    steps:
+
+    - name: Get artifacts from build job
+      uses: actions/download-artifact@v2
+      if: ${{ !env.ACT }}
+      with:
+        pattern: zip-*
+        merge-multiple: true
+        path: ${{github.workspace}}/build
+
+    - name: Upload binaries to release using OCID
+      uses: softprops/action-gh-release@v1
+      if: ${{ !env.ACT }}
+      with:
+        files: ${{github.workspace}}/build/*.zip
+        token: ${{ secrets.GITHUB_TOKEN }}

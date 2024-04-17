@@ -12,6 +12,7 @@ SET(CPACK_PACKAGE_VENDOR "Luka Cehovin Zajc and VOT Innitiative")
 SET(CPACK_PACKAGE_CONTACT "Luka Cehovin Zajc <luka.cehovin@fri.uni-lj.si>")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Luka Cehovin Zajc <luka.cehovin@fri.uni-lj.si>")
 SET(CPACK_DEBIAN_PACKAGE_DEPENDS "")
+SET(CPACK_INSTALL_PREFIX "")
 
 SET (BUILD_DEBUG FALSE CACHE BOOL "Build in debug mode")
 
