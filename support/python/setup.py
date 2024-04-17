@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
 import os, sys, glob
-from distutils.core import setup, Extension
+
+from setuptools import setup, Extension
+
+#from distutils.core import setup, Extension
 from distutils.command.build_ext import build_ext
 
 root = os.path.abspath(os.path.dirname(__file__))
@@ -53,6 +56,7 @@ try:
             return python, abi, plat
 
 except ImportError:
+    print("Warning: wheel package not found, bdist_wheel command will not be available")
     bdist_wheel = None
 try:
     with open(os.path.join(root, "VERSION"), encoding='utf-8') as fp:
@@ -72,12 +76,13 @@ varargs = dict()
 
 if os.path.isfile(os.path.join("trax", library_prefix + "trax" + library_suffix)):
     varargs["package_data"] = {"trax" : [library_prefix + "trax" + library_suffix]}
-    varargs["cmdclass"] = {'bdist_wheel': bdist_wheel}
+    varargs["cmdclass"] = {'bdist_wheel': bdist_wheel, 'build_ext': build_ext_ctypes}
     varargs["setup_requires"] = ['wheel']
 elif os.path.isfile(os.path.join("trax", "trax.c")):
     sources = glob.glob("trax/*.c") + glob.glob("trax/*.cpp")
     varargs["ext_modules"] = [CTypes("trax.trax", sources=sources, define_macros=[("trax_EXPORTS", "1")])]
-    varargs["cmdclass"] = {'build_ext': build_ext_ctypes}
+    varargs["cmdclass"] = { 'build_ext': build_ext_ctypes, 'bdist_wheel': bdist_wheel}
+    varargs["setup_requires"] = ['wheel']
 
 setup(name='vot-trax',
     version=VERSION,
