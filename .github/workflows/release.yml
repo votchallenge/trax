@@ -37,7 +37,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_TESTS=ON -DBUILD_CLIENT=ON -DBUILD_PYTHON=ON -DBUILD_PLATFORM="${RUNNER_OS}_${RUNNER_ARCH}" 
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_TESTS=ON -DBUILD_CLIENT=ON -DBUILD_PYTHON=ON -DBUILD_PLATFORM="${{env.RUNNER_OS}}_${{env.RUNNER_ARCH}}" 
 
     - name: Compile
       # Build your program with the given configuration
@@ -59,6 +59,7 @@ jobs:
       uses: pypa/cibuildwheel@v2.17.0
       env:
         CIBW_ARCHS: "${{ matrix.archs }}"
+        CIBW_BUILD: cp311-* pp310-*
       with:
         package-dir: ${{github.workspace}}/build/python
         output-dir: ${{github.workspace}}/build/python/dist
@@ -99,18 +100,18 @@ jobs:
     steps:
 
     - name: Get artifacts from build job
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       if: ${{ !env.ACT }}
       with:
         pattern: wheel-*
         merge-multiple: true
-        path: ${{github.workspace}}/dist
+        path: ${{github.workspace}}/pypi/
 
     - name: Publish package to PyPI using OCID
       uses: pypa/gh-action-pypi-publish@release/v1
       if: ${{ !env.ACT }} 
       with:
-        packages-dir: ${{github.workspace}}/dist
+        packages-dir: ${{github.workspace}}/pypi/
 
   publish-github:
     runs-on: ubuntu-20.04
@@ -120,6 +121,7 @@ jobs:
       url: 
     permissions:
       id-token: write
+      contents: write
     steps:
 
     - name: Get artifacts from build job
@@ -128,11 +130,11 @@ jobs:
       with:
         pattern: zip-*
         merge-multiple: true
-        path: ${{github.workspace}}/build
+        path: ${{github.workspace}}/zip
 
     - name: Upload binaries to release using OCID
       uses: softprops/action-gh-release@v1
       if: ${{ !env.ACT }}
       with:
-        files: ${{github.workspace}}/build/*.zip
+        files: ${{github.workspace}}/zip/*.zip
         token: ${{ secrets.GITHUB_TOKEN }}
