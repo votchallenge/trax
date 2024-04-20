@@ -6,10 +6,6 @@ on:
 
 env:
   BUILD_TYPE: Release
-  # Limit wheel builds to most used architectures
-  CIBW_ARCHS_MACOS: "x86_64 arm64"
-  CIBW_ARCHS_LINUX: "x86_64"
-  CIBW_ARCHS_WINDOWS: "x86_64"
 
 jobs:
   build:
@@ -65,7 +61,7 @@ jobs:
         CIBW_ARCHS: "${{ matrix.archs }}"
       with:
         package-dir: ${{github.workspace}}/build/python
-        output-dir: dist
+        output-dir: ${{github.workspace}}/build/python/dist
 
     #- name: Build Python wheels
     #  working-directory: ${{github.workspace}}/build/python
