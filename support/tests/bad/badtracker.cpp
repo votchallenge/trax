@@ -4,6 +4,10 @@
 
 int main( int argc, char** argv) {
 
+#ifdef _MSC_VER
+  _set_abort_behavior( 0, _WRITE_ABORT_MSG);
+#endif
+
   trax::Server handle(trax::Metadata(TRAX_REGION_RECTANGLE, TRAX_IMAGE_ANY), trax_no_log);
 
   int timetobreak = (rand() % 10) + 1;

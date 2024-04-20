@@ -266,7 +266,6 @@ const Metadata Handle::metadata() {
 
 bool Handle::terminate(const std::string reason) {
 	if (!claims()) return -1;
-
 	return trax_terminate(handle, reason.c_str()) == TRAX_OK;
 }
 

@@ -284,6 +284,8 @@ bool Process::start() {
 
         LPCSTR curdir = directory.empty() ? NULL : directory.c_str();
 
+		piProcInfo.hThread = 0;
+
         if (!CreateProcess(NULL, (char *) cmdbuffer.str().c_str(), NULL, NULL, true, CREATE_NO_WINDOW,
         (void *)envbuffer.str().c_str(),
         curdir, &siStartInfo, &piProcInfo )) {
@@ -401,7 +403,6 @@ bool Process::stop() {
 #ifdef WIN32
 
             DWORD dwProcessID = piProcInfo.dwProcessId;
-
             for (HWND hwnd = GetTopWindow(NULL); hwnd; hwnd = ::GetNextWindow(hwnd, GW_HWNDNEXT))
             {
                 DWORD dwWindowProcessID;
@@ -409,7 +410,6 @@ bool Process::stop() {
                 if (dwWindowProcessID == dwProcessID)
                     PostThreadMessage(dwThreadID, WM_QUIT, 0, 0);
             }
-
             is_alive();
 
 #else
@@ -438,10 +438,8 @@ bool Process::kill() {
         if (running) {
 
 #ifdef WIN32
-
-            result = TerminateProcess(piProcInfo.hProcess, -15);
-            is_alive();
-
+            TerminateProcess(piProcInfo.hProcess, -15);
+            //is_alive();
 #else
 
             ::kill(pid, SIGKILL);
@@ -467,28 +465,35 @@ void Process::cleanup() {
 
 #define CLOSE_AND_RESET(H) { if (H) { CloseHandle((H)); H = NULL; }  }
 
-        CLOSE_AND_RESET(piProcInfo.hProcess);
-        CLOSE_AND_RESET(piProcInfo.hThread);
-
-        if (p_stdin != -1) {
-            close(p_stdin);
+       /* if (p_stdin != -1) {
+            _close(p_stdin);
             p_stdin = -1;
-        }
+        }*/
+
+        CLOSE_AND_RESET(handle_OUT_Wr);	
+        CLOSE_AND_RESET(handle_ERR_Wr);
+        CLOSE_AND_RESET(handle_IN_Wr);
+		
+		CLOSE_AND_RESET(handle_IN_Rd);
+        CLOSE_AND_RESET(handle_OUT_Rd);
+        CLOSE_AND_RESET(handle_ERR_Rd);
+		
+/*
         if (p_stdout != -1) {
-            close(p_stdout);
+            _close(p_stdout);
             p_stdout = -1;
         }
         if (p_stderr != -1) {
-            close(p_stderr);
+            _close(p_stderr);
             p_stderr = -1;
         }
+*/
 
-        CLOSE_AND_RESET(handle_IN_Rd);
-        CLOSE_AND_RESET(handle_IN_Wr);
-        CLOSE_AND_RESET(handle_OUT_Rd);
-        CLOSE_AND_RESET(handle_OUT_Wr);
-        CLOSE_AND_RESET(handle_ERR_Rd);
-        CLOSE_AND_RESET(handle_ERR_Wr);
+
+        CLOSE_AND_RESET(piProcInfo.hThread);
+        CLOSE_AND_RESET(piProcInfo.hProcess);
+
+
 
 #else
 

@@ -1464,12 +1464,12 @@ int trax_terminate(trax_handle* handle, const char* reason) {
     if (reason)
         trax_properties_set(tmp_properties, "trax.reason", reason);
 
+    handle->flags |= TRAX_FLAG_TERMINATED;
+
     write_message((message_stream*)handle->stream, &LOGGER(handle), TRAX_QUIT, arguments, tmp_properties);
 
     list_destroy(&arguments);
     trax_properties_release(&tmp_properties);
-
-    handle->flags |= TRAX_FLAG_TERMINATED;
 
     return TRAX_OK;
 

@@ -3,12 +3,12 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 ADD_EXECUTABLE(badtracker badtracker.cpp)
 TARGET_LINK_LIBRARIES(badtracker traxstatic)
 
-ADD_TEST(NAME test_badtracker_abort1 COMMAND traxtest -d -p break_type=sigabrt -p break_time=1 -- ./badtracker WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-ADD_TEST(NAME test_badtracker_abort5 COMMAND traxtest -d -p break_type=sigabrt -p break_time=5 -- ./badtracker WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-ADD_TEST(NAME test_badtracker_sigsegv1 COMMAND traxtest -d -p break_type=sigsegv -p break_time=1 -- ./badtracker WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-ADD_TEST(NAME test_badtracker_sigsegv5 COMMAND traxtest -d -p break_type=sigsegv -p break_time=5 -- ./badtracker WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-ADD_TEST(NAME test_badtracker_sigusr1 COMMAND traxtest -d -p break_type=sigusr1 -p break_time=1 -- ./badtracker WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-ADD_TEST(NAME test_badtracker_sigusr5 COMMAND traxtest -d -p break_type=sigusr1 -p break_time=5 -- ./badtracker WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+ADD_TEST(NAME test_badtracker_abort1 COMMAND traxtest -d -p break_type=sigabrt -p break_time=1 -- $<TARGET_FILE:badtracker> WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+ADD_TEST(NAME test_badtracker_abort5 COMMAND traxtest -d -p break_type=sigabrt -p break_time=5 -- $<TARGET_FILE:badtracker> WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+ADD_TEST(NAME test_badtracker_sigsegv1 COMMAND traxtest -d -p break_type=sigsegv -p break_time=1 -- $<TARGET_FILE:badtracker> WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+ADD_TEST(NAME test_badtracker_sigsegv5 COMMAND traxtest -d -p break_type=sigsegv -p break_time=5 -- $<TARGET_FILE:badtracker> WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+ADD_TEST(NAME test_badtracker_sigusr1 COMMAND traxtest -d -p break_type=sigusr1 -p break_time=1 -- $<TARGET_FILE:badtracker> WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+ADD_TEST(NAME test_badtracker_sigusr5 COMMAND traxtest -d -p break_type=sigusr1 -p break_time=5 -- $<TARGET_FILE:badtracker> WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 set_tests_properties(
 	test_badtracker_abort1
@@ -17,7 +17,7 @@ set_tests_properties(
 	test_badtracker_sigsegv5
 	test_badtracker_sigusr1
 	test_badtracker_sigusr5
-	PROPERTIES TIMEOUT 5 PASS_REGULAR_EXPRESSION "stopped by signal [0-9]+")
+	PROPERTIES TIMEOUT 5 PASS_REGULAR_EXPRESSION "Tracker exited")
 
 FIND_PROGRAM(MKOCTFILE mkoctfile)
 
@@ -42,5 +42,5 @@ set_tests_properties(
 	test_octave_badmex_sigsegv5
 	test_octave_badmex_sigusr1
 	test_octave_badmex_sigusr5
-	PROPERTIES TIMEOUT 5 PASS_REGULAR_EXPRESSION "stopped by signal [0-9]+")
+	PROPERTIES TIMEOUT 5 PASS_REGULAR_EXPRESSION "Tracker exited")
 ENDIF()

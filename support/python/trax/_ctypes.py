@@ -133,7 +133,7 @@ import sys
 def _environ_path(name):
     """Split an environment variable into a path-like list elements"""
     if name in os.environ:
-        return os.environ[name].split(":")
+        return os.environ[name].split(os.pathsep)
     return []
 
 
@@ -465,6 +465,19 @@ class WindowsLibraryLoader(LibraryLoader):
             super(WindowsLibraryLoader.Lookup, self).__init__(path)
             self.access["stdcall"] = ctypes.windll.LoadLibrary(path)
 
+    def getplatformpaths(self, libname):
+        if os.path.pathsep in libname:
+            names = [libname]
+        else:
+            names = [fmt % libname for fmt in self.name_formats]
+
+        for directory in self.getdirs():
+            for name in names:
+                yield os.path.join(directory, name)
+
+    @staticmethod
+    def getdirs():
+        return _environ_path("PATH")
 
 # Platform switching
 

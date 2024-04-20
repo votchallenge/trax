@@ -390,7 +390,7 @@ public:
 
 		Lock lock(process_state_mutex);
 
-		if (client != NULL) {
+		if (client != NULL && process_running()) {
 			print_debug("Trying to stop process using protocol.");
 			client->terminate();
 		}
@@ -479,6 +479,11 @@ public:
 
 		print_debug("Flushing streams");
 
+#ifdef _MSC_VER
+flush_condition.wait(1000);
+			return;
+#endif
+
 		char buffer[LOGGER_BUFFER_SIZE];
 
 		for (int i = 0; i < 10; i++) {
@@ -549,14 +554,13 @@ public:
 
 			run = state->watchdog_active;
 
-			bool terminate = !state->process_running();;
+			bool terminate = !state->process_running();
 
 			for (vector<WatchdogCallback*>::iterator c = state->callbacks.begin(); c != state->callbacks.end(); c++) {
 				terminate |= (*c)();
 			}
 
 			if (terminate) {
-				//state->print_debug("Termination requested externally ...");
 				state->stop_process();
 			} else {
 
@@ -565,7 +569,7 @@ public:
 					state->watchdog_timeout--;
 
 					if (state->watchdog_timeout == 0) {
-						//state->print_debug("Timeout reached. Stopping tracker process ...");
+						
 						state->stop_process();
 					}
 
@@ -575,8 +579,6 @@ public:
 			state->watchdog_mutex.release();
 
 		}
-
-		//state->print_debug("Stopping watchdog thread");
 
 		return 0;
 
