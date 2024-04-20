@@ -49,7 +49,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'TraX'
-copyright = u'2023, Luka Cehovin Zajc'
+copyright = u'2024, Luka Cehovin Zajc'
 author = u'Luka Cehovin'
 
 # The version info for the project you're documenting, acts as replacement for
