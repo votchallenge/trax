@@ -390,7 +390,7 @@ public:
 
 		Lock lock(process_state_mutex);
 
-		if (client != NULL && process_running()) {
+		if (client != NULL) {
 			print_debug("Trying to stop process using protocol.");
 			client->terminate();
 		}
