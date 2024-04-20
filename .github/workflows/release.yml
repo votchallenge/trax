@@ -59,7 +59,7 @@ jobs:
       uses: pypa/cibuildwheel@v2.17.0
       env:
         CIBW_ARCHS: "${{ matrix.archs }}"
-        CIBW_BUILD: cp311-* pp310-*
+        CIBW_BUILD: "cp311-* pp310-*"
       with:
         package-dir: ${{github.workspace}}/build/python
         output-dir: ${{github.workspace}}/build/python/dist
