@@ -26,8 +26,8 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v5
 
-    - name: Install cibuildwheel
-      run: python -m pip install cibuildwheel==2.17 numpy>=1.16 six setuptools
+    - name: Install Python dependencies
+      run: python -m pip install numpy>=1.16 six setuptools
 
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2
@@ -39,13 +39,9 @@ jobs:
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_TESTS=ON -DBUILD_CLIENT=ON -DBUILD_PYTHON=ON -DBUILD_PLATFORM="${RUNNER_OS}_${RUNNER_ARCH}" 
 
-    - name: Build
+    - name: Compile
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-
-    #- name: Install Python dependencies from setup.py
-    #  working-directory: ${{github.workspace}}/build/python
-    #  run: python -m pip install -e .
 
     - name: Test
       working-directory: ${{github.workspace}}/build
@@ -59,22 +55,28 @@ jobs:
       working-directory: ${{github.workspace}}/build/python
       run: python setup.py sdist
 
-    - name: Build Python wheels
-      working-directory: ${{github.workspace}}/build/python
-      run: python -m cibuildwheel --output-dir dist
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v2.17.0
+      with:
+        package-dir: ${{github.workspace}}/build/python
+        output-dir: dist
+
+    #- name: Build Python wheels
+    #  working-directory: ${{github.workspace}}/build/python
+    #  run: python -m cibuildwheel --output-dir dist
 
     - name: Upload ZIP artifacts
       uses: actions/upload-artifact@v4
       if: ${{ !env.ACT }}
       with:
-        name: zip-${{ matrix.os }}
+        name: zip-${{ matrix.os }}-${{ strategy.job-index }}
         path: ${{github.workspace}}/build/trax*.zip
 
     - name: Upload wheel artifacts
       uses: actions/upload-artifact@v4
       if: ${{ !env.ACT }}
       with:
-        name: wheel-${{ matrix.os }}
+        name: wheel-${{ matrix.os }}-${{ strategy.job-index }}
         path: ${{github.workspace}}/build/python/dist/*.*
 
     - name: Copy artifacts to output directory
