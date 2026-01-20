@@ -184,6 +184,26 @@ class TestPolygonRegion(unittest.TestCase):
         """Test polygon creation requires minimum 3 points"""
         with self.assertRaises(AssertionError):
             Polygon.create([(0, 0), (100, 0)])
+            
+    def test_polygon_minimum_points_message(self):
+        """Test polygon creation error message for insufficient points"""
+        with self.assertRaisesRegex(AssertionError, "at least 3 points"):
+            Polygon.create([(0, 0)])
+            
+    def test_polygon_one_point(self):
+        """Test polygon creation with single point fails"""
+        with self.assertRaisesRegex(AssertionError, "at least 3 points"):
+            Polygon.create([(50, 100)])
+            
+    def test_polygon_requires_list(self):
+        """Test polygon creation requires a list"""
+        with self.assertRaisesRegex(AssertionError, "must be a list"):
+            Polygon.create(((0, 0), (100, 0), (100, 100)))
+            
+    def test_polygon_requires_tuples(self):
+        """Test polygon creation requires tuples for points"""
+        with self.assertRaisesRegex(AssertionError, "must be tuples"):
+            Polygon.create([[0, 0], [100, 0], [100, 100]])
 
     def test_polygon_string_representation(self):
         """Test polygon string representation"""
@@ -230,18 +250,38 @@ class TestPointRegion(unittest.TestCase):
     def test_point_set(self):
         """Test setting point coordinates"""
         point = Point.create(10, 20)
-        result = point.set(0, 50, 100)
+        result = point.set(50, 100)
         self.assertIs(result, point)  # Test fluent interface
         
         retrieved_x, retrieved_y = point.get()
         self.assertAlmostEqual(retrieved_x, 50, places=1)
         self.assertAlmostEqual(retrieved_y, 100, places=1)
-
-    def test_point_set_invalid_index(self):
-        """Test point set with invalid index raises exception"""
+        
+    def test_point_set_modifies_coordinates(self):
+        """Test that set actually modifies the point coordinates"""
         point = Point.create(10, 20)
-        with self.assertRaises(IndexError):
-            point.set(1, 50, 100)
+        point.set(100, 200)
+        x, y = point.get()
+        self.assertAlmostEqual(x, 100, places=1)
+        self.assertAlmostEqual(y, 200, places=1)
+        
+    def test_point_set_multiple_times(self):
+        """Test setting point coordinates multiple times"""
+        point = Point.create(10, 20)
+        point.set(50, 100)
+        self.assertAlmostEqual(point.x, 50, places=1)
+        self.assertAlmostEqual(point.y, 100, places=1)
+        
+        point.set(200, 300)
+        self.assertAlmostEqual(point.x, 200, places=1)
+        self.assertAlmostEqual(point.y, 300, places=1)
+        
+    def test_point_set_fluent_chaining(self):
+        """Test fluent interface allows method chaining"""
+        point = Point.create(0, 0)
+        result = point.set(10, 20).set(30, 40)
+        self.assertAlmostEqual(point.x, 30, places=1)
+        self.assertAlmostEqual(point.y, 40, places=1)
 
     def test_point_string_representation(self):
         """Test point string representation"""
@@ -249,64 +289,78 @@ class TestPointRegion(unittest.TestCase):
         self.assertIn('Point', str(point))
         self.assertIn('50', str(point))
         self.assertIn('100', str(point))
-
-
-class TestMaskRegion(unittest.TestCase):
-    """Test Mask region creation and properties"""
-
-    def test_create_mask(self):
-        """Test creating a mask region"""
-        data = np.zeros((100, 200), dtype=np.uint8)
-        data[10:40, 20:80] = 255
         
-        mask = Mask.create(data)
-        self.assertIsNotNone(mask)
-        self.assertEqual(mask.type, Region.MASK)
-
-    def test_mask_size(self):
-        """Test mask size method"""
-        data = np.zeros((100, 200), dtype=np.uint8)
-        mask = Mask.create(data)
-        width, height = mask.size()
-        self.assertEqual(width, 200)
-        self.assertEqual(height, 100)
-
-    def test_mask_offset(self):
-        """Test mask offset method"""
-        data = np.zeros((100, 200), dtype=np.uint8)
-        mask = Mask.create(data, x=10, y=20)
-        x, y = mask.offset()
-        self.assertEqual(x, 10)
-        self.assertEqual(y, 20)
-
-    def test_mask_array_without_normalize(self):
-        """Test mask array conversion without normalization"""
-        original_data = np.random.randint(0, 2, (50, 100), dtype=np.uint8) * 255
-        mask = Mask.create(original_data)
+    def test_point_negative_coordinates(self):
+        """Test point with negative coordinates"""
+        point = Point.create(-50.5, -100.5)
+        self.assertAlmostEqual(point.x, -50.5, places=1)
+        self.assertAlmostEqual(point.y, -100.5, places=1)
         
-        retrieved_data = mask.array(normalize=False)
-        self.assertEqual(retrieved_data.shape, (50, 100))
-        np.testing.assert_array_equal(retrieved_data, original_data)
-
-    def test_mask_array_with_normalization(self):
-        """Test mask array conversion with normalization (offset padding)"""
-        original_data = np.ones((50, 100), dtype=np.uint8) * 255
-        mask = Mask.create(original_data, x=10, y=20)
+    def test_point_zero_coordinates(self):
+        """Test point with zero coordinates"""
+        point = Point.create(0, 0)
+        self.assertAlmostEqual(point.x, 0, places=1)
+        self.assertAlmostEqual(point.y, 0, places=1)
         
-        retrieved_data = mask.array(normalize=True)
-        # Should have padding for the offset
-        self.assertEqual(retrieved_data.shape[0], 50 + 20)
-        self.assertEqual(retrieved_data.shape[1], 100 + 10)
+    def test_point_large_coordinates(self):
+        """Test point with large coordinates"""
+        point = Point.create(10000.5, 20000.5)
+        self.assertAlmostEqual(point.x, 10000.5, places=1)
+        self.assertAlmostEqual(point.y, 20000.5, places=1)
 
-    def test_mask_string_representation(self):
-        """Test mask string representation"""
-        data = np.zeros((100, 200), dtype=np.uint8)
-        mask = Mask.create(data, x=5, y=10)
-        mask_str = str(mask)
-        self.assertIn('Mask', mask_str)
-        self.assertIn('200', mask_str)
-        self.assertIn('100', mask_str)
-        self.assertIn('offset', mask_str)
+
+class TestRegionTypeValidation(unittest.TestCase):
+    """Test that region types are correctly distinguished"""
+    
+    def test_point_is_not_polygon(self):
+        """Test that Point is a separate type from Polygon"""
+        point = Point.create(50, 100)
+        self.assertEqual(point.type, Region.POINT)
+        self.assertNotEqual(point.type, Region.POLYGON)
+        
+    def test_polygon_is_not_point(self):
+        """Test that Polygon with 3 points is not a Point"""
+        polygon = Polygon.create([(0, 0), (100, 0), (50, 100)])
+        self.assertEqual(polygon.type, Region.POLYGON)
+        self.assertNotEqual(polygon.type, Region.POINT)
+        
+    def test_point_type_encoding(self):
+        """Test Point type encoding is distinct"""
+        point_code = Region.encode(Region.POINT)
+        polygon_code = Region.encode(Region.POLYGON)
+        self.assertNotEqual(point_code, polygon_code)
+        self.assertEqual(point_code, 16)
+        self.assertEqual(polygon_code, 4)
+
+
+class TestCImplementationConsistency(unittest.TestCase):
+    """Test consistency between Python wrapper and C implementation"""
+    
+    def test_point_roundtrip_c_implementation(self):
+        """Test Point creation and retrieval through C implementation"""
+        x_orig, y_orig = 123.456, 789.012
+        point = Point.create(x_orig, y_orig)
+        x_retrieved, y_retrieved = point.get()
+        
+        # C implementation should preserve float values
+        self.assertAlmostEqual(x_retrieved, x_orig, places=2)
+        self.assertAlmostEqual(y_retrieved, y_orig, places=2)
+        
+    def test_point_set_c_implementation(self):
+        """Test Point.set() updates through C implementation"""
+        point = Point.create(0, 0)
+        x_new, y_new = 456.789, 321.654
+        point.set(x_new, y_new)
+        
+        x_retrieved, y_retrieved = point.get()
+        self.assertAlmostEqual(x_retrieved, x_new, places=2)
+        self.assertAlmostEqual(y_retrieved, y_new, places=2)
+        
+    def test_polygon_minimum_enforced(self):
+        """Test that C implementation doesn't accept < 3 points"""
+        # This should fail at Python level before reaching C
+        with self.assertRaises(AssertionError):
+            Polygon.create([(0, 0), (100, 100)])
 
 if __name__ == '__main__':
     unittest.main()

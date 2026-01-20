@@ -263,11 +263,16 @@ class Polygon(Region):
         Constructor
 
         Args:
-            points: list of points in the polygon
+            points: list of points in the polygon (minimum 3 points required)
+            
+        Raises:
+            AssertionError: if points list has less than 3 points
+            AssertionError: if points is not a list
+            AssertionError: if points don't contain tuples
         """
-        assert(isinstance(points, list))
-        assert(len(points) > 2)
-        assert(reduce(lambda x, y: x and y, [isinstance(p, tuple) for p in points]))
+        assert(isinstance(points, list)), "Points must be a list"
+        assert(len(points) >= 3), "Polygon must have at least 3 points, got {}".format(len(points))
+        assert(reduce(lambda x, y: x and y, [isinstance(p, tuple) for p in points])), "All points must be tuples"
 
         poly = cast(trax_region_create_polygon(len(points)), c_void_p)
 
@@ -444,7 +449,10 @@ class Mask(Region):
 class Point(Region):
     
     """
-    Point region description
+    Point region description. Represents a single 2D point location.
+    
+    This is a separate region type from Polygon and is stored natively as a point,
+    not as a single-point polygon.
     """
 
     @staticmethod
@@ -452,13 +460,12 @@ class Point(Region):
         """ Constructor
 
         Args:
-            x (float): X coordinate of the point.
-            y (float): Y coordinate of the point.
+            x (float): X coordinate of the point. Defaults to 0.
+            y (float): Y coordinate of the point. Defaults to 0.
 
         Returns:
             Point: Point region description.
         """
-        # Points are represented as polygons with a single point
         return Point(cast(trax_region_create_point(x, y), c_void_p))
 
     def __str__(self):
@@ -509,11 +516,10 @@ class Point(Region):
         _, y = self.get()
         return y
 
-    def set(self, i: int, x: float, y: float):
-        """Set point at index i
+    def set(self, x: float, y: float):
+        """Set point coordinates
 
         Args:
-            i (int): index of the point
             x (float): x coordinate
             y (float): y coordinate
 
@@ -521,7 +527,5 @@ class Point(Region):
             Point: self
         """
 
-        if i != 0:
-            raise IndexError("Index {} is invalid for Point region".format(i))
         trax_region_set_point(self.reference, x, y)
         return self
