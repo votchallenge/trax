@@ -43,7 +43,7 @@
 extern "C" {
 #endif
 
-typedef enum region_type {EMPTY, SPECIAL, RECTANGLE, POLYGON, MASK} region_type;
+typedef enum region_type {EMPTY, SPECIAL, RECTANGLE, POLYGON, MASK, POINT} region_type;
 
 typedef struct region_bounds {
 
@@ -53,6 +53,13 @@ typedef struct region_bounds {
 	float right;
 
 } region_bounds;
+
+typedef struct region_point {
+
+	float x;
+	float y;
+
+} region_point;
 
 typedef struct region_polygon {
 
@@ -90,6 +97,7 @@ typedef struct region_container {
         region_rectangle rectangle;
         region_polygon polygon;
         region_mask mask;
+        region_point point;
         int special;
     } data;
 } region_container;
@@ -131,6 +139,8 @@ __TRAX_EXPORT region_container* region_create_rectangle(float x, float y, float 
 __TRAX_EXPORT region_container* region_create_polygon(int count);
 
 __TRAX_EXPORT region_container* region_create_mask(int x, int y, int width, int height);
+
+__TRAX_EXPORT region_container* region_create_point(float x, float y);
 
 __TRAX_EXPORT int region_contains_point(region_container* r, float x, float y);
 

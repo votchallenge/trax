@@ -995,6 +995,24 @@ if _libs["trax"].has("trax_region_get_mask_row", "cdecl"):
     trax_region_get_mask_row.restype = POINTER(ctypes.c_char)
 
 # /home/lukacu/Checkouts/vot/trax/include/trax.h: 483
+if _libs["trax"].has("trax_region_create_point", "cdecl"):
+    trax_region_create_point = _libs["trax"].get("trax_region_create_point", "cdecl")
+    trax_region_create_point.argtypes = [c_float, c_float]
+    trax_region_create_point.restype = ctypes.c_void_p
+
+# /home/lukacu/Checkouts/vot/trax/include/trax.h: 488
+if _libs["trax"].has("trax_region_set_point", "cdecl"):
+    trax_region_set_point = _libs["trax"].get("trax_region_set_point", "cdecl")
+    trax_region_set_point.argtypes = [ctypes.c_void_p, c_float, c_float]
+    trax_region_set_point.restype = None
+    
+# /home/lukacu/Checkouts/vot/trax/include/trax.h: 493
+if _libs["trax"].has("trax_region_get_point", "cdecl"):
+    trax_region_get_point = _libs["trax"].get("trax_region_get_point", "cdecl")
+    trax_region_get_point.argtypes = [ctypes.c_void_p, POINTER(c_float), POINTER(c_float)]
+    trax_region_get_point.restype = None
+
+# /home/lukacu/Checkouts/vot/trax/include/trax.h: 483
 if _libs["trax"].has("trax_region_bounds", "cdecl"):
     trax_region_bounds = _libs["trax"].get("trax_region_bounds", "cdecl")
     trax_region_bounds.argtypes = [ctypes.c_void_p]

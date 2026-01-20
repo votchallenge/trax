@@ -15,7 +15,8 @@ from ._ctypes import trax_region_create_polygon, \
     trax_region_create_rectangle, trax_region_get_polygon_count, trax_region_get_polygon_point, \
     trax_region_get_special, trax_region_get_type, trax_region_get_rectangle, \
     trax_region_set_polygon_point, trax_region_create_special, trax_region_create_mask, \
-    trax_region_get_mask_header, trax_region_get_mask_row, trax_region_write_mask_row
+    trax_region_get_mask_header, trax_region_get_mask_row, trax_region_write_mask_row, \
+    trax_region_create_point, trax_region_set_point, trax_region_get_point
 
 class Region(object):
     """Base class for region descriptions."""
@@ -24,6 +25,7 @@ class Region(object):
     RECTANGLE = "rectangle"
     POLYGON = "polygon"
     MASK = "mask"
+    POINT = "point"
 
     def __init__(self, internal):
         """Constructor
@@ -51,6 +53,10 @@ class Region(object):
             return Polygon(internal)
         elif type == 8:
             return Mask(internal)
+        elif type == 16:
+            return Point(internal)
+        else:
+            raise ValueError("Unknown region type {}".format(type))
 
     @abstractmethod
     def type(self) -> str:
@@ -76,6 +82,8 @@ class Region(object):
             decoded.append(Region.POLYGON)
         if intcode & 8:
             decoded.append(Region.MASK)
+        if intcode & 16:
+            decoded.append(Region.POINT)
         return decoded
 
     @staticmethod
@@ -93,6 +101,8 @@ class Region(object):
             return 4
         elif strcode == Region.MASK:
             return 8
+        elif strcode == Region.POINT:
+            return 16
 
         raise IndexError("Illegal region format name {}".format(strcode))
 
@@ -430,3 +440,88 @@ class Mask(Region):
             return mat
 
         return np.pad(mat, pad_width=[(y.value, 0), (x.value, 0)], mode='constant')
+
+class Point(Region):
+    
+    """
+    Point region description
+    """
+
+    @staticmethod
+    def create(x=0, y=0):
+        """ Constructor
+
+        Args:
+            x (float): X coordinate of the point.
+            y (float): Y coordinate of the point.
+
+        Returns:
+            Point: Point region description.
+        """
+        # Points are represented as polygons with a single point
+        return Point(cast(trax_region_create_point(x, y), c_void_p))
+
+    def __str__(self):
+        """String representation of the region.
+        
+        Returns:
+            str: String representation of the region.
+        """
+        x, y = self.get()
+        return 'Point ({},{})'.format(x, y)
+
+    @property
+    def type(self) -> str:
+        """Region type.
+        
+        Returns:
+            str: Region type.
+        """
+        return Region.POINT
+
+    def get(self) -> tuple:
+        """Get point coordinates
+        Returns:
+            tuple: point coordinates
+        """
+        x = c_float()
+        y = c_float()
+        trax_region_get_point(self.reference, byref(x), byref(y))
+        return x.value, y.value
+
+    @property
+    def x(self) -> float:
+        """X coordinate of the point
+
+        Returns:
+            float: X coordinate of the point
+        """
+        x, _ = self.get()
+        return x
+    
+    @property
+    def y(self) -> float:
+        """Y coordinate of the point
+
+        Returns:
+            float: Y coordinate of the point
+        """
+        _, y = self.get()
+        return y
+
+    def set(self, i: int, x: float, y: float):
+        """Set point at index i
+
+        Args:
+            i (int): index of the point
+            x (float): x coordinate
+            y (float): y coordinate
+
+        Returns:
+            Point: self
+        """
+
+        if i != 0:
+            raise IndexError("Index {} is invalid for Point region".format(i))
+        trax_region_set_point(self.reference, x, y)
+        return self

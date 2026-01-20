@@ -71,8 +71,10 @@
 #define TRAX_REGION_RECTANGLE 2
 #define TRAX_REGION_POLYGON 4
 #define TRAX_REGION_MASK 8
+#define TRAX_REGION_POINT 16
 
-#define TRAX_REGION_ANY (TRAX_REGION_RECTANGLE | TRAX_REGION_POLYGON | TRAX_REGION_MASK)
+#define TRAX_REGION_ANY (TRAX_REGION_RECTANGLE | TRAX_REGION_POLYGON | TRAX_REGION_MASK | TRAX_REGION_POINT)
+
 
 #define TRAX_FLAG_VALID 1
 #define TRAX_FLAG_SERVER 2
@@ -474,6 +476,22 @@ __TRAX_EXPORT char* trax_region_write_mask_row(trax_region* region, int row);
  * Returns a read-only pointer for a row in a data array of a mask.
 **/
 __TRAX_EXPORT const char* trax_region_get_mask_row(const trax_region* region, int row);
+
+/**
+ * Creates a point region.
+**/
+__TRAX_EXPORT trax_region* trax_region_create_point(float x, float y);
+
+/**
+ * Set the coordinates for a point region.
+**/
+__TRAX_EXPORT void trax_region_set_point(trax_region* region, float x, float y);
+
+/**
+ * Retrieve coordinate from a point region object.
+**/
+
+__TRAX_EXPORT void trax_region_get_point(const trax_region* region, float* x, float* y);
 
 /**
  * Calculates a bounding box region that bounds the input region.
@@ -1188,6 +1206,11 @@ public:
     static Region create_mask(int x, int y, int width, int height);
 
     /**
+     * Creates a point region.
+    **/
+    static Region create_point(float x, float y);
+
+    /**
      * Releases region, frees allocated memory.
     **/
     virtual ~Region();
@@ -1251,6 +1274,16 @@ public:
      * Returns a read-only pointer for a row in a data array of a mask.
     **/
     const char* get_mask_row(int row) const;
+
+    /**
+     * Sets the coordinates for a point region.
+    **/
+    void set(float x, float y);
+
+    /**
+     * Retrieve coordinate from a point region object.
+    **/
+    void get(float* x, float* y) const;
 
     /**
      * Computes bounds of a region.

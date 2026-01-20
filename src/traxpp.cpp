@@ -837,6 +837,14 @@ Region Region::create_mask(int x, int y, int width, int height) {
 
 }
 
+Region Region::create_point(float x, float y) {
+
+	Region region;
+	region.wrap(trax_region_create_point(x, y));
+	return region;
+
+}
+
 Region::~Region() {
 	release();
 }
@@ -905,6 +913,17 @@ const char* Region::get_mask_row(int row) const {
 
 	return trax_region_get_mask_row(region, row);
 
+}
+
+void Region::set(float x, float y) {
+	if (type() != TRAX_REGION_POINT || claims() > 1)
+		wrap(trax_region_create_point(x, y));
+	else
+		trax_region_set_point(region, x, y);
+}
+
+void Region::get(float* x, float* y) const {
+	trax_region_get_point(region, x, y);
 }
 
 Region Region::convert(int format) const {

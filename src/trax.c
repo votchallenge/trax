@@ -24,6 +24,7 @@
 #define IS_VERSION_2(H) (((H)->version >= 2))
 #define IS_VERSION_3(H) (((H)->version >= 3))
 #define IS_VERSION_4(H) (((H)->version >= 4))
+#define IS_VERSION_5(H) (((H)->version >= 5))
 
 #define HANDLE_ALIVE(H) (((H)->flags & TRAX_FLAG_VALID) && !((H)->flags & TRAX_FLAG_TERMINATED))
 
@@ -563,7 +564,7 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
     trax_properties* tmp_properties;
     string_list* arguments;
     char *tmp, *tracker_name, *tracker_description, *tracker_family;
-    int region_formats, image_formats, channels, flags;
+    int state_formats = 0, image_formats, channels, flags;
 
     trax_handle* client = (trax_handle*) malloc(sizeof(trax_handle));
 
@@ -589,9 +590,19 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
 
     client->version = trax_properties_get_int(tmp_properties, "trax.version", 1);
 
-    tmp = trax_properties_get(tmp_properties, "trax.region");
-    region_formats = region_formats_decode(tmp);
-    free(tmp);
+    if (IS_VERSION_5(client)) {
+        tmp = trax_properties_get(tmp_properties, "trax.state");
+        if (tmp) {
+            state_formats = region_formats_decode(tmp);
+            free(tmp);
+        }
+    }
+
+    if (state_formats == 0) {
+        tmp = trax_properties_get(tmp_properties, "trax.region");
+        state_formats = region_formats_decode(tmp);
+        free(tmp);
+    }
 
     tmp = trax_properties_get(tmp_properties, "trax.image");
     image_formats = image_formats_decode(tmp);
@@ -619,7 +630,7 @@ trax_handle* client_setup(message_stream* stream, const trax_logging log) {
         }
     }
 
-    client->metadata = trax_metadata_create(region_formats, image_formats, channels,
+    client->metadata = trax_metadata_create(state_formats, image_formats, channels,
                                             tracker_name, tracker_description, tracker_family, flags);
 
     if (tracker_name) free(tracker_name);
@@ -669,7 +680,10 @@ trax_handle* server_setup(trax_metadata *metadata, message_stream* stream, const
     trax_properties_set_int(properties, "trax.version", server->version);
 
     region_formats_encode(metadata->format_region, tmp);
-    trax_properties_set(properties, "trax.region", tmp);
+    if (IS_VERSION_5(server))
+        trax_properties_set(properties, "trax.state", tmp);
+    else 
+        trax_properties_set(properties, "trax.region", tmp);
 
     image_formats_encode(metadata->format_image, tmp);
     trax_properties_set(properties, "trax.image", tmp);
@@ -1887,6 +1901,30 @@ const char* trax_region_get_mask_row(const trax_region* region, int row) {
 
     return &(REGION(region)->data.mask.data[REGION(region)->data.mask.width * row]);
     
+}
+
+trax_region* trax_region_create_point(float x, float y) {
+
+    return region_create_point(x, y);
+
+}
+
+void trax_region_set_point(trax_region* region, float x, float y) {
+
+    assert(REGION(region)->type == POINT);
+
+    REGION(region)->data.point.x = x;
+    REGION(region)->data.point.y = y;
+
+}
+
+void trax_region_get_point(const trax_region* region, float* x, float* y) {
+
+    assert(REGION(region)->type == POINT);
+
+    if (x) *x = REGION(region)->data.point.x;
+    if (y) *y = REGION(region)->data.point.y;
+
 }
 
 char* trax_region_encode(const trax_region* region) {

@@ -254,6 +254,8 @@ const char* __parse_uri_prefix(const char* buffer, region_type* type) {
 				*type = MASK;
 			else if (strncmp(buffer, "special", i - 1) == 0)
 				*type = SPECIAL;
+			else if (strncmp(buffer, "point", i - 1) == 0)
+				*type = POINT;
 			return &(buffer[i + 1]);
 		}
 
@@ -364,6 +366,8 @@ int region_parse(const char* buffer, region_container** region) {
 			prefix_type = RECTANGLE;
 		else if (num >= 6 && num % 2 == 0)
 			prefix_type = POLYGON;
+		else if (num == 2)
+			prefix_type = POINT;
 	}
 
 	switch (prefix_type) {
@@ -452,6 +456,17 @@ int region_parse(const char* buffer, region_container** region) {
 		free(data);
 		return 1;
 	}
+	case POINT: {
+		assert(num == 2);
+		(*region) = (region_container*) malloc(sizeof(region_container));
+		(*region)->type = POINT;
+
+		(*region)->data.point.x = data[0];
+		(*region)->data.point.y = data[1];
+
+		free(data);
+		return 1;
+	}
 	}
 
 	if (data) free(data);
@@ -516,6 +531,11 @@ char* region_string(region_container* region) {
 		if (count && value) {
 			buffer_append(buffer, ",%d", count);
 		}
+	} else if (region->type == POINT) {
+
+		buffer_append(buffer, "%.4f,%.4f",
+		              region->data.point.x, region->data.point.y);
+
 	}
 
 	if (buffer_size(buffer) > 0)
@@ -546,43 +566,50 @@ region_container* region_convert(const region_container* region, region_type typ
 		reg->type = type;
 
 		switch (region->type) {
-		case RECTANGLE:
-			reg->data.rectangle = region->data.rectangle;
-			break;
-		case POLYGON: {
-
-			float top = FLT_MAX;
-			float bottom = FLT_MIN;
-			float left = FLT_MAX;
-			float right = FLT_MIN;
-			int i;
-
-			for (i = 0; i < region->data.polygon.count; i++) {
-				top = MIN(top, region->data.polygon.y[i]);
-				bottom = MAX(bottom, region->data.polygon.y[i]);
-				left = MIN(left, region->data.polygon.x[i]);
-				right = MAX(right, region->data.polygon.x[i]);
+		case POINT: {
+				reg->data.rectangle.x = region->data.point.x;
+				reg->data.rectangle.y = region->data.point.y;
+				reg->data.rectangle.width = 0;
+				reg->data.rectangle.height = 0;
+				break;
 			}
+		case RECTANGLE: {
+				reg->data.rectangle = region->data.rectangle;
+				break;
+			}
+		case POLYGON: {
+				float top = FLT_MAX;
+				float bottom = FLT_MIN;
+				float left = FLT_MAX;
+				float right = FLT_MIN;
+				int i;
 
-			reg->data.rectangle.x = left;
-			reg->data.rectangle.y = top;
-			reg->data.rectangle.width = right - left;
-			reg->data.rectangle.height = bottom - top;
-			break;
+				for (i = 0; i < region->data.polygon.count; i++) {
+					top = MIN(top, region->data.polygon.y[i]);
+					bottom = MAX(bottom, region->data.polygon.y[i]);
+					left = MIN(left, region->data.polygon.x[i]);
+					right = MAX(right, region->data.polygon.x[i]);
+				}
+
+				reg->data.rectangle.x = left;
+				reg->data.rectangle.y = top;
+				reg->data.rectangle.width = right - left;
+				reg->data.rectangle.height = bottom - top;
+				break;
 			}
 		case MASK: {
-			region_bounds b = compute_bounds_mask(&(region->data.mask));
+				region_bounds b = compute_bounds_mask(&(region->data.mask));
 
-			reg->data.rectangle.x = b.left;
-			reg->data.rectangle.y = b.top;
-			reg->data.rectangle.width = b.right - b.left + 1;
-			reg->data.rectangle.height = b.bottom - b.top + 1;
+				reg->data.rectangle.x = b.left;
+				reg->data.rectangle.y = b.top;
+				reg->data.rectangle.width = b.right - b.left + 1;
+				reg->data.rectangle.height = b.bottom - b.top + 1;
 
-			break;
+				break;
 			}
 		default: {
-			free(reg); reg = NULL;
-			break;
+				free(reg); reg = NULL;
+				break;
 			}
 		}
 		break;
@@ -715,6 +742,8 @@ region_container* region_convert(const region_container* region, region_type typ
 void region_release(region_container** region) {
 
 	switch ((*region)->type) {
+	case POINT:
+		break;
 	case RECTANGLE:
 		break;
 	case POLYGON:
@@ -798,6 +827,16 @@ region_container* region_create_mask(int x, int y, int width, int height) {
 
 }
 
+region_container* region_create_point(float x, float y) {
+
+	region_container* reg = __create_region(POINT);
+
+	reg->data.point.x = x;
+	reg->data.point.y = y;
+
+	return reg;
+
+}
 
 #define MAX_MASK 10000
 
@@ -857,6 +896,13 @@ region_bounds region_compute_bounds(const region_container* region) {
 	}
 	case MASK: {
 		bounds = compute_bounds_mask(&(region->data.mask));
+		break;
+	}
+	case POINT: {
+		bounds = region_create_bounds(region->data.point.x,
+		                              region->data.point.y,
+		                              region->data.point.x,
+		                              region->data.point.y);
 		break;
 	}
 	default: {
@@ -1214,6 +1260,12 @@ int region_contains_point(region_container* r, float x, float y) {
 
 	if (r->type == MASK)
 		return point_in_mask(&(r->data.mask), x, y);
+
+	if (r->type == POINT) {
+		if (x == (r->data.point).x && y == (r->data.point).y)
+			return 1;
+		return 0;
+	}
 
 	return 0;
 
